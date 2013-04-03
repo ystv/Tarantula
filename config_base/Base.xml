@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TarantulaConfig>
+	<Config>
+		<Devices>Devices</Devices>
+		<Interfaces>Interfaces</Interfaces>
+		<Logs>Logs</Logs>
+		<EventSources>EventSources</EventSources>
+		<EventProcessors>EventProcessors</EventProcessors>
+	</Config>
+	<System>
+		<Name>Test Tarantula System</Name>
+		<Framerate>25</Framerate>
+		<PluginReloadCount>3</PluginReloadCount>
+	</System>
+	<Channels>
+		<Channel>
+			<Name>Campus Stream</Name>
+			<CrosspointPort>YSTV Stream</CrosspointPort>
+			<CrosspointName>Demo Crosspoint 1</CrosspointName>
+		</Channel>
+	</Channels>
+	<MouseCatcher>
+	   <MaxDeletedEvents>3</MaxDeletedEvents>
+	</MouseCatcher>
+</TarantulaConfig>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TarantulaPlugin>
+    <PluginLoad>
+        <Name>Demo CG Device</Name>
+        <Type>Device</Type>
+        <Library>CGDevice_Demo</Library>
+        <Instance>Demo CG Device 1</Instance>
+        <Enabled>true</Enabled>
+    </PluginLoad>
+    <PluginData mode="simple">
+        <Type>Graphics</Type>
+        <PollPeriod units="seconds">5</PollPeriod>
+    </PluginData>
+</TarantulaPlugin>

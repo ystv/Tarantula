@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TarantulaPlugin>
+    <PluginLoad>
+        <Name>Syslog Logger</Name>
+        <Type>Logger</Type>
+        <Library>Log_Syslog</Library>
+        <Instance>Syslog Logger</Instance>
+        <Enabled>true</Enabled>
+    </PluginLoad>
+    <PluginData mode="simple">
+        <!-- Log this severity level and above. Options are Critical, Error,
+            Warning and Info, in that order -->
+        <LogLevel>Error</LogLevel>
+    </PluginData>
+</TarantulaPlugin>

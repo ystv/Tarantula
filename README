@@ -1,0 +1,12 @@
+Tarantula V0.0000001
+==========================
+
+Directory Structure:
+
+bin		Build output.
+build  		Build Intermediate Files
+config_base  	Template Config
+docs  		Documentation
+include  	Header Files
+src  		Source Code
+tests		Unit Tests

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TarantulaPlugin>
+    <PluginLoad>
+	    <Name>Caspar CG Plugin</Name>
+	    <Type>Device</Type>
+	    <Library>CGDevice_Caspar</Library>
+	    <Instance>Main Video Server Graphics</Instance>
+	    <Enabled>false</Enabled>
+	</PluginLoad>
+	<PluginData mode="simple">
+	    <Type>Graphics</Type>
+	    <PollPeriod units="seconds">5</PollPeriod>
+	    <Host>192.168.11.42</Host>
+	    <Port>5250</Port>
+	    <ProducerLayer>1</ProducerLayer>
+	    <Layer>2</Layer>
+	</PluginData>
+</TarantulaPlugin>

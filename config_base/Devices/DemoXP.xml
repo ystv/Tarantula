@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TarantulaPlugin>
+    <PluginLoad>
+        <Name>Demo Crosspoint</Name>
+        <Type>Device</Type>
+        <Library>demoXpoint</Library>
+        <Instance>Demo Crosspoint 1</Instance>
+        <Enabled>true</Enabled>
+    </PluginLoad>
+    <PluginData>
+        <Type>Crosspoint</Type>
+        <PollPeriod units="seconds">3000</PollPeriod>
+        <Streams>
+            <Stream name="Caspar" direction="in">
+		        <RouterPortVideo>1</RouterPortVideo>
+                <RouterPortAudio>1</RouterPortAudio>
+		    </Stream>
+		    <Stream name="Inform" direction="in">
+		        <RouterPortVideo>16</RouterPortVideo>
+		        <RouterPortAudio>9</RouterPortAudio>
+		    </Stream>
+		    <Stream name="DaVE" direction="in">
+		        <RouterPortVideo>4</RouterPortVideo>
+		        <RouterPortAudio>7</RouterPortAudio>
+		    </Stream>
+		    <Stream name="Vidsrv" direction="in">
+		        <RouterPortVideo>12</RouterPortVideo>
+		        <RouterPortAudio>6</RouterPortAudio>
+		    </Stream>
+		    <Stream name="YSTV Stream" direction="out">
+		        <RouterPortVideo>1</RouterPortVideo>
+		        <RouterPortAudio>3</RouterPortAudio>
+		    </Stream>
+		    <Stream name="On Campus Stream" direction="out">
+		        <RouterPortVideo>2</RouterPortVideo>
+                <RouterPortAudio>3</RouterPortAudio>
+		    </Stream>
+        </Streams>
+    </PluginData>
+</TarantulaPlugin>

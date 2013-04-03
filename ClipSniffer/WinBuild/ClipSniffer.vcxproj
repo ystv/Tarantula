@@ -1,0 +1,204 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{52615D52-46A8-4653-8EEE-4C43A1559C39}</ProjectGuid>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <Keyword>ManagedCProj</Keyword>
+    <RootNamespace>ClipSniffer</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CLRSupport>false</CLRSupport>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>Windows7.1SDK</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CLRSupport>false</CLRSupport>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>Windows7.1SDK</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <CLRSupport>false</CLRSupport>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>Windows7.1SDK</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <CLRSupport>false</CLRSupport>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>Windows7.1SDK</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+    <IncludePath>..\..\..\libs\ffmpeg-win32-dev\include;$(IncludePath)</IncludePath>
+    <IntDir>..\..\build</IntDir>
+    <TargetName>$(ProjectName)-$(Platform)-$(Configuration)</TargetName>
+    <OutDir>..\..\bin</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LinkIncremental>true</LinkIncremental>
+    <IncludePath>..\..\..\libs\ffmpeg-win64-dev\include;$(IncludePath)</IncludePath>
+    <IntDir>..\..\build\</IntDir>
+    <TargetName>$(ProjectName)-$(Platform)-$(Configuration)</TargetName>
+    <OutDir>..\..\bin\</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+    <IncludePath>..\..\..\libs\ffmpeg-win32-dev\include;$(IncludePath)</IncludePath>
+    <IntDir>..\..\build</IntDir>
+    <TargetName>$(ProjectName)-$(Platform)-$(Configuration)</TargetName>
+    <OutDir>..\..\bin</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LinkIncremental>false</LinkIncremental>
+    <IncludePath>..\..\..\libs\ffmpeg-win64-dev\include;$(IncludePath)</IncludePath>
+    <IntDir>..\..\build</IntDir>
+    <TargetName>$(ProjectName)-$(Platform)-$(Configuration)</TargetName>
+    <OutDir>..\..\bin</OutDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\..\libs\libxml++-2.34.2\MSVC_Net2010\libxml++;..\..\..\libs\glib-x86\lib\glib-2.0\include;..\..\..\libs\glibmm\MSVC_Net2010\glibmm;..\..\..\libs\libxml++-2.34.2;..\..\..\libs\glibmm\glib;..\..\..\libs\glib-x86\include\glib-2.0;../../src/sqlite-amalgamation;../../../libs/inttypes;../include;../../include</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>glib-2.0.lib;avformat.lib;avutil.lib;glibmm-2.4.lib;xml++-vc100-2_6.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\..\..\libs\glib-x86\lib;..\..\..\libs\libxml++-2.34.2\MSVC_Net2010\libxml++\win32\Release;..\..\..\libs\glibmm\MSVC_Net2010\glibmm\Release\win32;..\..\..\libs\ffmpeg-win32-dev\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
+    <PostBuildEvent>
+      <Command>CopyDLLs-$(Platform).bat</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\..\libs\libxml++-2.34.2\MSVC_Net2010\libxml++;..\..\..\libs\glib-x64\lib\glib-2.0\include;..\..\..\libs\glibmm\MSVC_Net2010\glibmm;..\..\..\libs\libxml++-2.34.2;..\..\..\libs\glibmm\glib;..\..\..\libs\glib-x86\include\glib-2.0;../../src/sqlite-amalgamation;../../../libs/inttypes;../include;../../include</AdditionalIncludeDirectories>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PrecompiledHeaderFile>
+      </PrecompiledHeaderFile>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>glib-2.0.lib;avformat.lib;avutil.lib;glibmm-2.4.lib;xml++-vc100-2_6.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\..\..\libs\glib-x64\lib;..\..\..\libs\libxml++-2.34.2\MSVC_Net2010\libxml++\x64\Release;..\..\..\libs\glibmm\MSVC_Net2010\glibmm\Release\x64;..\..\..\libs\ffmpeg-win64-dev\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <ProgramDatabaseFile>$(TargetDir)/symbols/$(TargetName).pdb</ProgramDatabaseFile>
+    </Link>
+    <PostBuildEvent>
+      <Command>CopyDLLs-$(Platform).bat</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>WIN32;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\..\libs\libxml++-2.34.2\MSVC_Net2010\libxml++;..\..\..\libs\glib-x86\lib\glib-2.0\include;..\..\..\libs\glibmm\MSVC_Net2010\glibmm;..\..\..\libs\libxml++-2.34.2;..\..\..\libs\glibmm\glib;..\..\..\libs\glib-x86\include\glib-2.0;../../src/sqlite-amalgamation;../../../libs/inttypes;../include;../../include</AdditionalIncludeDirectories>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <WholeProgramOptimization>true</WholeProgramOptimization>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>glib-2.0.lib;avformat.lib;avutil.lib;glibmm-vc100-2_4.lib;xml++-vc100-2_6.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\..\..\libs\glib-x86\lib;D:\Source\Libs\libxml++-2.34.2\MSVC_Net2010\libxml++\Win32\Release;D:\Source\Libs\glibmm\MSVC_Net2010\glibmm\Win32\Release;D:\Source\Libs\ffmpeg-win32-dev\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+    </Link>
+    <PostBuildEvent>
+      <Command>CopyDLLs-$(Platform).bat</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>WIN32;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\..\libs\libxml++-2.34.2\MSVC_Net2010\libxml++;..\..\..\libs\glib-x64\lib\glib-2.0\include;..\..\..\libs\glibmm\MSVC_Net2010\glibmm;..\..\..\libs\libxml++-2.34.2;..\..\..\libs\glibmm\glib;..\..\..\libs\glib-x86\include\glib-2.0;../../src/sqlite-amalgamation;../../../libs/inttypes;../include;../../include</AdditionalIncludeDirectories>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <WholeProgramOptimization>true</WholeProgramOptimization>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>glib-2.0.lib;avformat.lib;avutil.lib;glibmm-vc100-2_4.lib;xml++-vc100-2_6.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\..\..\libs\glib-x64\lib;D:\Source\Libs\libxml++-2.34.2\MSVC_Net2010\libxml++\x64\Release;D:\Source\Libs\glibmm\MSVC_Net2010\glibmm\x64\Release;..\..\..\libs\ffmpeg-win64-dev\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+    </Link>
+    <PostBuildEvent>
+      <Command>CopyDLLs-$(Platform).bat</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\include\ConfigBase.h" />
+    <ClInclude Include="..\..\include\MemDB.h" />
+    <ClInclude Include="..\include\ClipSniffer.h" />
+    <ClInclude Include="..\include\dirScan.h" />
+    <ClInclude Include="..\include\ffmpegInterrogator.h" />
+    <ClInclude Include="..\include\FileList.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\src\Common\ConfigBase.cpp" />
+    <ClCompile Include="..\..\src\Common\Log.cpp" />
+    <ClCompile Include="..\..\src\Common\MemDB.cpp" />
+    <ClCompile Include="..\..\src\sqlite-amalgamation\sqlite3.c" />
+    <ClCompile Include="..\src\ClipSniffer.cpp" />
+    <ClCompile Include="..\src\dirScan.cpp" />
+    <ClCompile Include="..\src\ffmpegInterrogator.cpp" />
+    <ClCompile Include="..\src\FileList.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="WinIcon.rc" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

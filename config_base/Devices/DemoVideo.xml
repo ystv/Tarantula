@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TarantulaPlugin>
+    <PluginLoad>
+        <Name>Demo Video Device</Name>
+        <Type>Device</Type>
+        <Library>VideoDevice_Demo</Library>
+        <Instance>Demo Video Device 1</Instance>
+        <Enabled>true</Enabled>
+    </PluginLoad>
+    <PluginData mode="simple">
+        <Type>Video</Type>
+        <PollPeriod units="seconds">5</PollPeriod>
+    </PluginData>
+</TarantulaPlugin>

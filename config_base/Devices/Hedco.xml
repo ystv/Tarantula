@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TarantulaPlugin>
+    <PluginLoad>
+        <Name>Hedco</Name>
+        <Type>Device</Type>
+        <Library>CrosspointDevice_Hedco</Library>
+        <Instance>Netmux</Instance>
+        <Enabled>false</Enabled>
+    </PluginLoad>
+    <PluginData>
+        <Type>Crosspoint</Type>
+        <PollPeriod units="seconds">20</PollPeriod>
+        <Port>/dev/ttyS0</Port>
+        <Baud>19200</Baud>
+        <Streams>
+            <Stream name="Caspar" direction="in">
+		        <RouterPortVideo>1</RouterPortVideo>
+                <RouterPortAudio>1</RouterPortAudio>
+		    </Stream>
+		    <Stream name="Inform" direction="in">
+		        <RouterPortVideo>16</RouterPortVideo>
+		        <RouterPortAudio>9</RouterPortAudio>
+		    </Stream>
+		    <Stream name="DaVE" direction="in">
+		        <RouterPortVideo>4</RouterPortVideo>
+		        <RouterPortAudio>7</RouterPortAudio>
+		    </Stream>
+		    <Stream name="Vidsrv" direction="in">
+		        <RouterPortVideo>12</RouterPortVideo>
+		        <RouterPortAudio>6</RouterPortAudio>
+		    </Stream>
+		    <Stream name="Stream" direction="out">
+		        <RouterPortVideo>0</RouterPortVideo>
+		        <RouterPortAudio>1</RouterPortAudio>
+		    </Stream>
+		    <Stream name="Record" direction="out">
+                <RouterPortVideo>2</RouterPortVideo>
+                <RouterPortAudio>3</RouterPortAudio>
+            </Stream>
+        </Streams>
+    </PluginData>
+</TarantulaPlugin>

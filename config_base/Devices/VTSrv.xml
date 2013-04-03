@@ -1,0 +1,19 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<TarantulaPlugin>
+    <PluginLoad>
+        <Name>Xine Device</Name>
+        <Type>Device</Type>
+        <Library>XineNet</Library>
+        <Instance>VT Server</Instance>
+        <Enabled>false</Enabled>
+    </PluginLoad>
+    <PluginData>
+        <Type>Video</Type>
+        <PollPeriod units="seconds">5</PollPeriod>
+        <Streams>
+            <Stream name="video" direction="out">
+                <NamedStream>VTSrv</NamedStream>
+            </Stream>
+        </Streams>
+    </PluginData>
+</TarantulaPlugin>

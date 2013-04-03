@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TarantulaPlugin>
+    <PluginLoad>
+        <Name>Demo Event Processor</Name>
+        <Type>EventProcessor</Type>
+        <Library>EventProcessor_Demo</Library>
+        <Instance>Demo Event Processor 1</Instance>
+        <Enabled>true</Enabled>
+    </PluginLoad>
+</TarantulaPlugin>

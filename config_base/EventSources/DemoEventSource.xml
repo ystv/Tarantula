@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TarantulaPlugin>
+    <PluginLoad>
+        <Name>XML Network Event Source</Name>
+        <Type>EventSource</Type>
+        <Library>EventSource_XML_Network</Library>
+        <Instance>Network Event Source</Instance>
+        <Enabled>true</Enabled>
+    </PluginLoad>
+    <PluginData mode="simple">
+        <PollPeriod units="seconds">10</PollPeriod>
+    </PluginData>
+</TarantulaPlugin>

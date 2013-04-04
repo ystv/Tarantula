@@ -93,6 +93,7 @@ class MemDB
 {
 public:
     MemDB ();
+    MemDB (const char* filename);
     ~MemDB ();
     void dump (const char* filename); // Dumps out the database to an SQLite file
 protected:

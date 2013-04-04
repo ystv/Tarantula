@@ -41,6 +41,6 @@ public:
     EventProcessor_Demo (PluginConfig config, Hook h);
     virtual ~EventProcessor_Demo ();
     virtual void handleEvent (MouseCatcherEvent originalEvent,
-            MouseCatcherEvent *resultingEvent);
+            MouseCatcherEvent& resultingEvent);
 };
 

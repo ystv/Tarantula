@@ -67,7 +67,7 @@ void EventSource_Demo::tick (std::vector<EventAction> *peventqueue)
 {
     if (READY != m_status)
     {
-        m_hook.gs->L->error(m_pluginname, "Plugin not in ready state for handleEvent");
+        m_hook.gs->L->error(m_pluginname, "Plugin not in ready state for tick");
         return;
     }
 

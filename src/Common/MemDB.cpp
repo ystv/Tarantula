@@ -65,6 +65,15 @@ MemDB::MemDB ()
     sqlite3_open(":memory:", &m_pdb);
 }
 
+/**
+ * Opens a file-based database instead of an in-memory one. Will create it if
+ * it doesn't exist.
+ */
+MemDB::MemDB (const char* filename)
+{
+    sqlite3_open(filename, &m_pdb);
+}
+
 MemDB::~MemDB ()
 {
     sqlite3_close(m_pdb);

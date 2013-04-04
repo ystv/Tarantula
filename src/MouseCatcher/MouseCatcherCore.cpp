@@ -95,7 +95,7 @@ namespace MouseCatcherCore
                 // Create a variable to hold original event
                 MouseCatcherEvent originalevent = event;
                 g_mcprocessors[event.m_targetdevice]->handleEvent(originalevent,
-                        &event);
+                        event);
             }
             else
             {
@@ -200,8 +200,7 @@ namespace MouseCatcherCore
 
         try
         {
-            if (static_cast<int> (g_pdeletedevents->size()) >
-                    g_baseconfig.getMCDeletedEventCount())
+            if (g_pdeletedevents->size() > g_baseconfig.getMCDeletedEventCount())
             {
                 std::vector<MouseCatcherEvent> eventdata;
                 getEvents(-1, 0, &eventdata);

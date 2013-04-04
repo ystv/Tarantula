@@ -48,7 +48,7 @@ public:
     MouseCatcherProcessorPlugin (PluginConfig config, Hook h);
     virtual ~MouseCatcherProcessorPlugin ();
     virtual void handleEvent (MouseCatcherEvent originalEvent,
-            MouseCatcherEvent *resultingEvent)=0;
+            MouseCatcherEvent& resultingEvent)=0;
 
     //! Get information about processor used for EventSources
     ProcessorInformation getProcessorInformation ();

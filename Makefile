@@ -8,7 +8,7 @@ include Makefile.inc
 
 all : $(DIRS)
 
-$(DIRS) tests:
+$(DIRS) tests: boost
 	$(MAKE) --directory $@
 
 tests: src

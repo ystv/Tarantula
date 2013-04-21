@@ -10,6 +10,6 @@
     <PluginData mode="simple">
         <!-- Log this severity level and above. Options are Critical, Error,
             Warning and Info, in that order -->
-        <LogLevel>Error</LogLevel>
+        <LogLevel>Warning</LogLevel>
     </PluginData>
 </TarantulaPlugin>

@@ -40,4 +40,7 @@ public:
     virtual void warn (std::string where, std::string message);
     virtual void error (std::string where, std::string message);
     virtual void OMGWTF (std::string where, std::string message);
+
+private:
+    std::string gettime();
 };

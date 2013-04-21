@@ -36,7 +36,7 @@
  * @param response  Lines of data returned from CasparCG
  */
 void CasparQueryResponseProcessor::getMediaList (std::vector<std::string>& response,
-        std::map<std::string, long>& medialist)
+        std::vector<std::string>& medialist)
 {
 
     // Parse the response (skipping first two lines: return code and message)
@@ -49,13 +49,7 @@ void CasparQueryResponseProcessor::getMediaList (std::vector<std::string>& respo
         // Extract character 1 (0 is ") up to next double quote as media name
         std::string medianame = (*it).substr(1, nameend - 1);
 
-        // Beyond the media name should be "  MOVIE  " followed by frames (sans quotes), 9 chars
-        nameend += 9;
-
-        // And beyond that should be a number of frames followed by a space
-        long frames = ConvertType::stringToInt(
-                (*it).substr(nameend, (*it).find(" ", nameend)));
-        medialist[medianame] = frames;
+        medialist.push_back(medianame);
     }
 }
 
@@ -111,17 +105,15 @@ int CasparQueryResponseProcessor::readLayerStatus (std::vector<std::string>& res
         pugi::xml_node producer;
         try
         {
-            producer =
-                    xmldoc.select_single_node(
-                            "//channel/stage/layers/layer/foreground/producer[type=\"ffmpeg-producer\"]").node();
+            producer = xmldoc.select_single_node(
+            		"//channel/stage/layers/layer/foreground/producer[type=\"ffmpeg-producer\"]").node();
         } catch (...)
         {
             // Not playing, so exit
             return -1;
         }
 
-        framesremaining =
-                producer.parent().parent().child("frames-left").text().as_int(-1);
+        framesremaining = producer.parent().parent().child("frames-left").text().as_int(-1);
         filename = producer.child_value("filename");
 
         // Chop off the file path and extension
@@ -130,5 +122,43 @@ int CasparQueryResponseProcessor::readLayerStatus (std::vector<std::string>& res
     }
 
     return framesremaining;
+}
+
+/**
+ * Get the number of frames in a file selected by LOADBG X-Y filename followed
+ * by INFO X-Y
+ *
+ * @param response Data received from CasparCG
+ * @return		   Number of frames in file
+ */
+int CasparQueryResponseProcessor::readFileFrames(std::vector<std::string>& response)
+{
+	std::stringstream ss;
+	ss << response[2];
+
+	int frames = -1;
+
+	// Load the XML parser
+	pugi::xml_document xmldoc;
+	pugi::xml_parse_result parseresult = xmldoc.load(ss);
+
+	if (pugi::status_ok == parseresult.status)
+	{
+		// Get the producer
+		pugi::xml_node producer;
+		try
+		{
+			producer = xmldoc.select_single_node(
+					"//layer/background/producer/destination/producer[type=\"ffmpeg-producer\"]").node();
+		} catch (...)
+		{
+			// Not playing, so exit
+			return -1;
+		}
+
+		frames = producer.child("nb-frames").text().as_int(-1);
+	}
+
+	return frames;
 }
 

@@ -83,12 +83,12 @@ public:
  */
 const ActionInformation VIDEOACTION_LOAD = {0, "Load", "Load a video file to be played",
         {
-                {"m_filename", "string"},
+                {"filename", "string"},
         }
 };
 const ActionInformation VIDEOACTION_PLAY = {1, "Play", "Load and play a video file immediately",
         {
-                {"m_filename", "string"}
+                {"filename", "string"}
         }
 };
 const ActionInformation VIDEOACTION_PLAYLOADED = {2, "Play_Loaded", "Play a video file previously loaded with Load",
@@ -123,7 +123,7 @@ public:
     VideoDeviceStatus getStatus ();
     std::map<std::string, std::string> m_extradata;
 
-    void getFileList(std::vector<std::string>& filelist);
+    void getFileList(std::vector<std::pair<std::string, int>>& filelist);
 protected:
     std::map<std::string, VideoFile> m_files;
     unsigned int m_channel; // Channel number. Value dependent on exact server.

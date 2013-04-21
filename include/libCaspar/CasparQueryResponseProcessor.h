@@ -36,11 +36,12 @@ class CasparQueryResponseProcessor
 {
 public:
     static void getMediaList (std::vector<std::string>& response,
-            std::map<std::string, long> & medialist);
+            std::vector<std::string>& medialist);
     static void getTemplateList (std::vector<std::string>& response,
             std::vector<std::string>& templatelist);
     static int readLayerStatus (std::vector<std::string>& response,
             std::string& filename);
+    static int readFileFrames(std::vector<std::string>& response);
 
 };
 

@@ -16,7 +16,7 @@ $(LIBFILE): $(OBJS)
 	ar rcs $(LIBFILE) $(OBJS)
 
 $(OBJS): $(FILES)
-	$(CXX) $(COPTS) -o $@ $< -fPIC --shared -DBOOST_SYSTEM_STATIC_LINK=\"1\"
+	$(CXX) $(COPTS) -o $@ $< -c -fPIC -DBOOST_SYSTEM_STATIC_LINK=\"1\"
 
 clean:
 	rm -f $(LIBFILE) $(OBJS)

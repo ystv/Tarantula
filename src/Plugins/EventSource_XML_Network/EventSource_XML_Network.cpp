@@ -171,6 +171,11 @@ bool EventSource_XML_Network::parseEvent (const pugi::xml_node xmlnode,
         }
     }
 
+    if (0 == playlist_event_type_vector.count(outputevent.m_eventtype))
+    {
+    	return false;
+    }
+
     for (pugi::xml_node node : xmlnode.child("actiondata").children())
     {
         outputevent.m_extradata[node.name()] = node.child_value();
@@ -232,7 +237,13 @@ bool EventSource_XML_Network::processIncoming (XML_Incoming& newdata,
             return false;
         }
 
-        parseEvent(xml.child("MCEvent"), newaction.event);
+        if (!parseEvent(xml.child("MCEvent"), newaction.event))
+        {
+        	boost::asio::write(newdata.m_conn->socket(),
+        			boost::asio::buffer("400 BAD DATA\r\n"));
+        	return false;
+        }
+
         newaction.action = ACTION_ADD;
     }
     else if (!action.compare("Remove"))
@@ -260,7 +271,13 @@ bool EventSource_XML_Network::processIncoming (XML_Incoming& newdata,
 
         newaction.action = ACTION_EDIT;
         newaction.eventid = xml.child("eventid").text().as_int(-1);
-        parseEvent(xml.child("MCEvent"), newaction.event);
+
+        if (!parseEvent(xml.child("MCEvent"), newaction.event))
+		{
+			boost::asio::write(newdata.m_conn->socket(),
+					boost::asio::buffer("400 BAD DATA\r\n"));
+			return false;
+		}
 
     }
     else if (!action.compare("UpdatePlaylist"))
@@ -576,8 +593,16 @@ void EventSource_XML_Network::updateEventProcessors (
             boost::asio::buffer(ss.str()));
 }
 
+/**
+ * Send a list of files and durations on the specified device to the client
+ *
+ * @param device 		 Device to get files from
+ * @param files  		 Vector of files and durations
+ * @param additionaldata Action data, used for source plugin handle
+ */
 void EventSource_XML_Network::updateFiles (std::string device,
-        std::vector<std::string>& files, std::shared_ptr<void> additionaldata)
+		std::vector<std::pair<std::string, int>>& files,
+		std::shared_ptr<void> additionaldata)
 {
     if (READY != m_status)
     {
@@ -590,9 +615,15 @@ void EventSource_XML_Network::updateFiles (std::string device,
 
     rootnode.append_attribute("device").set_value(device.c_str());
 
-    for (std::string item : files)
+    for (std::pair<std::string, int> item : files)
     {
-        rootnode.append_child("File").text().set(item.c_str());
+    	pugi::xml_node filenode = rootnode.append_child("File");
+		filenode.append_child("Name").text().set(item.first.c_str());
+
+    	if (item.second > 0)
+    	{
+    		filenode.append_child("Duration").text().set(item.second);
+    	}
     }
 
     //Pull out the generated XML as a string

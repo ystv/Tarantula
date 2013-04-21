@@ -177,10 +177,10 @@ void VideoDevice::poll ()
     }
 }
 
-void VideoDevice::getFileList (std::vector<std::string>& filelist)
+void VideoDevice::getFileList (std::vector<std::pair<std::string, int>>& filelist)
 {
     for (auto file : m_files)
     {
-        filelist.push_back(file.first);
+        filelist.push_back(std::make_pair(file.first, file.second.m_duration));
     }
 }

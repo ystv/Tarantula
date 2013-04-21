@@ -45,7 +45,7 @@ MouseCatcherProcessorPlugin::MouseCatcherProcessorPlugin (PluginConfig config, H
     }
     else
     {
-        h.gs->L->info("EventProcessor_Demo Loader",
+        h.gs->L->info("EventProcessor Loader",
                 "No description set for " + config.m_instance);
     }
 

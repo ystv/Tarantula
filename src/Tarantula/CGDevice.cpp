@@ -161,8 +161,11 @@ void CGDevice::runDeviceEvent (Device* device, PlaylistEntry* event)
  *
  * @param templates Vector of strings for template names
  */
-void CGDevice::getTemplateList (std::vector<std::string>& templates)
+void CGDevice::getTemplateList (std::vector<std::pair<std::string, int>>& templates)
 {
-    templates = m_templatelist;
+	for (std::string thistemplate : m_templatelist)
+	{
+		templates.push_back(std::make_pair(thistemplate, 0));
+	}
 }
 

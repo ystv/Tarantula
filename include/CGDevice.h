@@ -72,7 +72,7 @@ public:
 
     void getHardwareStatus ();
     static void runDeviceEvent (Device *pdevice, PlaylistEntry *pevent);
-    void getTemplateList (std::vector<std::string>& templates);
+    void getTemplateList (std::vector<std::pair<std::string, int>>& templates);
 
 protected:
     std::map<int, CGLayer> m_plugindata;

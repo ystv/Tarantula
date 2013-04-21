@@ -80,7 +80,7 @@ void EventSource_Demo::tick (std::vector<EventAction> *peventqueue)
     {
         m_hook.gs->L->info("EventSource_Demo", "Generating fresh events...");
         MouseCatcherEvent mev;
-        mev.m_channel = "Campus Stream";
+        mev.m_channel = "Default";
         mev.m_targetdevice = "Demo Event Processor 1";
         mev.m_eventtype = EVENT_FIXED;
         mev.m_triggertime = time(NULL) + 15;
@@ -102,7 +102,7 @@ void EventSource_Demo::tick (std::vector<EventAction> *peventqueue)
         action2.action = ACTION_UPDATE_PLAYLIST;
         action2.event.m_triggertime = m_lastupdate;
         action2.thisplugin = this;
-        action2.event.m_channel = "Campus Stream";
+        action2.event.m_channel = "Default";
         action2.isprocessed = false;
 
         m_lastupdate = time(NULL);
@@ -206,7 +206,8 @@ void EventSource_Demo::updatePlaylist (std::vector<MouseCatcherEvent>& playlist,
 }
 
 void EventSource_Demo::updateFiles (std::string device,
-        std::vector<std::string>& files, std::shared_ptr<void> padditionaldata)
+		std::vector<std::pair<std::string, int>>& files,
+		std::shared_ptr<void> padditionaldata)
 {
     if (READY != m_status)
     {
@@ -216,9 +217,9 @@ void EventSource_Demo::updateFiles (std::string device,
 
     std::stringstream datadump;
     datadump << "Got files for " << device << ": ";
-    for (std::string file : files)
+    for (std::pair<std::string, int> file : files)
     {
-        datadump << file << ", ";
+        datadump << file.first << ", ";
     }
     m_hook.gs->L->info(m_pluginname, datadump.str());
 }

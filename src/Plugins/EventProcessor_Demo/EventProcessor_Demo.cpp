@@ -61,14 +61,16 @@ void EventProcessor_Demo::handleEvent (MouseCatcherEvent originalEvent,
     }
 
     resultingEvent = originalEvent;
+
     // Create a child
     MouseCatcherEvent childevent;
-    childevent.m_channel = "Campus Stream";
+    childevent.m_channel = "Default";
     childevent.m_duration = 1;
     childevent.m_action = 0;
-    childevent.m_extradata["output"] = "Campus Stream";
+    childevent.m_extradata["output"] = "Default";
     childevent.m_extradata["input"] = "Inform";
-    childevent.m_targetdevice = "demoXpoint";
+    childevent.m_targetdevice = "Demo Crosspoint 1";
+    childevent.m_triggertime = originalEvent.m_triggertime;
     resultingEvent.m_childevents.push_back(childevent);
 
 }

@@ -55,7 +55,7 @@ public:
     void updateEventProcessors (
             std::map<std::string, ProcessorInformation>& processors,
             std::shared_ptr<void> additionaldata);
-    void updateFiles (std::string device, std::vector<std::string>& files,
+    void updateFiles (std::string device, std::vector<std::pair<std::string, int>>& files,
             std::shared_ptr<void> additionaldata);
 private:
     long int m_polltime;

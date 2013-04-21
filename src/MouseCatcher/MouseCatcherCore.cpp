@@ -94,6 +94,10 @@ namespace MouseCatcherCore
             {
                 // Create a variable to hold original event
                 MouseCatcherEvent originalevent = event;
+
+                // Action fields do not apply to processors, set it to -1
+                originalevent.m_action = -1;
+
                 g_mcprocessors[event.m_targetdevice]->handleEvent(originalevent,
                         event);
             }
@@ -117,10 +121,20 @@ namespace MouseCatcherCore
         // Create and add a playlist event for the parent
         PlaylistEntry playlistevent;
         convertToPlaylistEvent(&event, lastid, &playlistevent);
+        int eventid;
 
-        int eventid =
-                g_channels[Channel::getChannelByName(event.m_channel)]->createEvent(
-                        &playlistevent);
+        try
+        {
+        	eventid = g_channels[Channel::getChannelByName(event.m_channel)]->
+        			createEvent(&playlistevent);
+        }
+        catch (std::exception&)
+        {
+        	g_logger.warn("MouseCatcherCore", "Got event for bad channel: " +
+        			event.m_channel);
+        	action.returnmessage = "Channel " + event.m_channel + " not found";
+        	return -1;
+        }
 
         // Loop over and handle children
         for (MouseCatcherEvent thischild : event.m_childevents)
@@ -327,19 +341,16 @@ namespace MouseCatcherCore
     {
         if (1 == g_devices.count(action.event.m_targetdevice))
         {
-            std::vector<std::string> files;
-            if (EVENTDEVICE_VIDEODEVICE
-                    == g_devices[action.event.m_targetdevice]->getType())
+        	std::vector<std::pair<std::string, int>> files;
+
+            if (EVENTDEVICE_VIDEODEVICE == g_devices[action.event.m_targetdevice]->getType())
             {
-                VideoDevice *dev =
-                        dynamic_cast<VideoDevice*>(g_devices[action.event.m_targetdevice]);
+                VideoDevice *dev = dynamic_cast<VideoDevice*>(g_devices[action.event.m_targetdevice]);
                 dev->getFileList(files);
             }
-            else if (EVENTDEVICE_CGDEVICE
-                    == g_devices[action.event.m_targetdevice]->getType())
+            else if (EVENTDEVICE_CGDEVICE == g_devices[action.event.m_targetdevice]->getType())
             {
-                CGDevice *dev =
-                        dynamic_cast<CGDevice*>(g_devices[action.event.m_targetdevice]);
+                CGDevice *dev = dynamic_cast<CGDevice*>(g_devices[action.event.m_targetdevice]);
                 dev->getTemplateList(files);
             }
             else
@@ -349,7 +360,10 @@ namespace MouseCatcherCore
                                 + action.event.m_targetdevice);
                 action.returnmessage = "Unable to get files for invalid device "
                         + action.event.m_targetdevice;
+                return;
             }
+            action.thisplugin->updateFiles(action.event.m_targetdevice, files,
+            		action.additionaldata);
         }
         else
         {
@@ -441,6 +455,14 @@ namespace MouseCatcherCore
                             {
                                 getEventProcessors(thisaction);
                             }
+                        }
+                        break;
+                        case ACTION_UPDATE_FILES:
+                        {
+                        	if (thisaction.thisplugin)
+                        	{
+                        		getDeviceFiles(thisaction);
+                        	}
                         }
                         break;
                         default:
@@ -546,7 +568,7 @@ namespace MouseCatcherCore
         if (parentid > -1)
         {
             pplaylistevent->m_parent = parentid;
-            pplaylistevent->m_eventtype = EVENT_CHILD;
+            //pplaylistevent->m_eventtype = EVENT_CHILD;
         }
         else
         {

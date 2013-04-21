@@ -14,7 +14,7 @@
 	</System>
 	<Channels>
 		<Channel>
-			<Name>Campus Stream</Name>
+			<Name>Default</Name>
 			<CrosspointPort>YSTV Stream</CrosspointPort>
 			<CrosspointName>Demo Crosspoint 1</CrosspointName>
 		</Channel>

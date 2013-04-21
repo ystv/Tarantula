@@ -146,10 +146,31 @@ int main(int argc,char *argv[]) {
     resp.clear();
 
     caspCon.sendCommand(query, resp);
-    std::map<std::string, long> medialist;
+    std::vector<std::string> medianames;
+    std::map<std::string, int> medialist;
 
     //Call the processor
-    CasparQueryResponseProcessor::getMediaList(resp, medialist);
+    CasparQueryResponseProcessor::getMediaList(resp, medianames);
+
+    //Iterate over media list getting lengths and adding to files list
+	for (std::string item : medianames)
+	{
+		// To grab duration from CasparCG we have to load the file and pull info
+		CasparCommand durationquery(CASPAR_COMMAND_LOADBG);
+		durationquery.addParam("1");
+		durationquery.addParam("5");
+		durationquery.addParam(item);
+		caspCon.sendCommand(durationquery, resp);
+
+		CasparCommand infoquery(CASPAR_COMMAND_INFO);
+		infoquery.addParam("1");
+		infoquery.addParam("5");
+		resp.clear();
+		caspCon.sendCommand(infoquery, resp);
+
+		medialist[item] = CasparQueryResponseProcessor::readFileFrames(resp);
+	}
+
     cout << endl << "Got a list of " << medialist.size() << " items. " << line <<
             " shows as having " << medialist[line] << " frames."<<endl;
 
@@ -190,6 +211,7 @@ int main(int argc,char *argv[]) {
     resp.clear();
     caspCon.sendCommand(flashcom, resp);
 
+    cout << endl << "Testing complete." << endl;
 
     return 0;
 }

@@ -37,23 +37,33 @@ Log_Screen::~Log_Screen ()
     // Nothing to do...
 }
 
+std::string Log_Screen::gettime ()
+{
+	long timenow = time(NULL);
+	struct tm * timeinfo = gmtime(&timenow);
+	char buffer[25];
+	strftime(buffer, 25, "%Y-%m-%d %H:%M:%S", timeinfo);
+
+	return std::string(buffer);
+}
+
 void Log_Screen::info (std::string where, std::string message)
 {
-    std::cout << where << ":: " << message << std::endl;
+    std::cout << gettime() << " INFO: " << where << ":: " << message << std::endl;
 }
 
 void Log_Screen::warn (std::string where, std::string message)
 {
-    std::cout << where << ":: " << message << std::endl;
+    std::cout << gettime() << " WARN: " << where << ":: " << message << std::endl;
 }
 
 void Log_Screen::error (std::string where, std::string message)
 {
-    std::cerr << where << ":: " << message << std::endl;
+    std::cerr << gettime() << " ERROR: " << where << ":: " << message << std::endl;
 }
 
 void Log_Screen::OMGWTF (std::string where, std::string message)
 {
-    std::cerr << where << ":: " << message << std::endl;
+    std::cerr << gettime() << " OMGWTF: " << where << ":: " << message << std::endl;
 }
 

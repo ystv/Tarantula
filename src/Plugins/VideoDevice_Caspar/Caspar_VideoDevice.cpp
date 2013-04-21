@@ -70,6 +70,9 @@ VideoDevice_Caspar::VideoDevice_Caspar (PluginConfig config, Hook h) :
     ptc->m_pstatus = &m_status;
 
     pthread_create(&m_netthread, NULL, NetworkThread, static_cast<void*> (ptc));
+
+    m_status = READY;
+
     getFiles();
 }
 
@@ -95,18 +98,16 @@ void VideoDevice_Caspar::poll ()
         if (resp[1] == "201 INFO OK")
         {
             std::string filename;
-            int frames = CasparQueryResponseProcessor::readLayerStatus(resp,
-                    filename);
+            int frames = CasparQueryResponseProcessor::readLayerStatus(resp, filename);
             if (frames <= 0)
                 m_videostatus.state = VDS_STOPPED;
             else
             {
                 m_videostatus.state = VDS_PLAYING;
                 m_videostatus.remainingframes = frames;
-                m_hook.gs->L->info("Caspar Media",
-                        "Got back a filename of " + filename + " with "
-                                + ConvertType::intToString(frames)
-                                + " frames left");
+                m_hook.gs->L->info("Caspar Media", "Got back a filename of "
+                		+ filename + " with " + ConvertType::intToString(frames)
+                        + " frames left");
             }
         }
 
@@ -148,18 +149,33 @@ void VideoDevice_Caspar::getFiles ()
     CasparCommand query(CASPAR_COMMAND_CLS);
     std::vector<std::string> resp;
     m_pcaspcon->sendCommand(query, resp);
-    std::map<std::string, long> medialist;
+    std::vector<std::string> medialist;
 
     //Call the processor
     CasparQueryResponseProcessor::getMediaList(resp, medialist);
 
-    //Iterate over media list adding to files list
-    for (std::pair<std::string, long> item : medialist)
+    //Iterate over media list getting lengths and adding to files list
+    for (std::string item : medialist)
     {
         VideoFile thisfile;
-        thisfile.m_filename = item.first;
-        thisfile.m_duration = item.second;
-        thisfile.m_title = item.first;
+        thisfile.m_filename = item;
+        thisfile.m_title = item;
+
+        // To grab duration from CasparCG we have to load the file and pull info
+        CasparCommand durationquery(CASPAR_COMMAND_LOADBG);
+        durationquery.addParam("1");
+        durationquery.addParam("5");
+        durationquery.addParam(item);
+        m_pcaspcon->sendCommand(durationquery, resp);
+
+        CasparCommand infoquery(CASPAR_COMMAND_INFO);
+        infoquery.addParam("1");
+        infoquery.addParam("5");
+        resp.clear();
+        m_pcaspcon->sendCommand(infoquery, resp);
+
+        thisfile.m_duration = CasparQueryResponseProcessor::readFileFrames(resp);
+
         m_files[thisfile.m_filename] = thisfile;
     }
 }

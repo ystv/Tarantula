@@ -1,13 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <TarantulaPlugin>
     <PluginLoad>
-        <Name>XML Network Event Source</Name>
+        <Name>Demo Event Source</Name>
         <Type>EventSource</Type>
-        <Library>EventSource_XML_Network</Library>
-        <Instance>Network Event Source</Instance>
-        <Enabled>true</Enabled>
+        <Library>EventSource_Demo</Library>
+        <Instance>Test Event Source 1</Instance>
+        <Enabled>false</Enabled>
     </PluginLoad>
     <PluginData mode="simple">
         <PollPeriod units="seconds">10</PollPeriod>
+        <!-- Should loaded devices and actions be logged? Warning: very verbose -->
+        <GetSystemData>false</GetSystemData>
     </PluginData>
 </TarantulaPlugin>

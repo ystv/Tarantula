@@ -105,8 +105,7 @@ void Channel::init ()
 void Channel::tick ()
 {
     //Pull all the time triggered events at the current time
-    std::vector<PlaylistEntry> events = m_pl.getEvents(EVENT_FIXED,
-            static_cast<long long int> (time(NULL)));
+    std::vector<PlaylistEntry> events = m_pl.getEvents(EVENT_FIXED, (time(NULL)));
 
     //Execute events on devices
     for (PlaylistEntry thisevent : events)

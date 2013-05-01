@@ -21,16 +21,3 @@ $(OBJS): $(FILES)
 clean:
 	rm -f $(LIBFILE) $(OBJS)
 
-#all: $(LIBFILE)
-
-#INCLUDE := ./ libs/system/src
-
-#$(LIBFILE) : $(CXX) $(COPTS) -DBOOST_SYSTEM_STATIC_LINK=1 \
-#  -fPIC
-  
-#.cpp.o:
-#	$(CXX) -c $(CXXFLAGS) $(INCLUDE)
-        
-
-#../../../build/$(PLUGINNAME)-%.o: %.cpp
-#	$(CXX) $(COPTS) --shared -fPIC -o $@ -c $<

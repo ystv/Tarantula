@@ -39,6 +39,8 @@ VideoDevice_Demo::VideoDevice_Demo (PluginConfig config, Hook h) :
     // Most of this is handled by parent class
     m_clipready = false;
     m_status = READY;
+
+    getFiles();
 }
 
 VideoDevice_Demo::~VideoDevice_Demo ()

@@ -134,9 +134,9 @@ public:
     int addEvent (PlaylistEntry *pobj);
 
     std::vector<PlaylistEntry> getEvents (playlist_event_type_t type,
-            long long int trigger);
+            time_t trigger);
     std::vector<PlaylistEntry> getChildEvents (int parentid);
-    std::vector<PlaylistEntry> getEventList (long long int since);
+    std::vector<PlaylistEntry> getEventList (time_t starttime, int length);
     void processEvent (int eventID);
     void removeEvent (int eventID);
 

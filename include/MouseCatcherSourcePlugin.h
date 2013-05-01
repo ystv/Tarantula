@@ -54,6 +54,9 @@ public:
     virtual void updateFiles (std::string device,
     		std::vector<std::pair<std::string, int>>& files,
             std::shared_ptr<void> additionaldata)=0;
+
+    static bool actionCompleteCheck (const EventAction &a,
+    		const MouseCatcherSourcePlugin *plugin);
 protected:
     void getEvents (int channelid, time_t since,
             std::vector<MouseCatcherEvent>* eventvector);

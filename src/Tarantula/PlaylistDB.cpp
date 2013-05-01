@@ -63,7 +63,7 @@ PlaylistDB::PlaylistDB () :
     m_getextras_query = prepare("SELECT key,value FROM extradata WHERE eventid = ?");
 
     // Queries used by EventSource interface
-    m_geteventlist_query = prepare("SELECT RowID, events.* FROM events WHERE lastupdate > ? AND parent = 0");
+    m_geteventlist_query = prepare("SELECT RowID, events.* FROM events WHERE trigger > ? AND trigger < ? AND parent = 0");
     m_updateevent_query = prepare("UPDATE events SET type = ?, trigger = ?, filename = ?, device = ?, devicetype = ?, duration = ?, lastupdate = strftime('%s', 'now')");
 }
 
@@ -156,7 +156,7 @@ void PlaylistDB::getExtraData (PlaylistEntry *pple)
  * @return        The event found at this time
  */
 std::vector<PlaylistEntry> PlaylistDB::getEvents (playlist_event_type_t type,
-        long long int trigger)
+        time_t trigger)
 {
     std::vector<PlaylistEntry> eventlist;
     m_getevent_query->rmParams();
@@ -180,14 +180,18 @@ std::vector<PlaylistEntry> PlaylistDB::getEvents (playlist_event_type_t type,
 /**
  * Gets all events changed since a specified time
  *
- * @param since The time to get events changed since
- * @return      A vector full of matching events
+ * @param starttime Start of the time period to fetch events for
+ * @param length	Length of the time period to fetch events for
+ * @return          A vector full of matching events
  */
-std::vector<PlaylistEntry> PlaylistDB::getEventList (long long int since)
+std::vector<PlaylistEntry> PlaylistDB::getEventList (time_t starttime,
+		int length)
 {
     std::vector<PlaylistEntry> eventlist;
     m_geteventlist_query->rmParams();
-    m_geteventlist_query->addParam(1, DBParam(since));
+    m_geteventlist_query->addParam(1, DBParam(starttime));
+    time_t endtime = starttime + length;
+    m_geteventlist_query->addParam(2, DBParam(endtime));
     m_geteventlist_query->bindParams();
 
     sqlite3_stmt *stmt = m_geteventlist_query->getStmt();

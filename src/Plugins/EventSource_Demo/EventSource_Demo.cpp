@@ -101,6 +101,7 @@ void EventSource_Demo::tick (std::vector<EventAction> *peventqueue)
 
         action2.action = ACTION_UPDATE_PLAYLIST;
         action2.event.m_triggertime = m_lastupdate;
+        action2.event.m_duration = m_pollperiod + 100;
         action2.thisplugin = this;
         action2.event.m_channel = "Default";
         action2.isprocessed = false;
@@ -141,7 +142,7 @@ void EventSource_Demo::updateDevices (
 
         EventAction typeaction;
         typeaction.action = ACTION_UPDATE_ACTIONS;
-        typeaction.event.m_channel = device.first;
+        typeaction.event.m_targetdevice = device.first;
         typeaction.thisplugin = this;
         m_tempactionqueue.push_back(typeaction);
     }

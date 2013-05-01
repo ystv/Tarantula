@@ -52,3 +52,15 @@ MouseCatcherSourcePlugin::~MouseCatcherSourcePlugin ()
 
 }
 
+/**
+ * Static predicate used to erase completed items from the ActionQueue
+ * @param a		 The EventAction checked
+ * @param plugin The plugin running the queue checks
+ * @return		 True if the EventAction is processed and owned by the plugin
+ */
+bool MouseCatcherSourcePlugin::actionCompleteCheck (const EventAction &a,
+		const MouseCatcherSourcePlugin *plugin)
+{
+	return (a.isprocessed) && (a.thisplugin == plugin);
+}
+

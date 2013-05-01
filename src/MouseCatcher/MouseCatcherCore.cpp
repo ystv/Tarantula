@@ -42,7 +42,6 @@ extern std::map<std::string, MouseCatcherProcessorPlugin*> g_mcprocessors;
 namespace MouseCatcherCore
 {
     std::vector<EventAction> *g_pactionqueue;
-    std::vector<int> *g_pdeletedevents;
 
     /**
      * Encapsulates loading plugins, registering callbacks and logging activation
@@ -53,7 +52,6 @@ namespace MouseCatcherCore
     void init (std::string sourcepath, std::string processorpath)
     {
         g_pactionqueue = new std::vector<EventAction>;
-        g_pdeletedevents = new std::vector<int>;
         g_logger.info("MouseCatcherCore", "Now initialising MouseCatcher core");
         loadAllPlugins(sourcepath, "EventSource");
         loadAllPlugins(processorpath, "EventProcessor");
@@ -147,14 +145,16 @@ namespace MouseCatcherCore
     }
 
     /**
-     * Gets all events the system knows about which have been modified since a time
+     * Gets all events the system knows about within a range of time
+     *
      * @param channelid     Channel to fetch events for. -1 for all channels.
-     * @param since         Only fetch events modified after this timestamp.
-     * @param eventvector   Pointer to insert the events into.
+     * @param starttime     Only fetch events scheduled after this timestamp.
+     * @param length		Length of range to fetch events for
+     * @param eventvector   Vector to insert the events into.
      * @return              False if given channel was invalid, otherwise true.
      */
-    void getEvents (int channelid, time_t since,
-            std::vector<MouseCatcherEvent>* eventvector)
+    void getEvents (int channelid, time_t starttime, int length,
+            std::vector<MouseCatcherEvent>& eventvector)
     {
         std::vector<PlaylistEntry> playlistevents;
         std::vector<Channel*>::iterator channelstart;
@@ -174,7 +174,7 @@ namespace MouseCatcherCore
         for (std::vector<Channel*>::iterator it = channelstart;
                 it != channelend; ++it)
         {
-            playlistevents = (*it)->m_pl.getEventList(since);
+            playlistevents = (*it)->m_pl.getEventList(starttime, length);
             for (std::vector<PlaylistEntry>::iterator it2 =
                     playlistevents.begin(); it2 != playlistevents.end(); ++it2)
             {
@@ -184,7 +184,7 @@ namespace MouseCatcherCore
                 MouseCatcherEvent tempevent;
                 MouseCatcherCore::convertToMCEvent(it2.base(), *it,
                         &tempevent, &g_logger);
-                eventvector->push_back(tempevent);
+                eventvector.push_back(tempevent);
             }
         }
 
@@ -212,30 +212,6 @@ namespace MouseCatcherCore
 
         g_channels.at(channelid)->m_pl.removeEvent(action.eventid);
 
-        try
-        {
-            if (g_pdeletedevents->size() > g_baseconfig.getMCDeletedEventCount())
-            {
-                std::vector<MouseCatcherEvent> eventdata;
-                getEvents(-1, 0, &eventdata);
-
-                for (MouseCatcherSourcePlugin* psourceplugin : g_mcsources)
-                {
-                    psourceplugin->updatePlaylist(eventdata, action.additionaldata);
-                }
-
-                g_pdeletedevents->clear();
-                if (!(g_pdeletedevents->empty()))
-                {
-                    throw std::exception();
-                }
-            }
-            g_pdeletedevents->push_back(action.eventid);
-        } catch (std::exception&)
-        {
-            g_logger.warn("removeEvent",
-                    "Did not successfully clear m_pdeletedevents");
-        }
     }
 
     /**
@@ -258,8 +234,9 @@ namespace MouseCatcherCore
     }
 
     /**
-     * Pull a list of playlist events changed since a time, and provide it to the
-     * EventSource using the updatePlaylist callback.
+     * Pull a list of playlist events.
+     * Selects all events between m_triggertime and m_triggertime + m_duration,
+     * and provides them to the EventSource using the updatePlaylist callback.
      *
      * @param action EventAction containing data for this event
      */
@@ -279,7 +256,8 @@ namespace MouseCatcherCore
             action.returnmessage = "Invalid channel name supplied";
             return;
         }
-        getEvents(channelref, action.event.m_triggertime, &eventdata);
+        getEvents(channelref, action.event.m_triggertime,
+        		action.event.m_duration, eventdata);
 
         action.thisplugin->updatePlaylist(eventdata, action.additionaldata);
     }

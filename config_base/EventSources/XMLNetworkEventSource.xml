@@ -9,5 +9,6 @@
     </PluginLoad>
     <PluginData mode="simple">
         <PollPeriod units="seconds">10</PollPeriod>
+        <Port>9815</Port>
     </PluginData>
 </TarantulaPlugin>

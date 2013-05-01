@@ -19,7 +19,4 @@
 			<CrosspointName>Demo Crosspoint 1</CrosspointName>
 		</Channel>
 	</Channels>
-	<MouseCatcher>
-	   <MaxDeletedEvents>3</MaxDeletedEvents>
-	</MouseCatcher>
 </TarantulaConfig>

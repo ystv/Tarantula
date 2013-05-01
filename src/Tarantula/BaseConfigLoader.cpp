@@ -185,24 +185,6 @@ void BaseConfigLoader::LoadConfig (std::string filename)
         }
 
     }
-
-    // Grab the MouseCatcher node
-    pugi::xml_node mcnode = m_configdata.document_element().child("MouseCatcher");
-    if (mcnode.empty())
-    {
-        g_logger.error("Base Config Loader", "No MouseCatcher node in config file");
-        throw std::exception();
-    }
-    else
-    {
-        m_mcdeletedvents = mcnode.child("MaxDeletedEvents").text().as_int(-1);
-        if (-1 == m_mcdeletedvents)
-        {
-            g_logger.warn("Base Config Loader",
-                    "No MaxDeletedEvents in config file. Assuming 10");
-            m_mcdeletedvents = 10;
-        }
-    }
 }
 
 float BaseConfigLoader::getFramerate ()

@@ -37,6 +37,11 @@ DBParam::DBParam (int val)
     m_type = DBPARAM_INT;
     m_intval = val;
 }
+DBParam::DBParam (time_t val)
+{
+	m_type = DBPARAM_LONG;
+	m_longval = val;
+}
 DBParam::DBParam (long long val)
 {
     m_type = DBPARAM_LONG;

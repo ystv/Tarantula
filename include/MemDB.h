@@ -57,6 +57,7 @@ class DBParam
 {
 public:
     DBParam (int val);
+    DBParam (time_t val);
     DBParam (long long val);
     DBParam (std::string val);
     DBParam (double val);

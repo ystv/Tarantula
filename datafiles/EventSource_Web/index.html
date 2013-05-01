@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type"
+	content="application/xhtml+html; charset=utf-8" />
+<title>Tarantula Scheduling Interface</title>
+<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.0/jquery.min.js" type="text/javascript" />
+<script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.2/jquery-ui.min.js" type="text/javascript" />
+<link href="//ajax.aspnetcdn.com/ajax/jquery.ui/1.10.2/themes/smoothness/jquery-ui.css" rel="stylesheet" type="text/css" />
+<link rel="stylesheet" type="text/css" href="/tarantula.css" />
+<script type="text/javascript">
+//<![CDATA[
+	$(document).ready(function() {
+	$("#schedule_datepicker").datepicker({
+	        onSelect: function(dateText, inst) { 
+                        window.location.href = "/" + $.datepicker.formatDate("yymmdd", new Date(dateText));
+                }
+        });
+	$("#schedule_datepicker").datepicker("setDate", new Date($("#currentdate").html()));
+		$(".accordion").accordion({
+			collapsible : true,
+			heightStyle : "content",
+			active : false
+		});
+
+		$("#add-form").dialog({
+			autoOpen : false,
+			height : 300,
+			width : 350,
+			modal : true,
+			buttons : {
+				"Create event" : function() {
+				        var eventxml = "<event><type>" + 
+				        $("select[name=type]:visible").val() + "</type>" + 
+				        "<device>" + $("select[name=device]:visible").val() + "</device>" +
+				        "<time>" + $.datepicker.formatDate("yy-mm-dd", 
+				                $("#schedule_datepicker").datepicker('getDate')) + 
+				        " " + $("input[name=time]:visible").val() + "</time>" +
+				        "<action>" + $("select[class=action-select]:visible").val() + "</action>" +
+				        "<extradata>";				       
+				        $(".action-form input:visible").each(function (index) {
+				                eventxml = eventxml + "<" + $(this).attr("name").split("-")[2] + 
+				                ">" + $(this).val() + "</" +  $(this).attr("name").split("-")[2] + ">";
+				        });
+				        if ($(".action-filename:visible").length) {
+				                eventxml = eventxml + "<filename duration=\"" + 
+				                $(".action-filename:visible option:selected").attr("tar-length") + 
+				                "\">" + $(".action-filename:visible").val() +
+				                "</filename>";
+				        }
+				        eventxml = eventxml + "</extradata></event>";
+				        $.ajax({
+				                type: "GET",
+				                url: "/add/",
+				                async: false,
+				                data: eventxml,
+				                success : function (xml) {
+				                        alert(xml);
+				                        
+				                }
+				        });
+				        $(this).dialog("close");
+				},
+				Cancel : function() {
+					$(this).dialog("close");
+				}
+			},
+			close : function() {
+				$("#add-form .add-sub").hide();
+			}
+		});
+		$("#add-form .add-sub").hide();
+		$(".action-form").hide();
+
+		$(".addbutton").button().click(function(event) {
+			$("#add-form").dialog("open");
+			$("#add-form select[name=type]").val(this.id);
+			$("#add-form div[id=add-" + this.id + "]").show();
+			$(".action-form").hide();
+			var formname = "#action-form-" + this.id + "-" + 
+			        $("select[name=action-" + this.id + "]").val();
+			$(formname).show();
+			if ($(formname + " .action-filename").length) {
+			        $.ajax({
+			                type: "GET",
+			                url: "/files/" + $("select[name=device]:visible").val(),
+			                async: false,
+			                success : function(xml) {
+			                        $("select[class=action-filename]:visible").replaceWith(xml);
+			                }
+			        });
+			}
+		});
+		
+		$("#add-form select[name=type]").change(function(event) {
+			$("#add-form .add-sub").hide();
+			$("#add-form div[id=add-" + $(this).val() + "]").show();
+			$(".action-form").hide();
+			var formname ="#action-form-" + $(this).val() + "-" + 
+			        $("select[name=action-" + $(this).val() + "]").val();
+			        
+			$(formname).show();
+			        
+		        if ($(formname + " .action-filename").length) {
+			        $.ajax({
+			                type: "GET",
+			                url: "/files/" + $("select[name=device]:visible").val(),
+			                async: false,
+			                success : function(xml) {
+			                        $("select[class=action-filename]:visible").replaceWith(xml);
+			                }
+			        });
+			}
+		});
+		
+		$(".action-select").change(function(event) {
+		        $(".action-form").hide();
+		        var formname = "#action-form-" + event.target.name.split("-")[1] + "-" + $(this).val();
+		        $(formname).show();
+		        
+		        if ($(formname + " .action-filename").length) {
+			        $.ajax({
+			                type: "GET",
+			                url: "/files/" + $("select[name=device]:visible").val(),
+			                async: false,
+			                success : function(xml) {
+			                        $("select[class=action-filename]:visible").replaceWith(xml);
+			                }
+			        });
+			}
+		        
+		});
+	});
+//]]>
+</script>
+</head>
+<body id="body">
+	<div id="wrapper">
+		<div id="header" class="pad">Tarantula Scheduling Interface</div>
+		<div id="column-left" class="pad">
+			<div id="add-event-bounding" class="border-box pad margin-top">
+				<h1 class="margin-bottom">Add New Event</h1>
+			</div>
+		</div>
+		<div id="column-center">
+			<h2 class="margin-bottom" id="dateheader">Wednesday 14th May 2013</h2>
+			<div id="scheduledata" class="accordion">
+				
+			</div>
+		</div>
+		<div id="column-right" class="margin-top">
+			<div id="schedule_datepicker"></div>
+		</div>
+		<div id="footer"></div>
+		<div id="add-form">
+			<form>
+			    <div class="formitem">
+				<label for="type">Type</label> 
+				<select name="type" class="form-input"> 
+				</select>
+				</div>
+				
+			</form>
+		</div>
+	</div>
+	<div id="pagedata" style="display: none;">
+	        <div id="currentdate"></div>
+	</div>
+</body>
+</html>
+

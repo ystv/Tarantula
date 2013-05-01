@@ -1,0 +1,100 @@
+@CHARSET "UTF-8";
+
+* {
+    margin: 0;
+    padding: 0;
+    font-size: 95%;
+}
+
+h1 {
+	color: #222222;
+	font-family: Helvetica;
+	font-size: 18px;
+	text-align: center;
+}
+
+h2 {
+    color: #222222;
+    font-family: Helvetica;
+    font-size: 16px;
+    text-align: center;
+}
+
+#body {
+	background: #eeeeee;
+}
+ 
+#wrapper {
+    width: 900px;
+    background: #bbbbbb;
+    margin: 40px auto;
+    border-radius: 3px;
+}
+ 
+#header {
+    color: #222222;
+    font-family: Helvetica;
+    font-size: 22px;
+    font-weight: bold;
+    text-align: center;
+    
+    height: 40px;
+}
+ 
+#column-left {
+    width: 166px;
+    float: left;
+}
+ 
+#column-center {
+    width: 460px;
+    height: 600px;
+    float: left;
+    padding-left: 10px;
+}
+ 
+#column-right {
+    width: 240px;
+    float: left;
+    margin-left: 10px;
+}
+#footer {
+    clear: both;
+    background: green;
+}
+
+.pad {
+	padding: 5px;
+}
+
+.border-box {
+	border-style: solid;
+    border-width: 2px; 
+    border-color: #555555;
+    border-radius: 3px;
+}
+
+.margin-bottom {
+	margin-bottom: 5px;
+}
+
+.margin-top {
+	margin-top: 40px;
+}
+
+.button-big {
+    font-size: 16px;
+    width: 100%;
+}
+
+.formitem {
+        margin-bottom: 5px;
+}
+
+.form-input {
+        padding: 2px;
+}
+
+.form-line {
+        padding: 2px;
+}

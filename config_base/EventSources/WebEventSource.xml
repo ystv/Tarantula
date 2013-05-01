@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TarantulaPlugin>
+    <PluginLoad>
+        <Name>Web Event Source</Name>
+        <Type>EventSource</Type>
+        <Library>EventSource_Web</Library>
+        <Instance>Web Event Source</Instance>
+        <Enabled>true</Enabled>
+    </PluginLoad>
+    <PluginData mode="simple">
+        <PollPeriod units="frames">250</PollPeriod>
+        <Port>9816</Port>
+        <IndexPath>datafiles/EventSource_Web/</IndexPath>
+        <Channel>Default</Channel>
+    </PluginData>
+</TarantulaPlugin>

@@ -59,6 +59,9 @@ boost::asio::ip::tcp::socket& TCPConnection::socket ()
     return m_socket;
 }
 
+/**
+ * Send a welcome message to a new client and set up a read.
+ */
 void TCPConnection::start ()
 {
     std::string message = "Welcome to Tarantula.\r\n";
@@ -75,6 +78,12 @@ void TCPConnection::handleWrite ()
 {
 }
 
+/**
+ * Read a line of data into the queue to be processed. Also starts another read
+ *
+ * @param error
+ * @param bytes_transferred
+ */
 void TCPConnection::handleIncomingData (
         const boost::system::error_code& error, size_t bytes_transferred)
 {
@@ -97,6 +106,12 @@ void TCPConnection::handleIncomingData (
                     boost::asio::placeholders::bytes_transferred()));
 }
 
+/**
+ * Constructor. Starts listener and reads configuration
+ *
+ * @param config Data loaded from configuration file
+ * @param h		 Link back to GlobalStuff structures
+ */
 EventSource_XML_Network::EventSource_XML_Network (PluginConfig config, Hook h) :
         MouseCatcherSourcePlugin(config, h), m_io_service(
                 new boost::asio::io_service), m_acceptor(*m_io_service,
@@ -118,6 +133,7 @@ EventSource_XML_Network::EventSource_XML_Network (PluginConfig config, Hook h) :
     m_status = READY;
 }
 
+
 EventSource_XML_Network::~EventSource_XML_Network ()
 {
     // close the connection to the relevant socket as it's cleaner than just
@@ -130,6 +146,9 @@ EventSource_XML_Network::~EventSource_XML_Network ()
     };
 }
 
+/**
+ * Create a listener and wait for a client.
+ */
 void EventSource_XML_Network::startAccept ()
 {
     std::shared_ptr<TCPConnection> new_connection = TCPConnection::create(
@@ -142,6 +161,13 @@ void EventSource_XML_Network::startAccept ()
     m_status = READY;
 }
 
+/**
+ * Handle an incoming connection by starting the connection handler and running
+ * another receive.
+ *
+ * @param new_connection Pointer to the incoming connection
+ * @param error
+ */
 void EventSource_XML_Network::handleAccept (
         std::shared_ptr<TCPConnection> new_connection,
         const boost::system::error_code& error)
@@ -154,6 +180,13 @@ void EventSource_XML_Network::handleAccept (
     startAccept();
 }
 
+/**
+ * Parse an XML event into a MouseCatcherEvent
+ *
+ * @param xmlnode	  Input XML to parse
+ * @param outputevent Event to populate with data from XML
+ * @return			  False if XML was not valud
+ */
 bool EventSource_XML_Network::parseEvent (const pugi::xml_node xmlnode,
         MouseCatcherEvent& outputevent)
 {
@@ -196,6 +229,13 @@ bool EventSource_XML_Network::parseEvent (const pugi::xml_node xmlnode,
     return true;
 }
 
+/**
+ * Process an incoming request and generate EventActions
+ *
+ * @param newdata   Incoming request data
+ * @param newaction	An action to populate
+ * @return			False if request was not valid
+ */
 bool EventSource_XML_Network::processIncoming (XML_Incoming& newdata,
         EventAction& newaction)
 {
@@ -283,7 +323,25 @@ bool EventSource_XML_Network::processIncoming (XML_Incoming& newdata,
     else if (!action.compare("UpdatePlaylist"))
     {
         newaction.action = ACTION_UPDATE_PLAYLIST;
-        newaction.event.m_triggertime = xml.child("since").text().as_int(0);
+
+        std::string start = xml.child_value("starttime");
+
+        if (!start.empty())
+        {
+			tm starttime = boost::posix_time::to_tm(
+				boost::posix_time::time_from_string(start));
+			newaction.event.m_triggertime = mktime(&starttime);
+        }
+        else
+        {
+        	// Set the default time to now if not specified
+        	newaction.event.m_triggertime = time(NULL);
+        }
+
+        // Set the default length to 1 day if not specified
+        newaction.event.m_duration = xml.child("length").text().as_int(
+        		time(NULL) + 86400);
+
         newaction.event.m_channel = xml.child_value("channel");
     }
     else if (!action.compare("UpdateDevices"))
@@ -328,12 +386,11 @@ bool EventSource_XML_Network::processIncoming (XML_Incoming& newdata,
     return true;
 }
 
-bool EventSource_XML_Network::check (const EventAction &a,
-        const MouseCatcherSourcePlugin *plugin)
-{
-    return (a.isprocessed) && (a.thisplugin == plugin);
-}
-
+/**
+ * Run the plugin main loop
+ *
+ * @param ActionQueue Pointer to central queue of MouseCatcher actions
+ */
 void EventSource_XML_Network::tick (std::vector<EventAction>* ActionQueue)
 {
     if (READY != m_status)
@@ -370,7 +427,7 @@ void EventSource_XML_Network::tick (std::vector<EventAction>* ActionQueue)
 
     std::vector<EventAction>::iterator it = std::remove_if(ActionQueue->begin(),
             ActionQueue->end(),
-            boost::bind(&EventSource_XML_Network::check, _1,
+            boost::bind(&MouseCatcherSourcePlugin::actionCompleteCheck, _1,
                     dynamic_cast<MouseCatcherSourcePlugin*>(this)));
 
     ActionQueue->erase(it, ActionQueue->end());
@@ -389,6 +446,13 @@ void EventSource_XML_Network::tick (std::vector<EventAction>* ActionQueue)
 
 }
 
+/**
+ * Helper function to add a child node and set the value
+ *
+ * @param parent Node for child to be added to
+ * @param name	 Name of node
+ * @param value	 Value inside added node
+ */
 void addchildwithvalue (pugi::xml_node& parent, const std::string name,
         const std::string value)
 {
@@ -396,6 +460,12 @@ void addchildwithvalue (pugi::xml_node& parent, const std::string name,
     child.text().set(value.c_str());
 }
 
+/**
+ * Helper function to generate XML for an event recursively
+ *
+ * @param parent Parent node to insert this event into
+ * @param event	 Event to convert to XML
+ */
 void converteventtoxml (pugi::xml_node& parent,
         const MouseCatcherEvent& event)
 {
@@ -407,7 +477,7 @@ void converteventtoxml (pugi::xml_node& parent,
     addchildwithvalue(eventdata, "targetdevice", event.m_targetdevice);
     eventdata.append_child("eventid").text().set(event.m_eventid);
 
-    struct tm * timeinfo = gmtime(&event.m_triggertime);
+    struct tm * timeinfo = localtime(&event.m_triggertime);
     char buffer[25];
     strftime(buffer, 25, "%Y-%m-%d %H:%M:%S", timeinfo);
     addchildwithvalue(eventdata, "time", buffer);
@@ -434,6 +504,12 @@ void converteventtoxml (pugi::xml_node& parent,
     }
 }
 
+/**
+ * Send playlist events to the client
+ *
+ * @param playlist       List of playlist events requested
+ * @param additionaldata Action data, used for source connection handle
+ */
 void EventSource_XML_Network::updatePlaylist (
         std::vector<MouseCatcherEvent>& playlist,
         std::shared_ptr<void> additionaldata)
@@ -465,6 +541,12 @@ void EventSource_XML_Network::updatePlaylist (
             boost::asio::buffer(ss.str()));
 }
 
+/**
+ * Send a list of devices to the client
+ *
+ * @param devices		 List of devices
+ * @param additionaldata Action data, used for source connection handle
+ */
 void EventSource_XML_Network::updateDevices (
         std::map<std::string, std::string>& devices,
         std::shared_ptr<void> additionaldata)
@@ -499,6 +581,13 @@ void EventSource_XML_Network::updateDevices (
 
 }
 
+/**
+ * Send a list of actions on a device to the client
+ *
+ * @param device         The device this action list matches to
+ * @param actions		 List of available actions
+ * @param additionaldata Action data, used for source connection handle
+ */
 void EventSource_XML_Network::updateDeviceActions (std::string device,
         std::vector<ActionInformation>& actions,
         std::shared_ptr<void> additionaldata)
@@ -547,6 +636,12 @@ void EventSource_XML_Network::updateDeviceActions (std::string device,
             boost::asio::buffer(ss.str()));
 }
 
+/**
+ * Send a list of EventProcessors and their information
+ *
+ * @param processors     List of loaded eventprocessors
+ * @param additionaldata Action data, used for source connection handle
+ */
 void EventSource_XML_Network::updateEventProcessors (
         std::map<std::string, ProcessorInformation>& processors,
         std::shared_ptr<void> additionaldata)
@@ -598,7 +693,7 @@ void EventSource_XML_Network::updateEventProcessors (
  *
  * @param device 		 Device to get files from
  * @param files  		 Vector of files and durations
- * @param additionaldata Action data, used for source plugin handle
+ * @param additionaldata Action data, used for source connection handle
  */
 void EventSource_XML_Network::updateFiles (std::string device,
 		std::vector<std::pair<std::string, int>>& files,

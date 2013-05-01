@@ -102,15 +102,14 @@ private:
     std::shared_ptr<boost::asio::io_service> m_io_service;
     boost::asio::ip::tcp::acceptor m_acceptor;
 
-    std::vector<XML_Incoming> m_incoming;bool processIncoming (
-            XML_Incoming& newdata, EventAction& newaction);bool parseEvent (
-            const pugi::xml_node xmlnode, MouseCatcherEvent& outputevent);
+    std::vector<XML_Incoming> m_incoming;
+    bool processIncoming (XML_Incoming& newdata, 
+		EventAction& newaction);
+    bool parseEvent (const pugi::xml_node xmlnode, 
+		MouseCatcherEvent& outputevent);
     void startAccept ();
     void handleAccept (std::shared_ptr<TCPConnection> new_connection,
             const boost::system::error_code& error);
-
-    static bool check (const EventAction &a,
-            const MouseCatcherSourcePlugin *plugin);
 
 };
 

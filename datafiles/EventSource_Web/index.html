@@ -130,6 +130,19 @@
 			}
 		        
 		});
+		$("select[name=device]").change(function(event) {
+			if ($(".action-filename:visible").length) {
+				$.ajax({
+			                type: "GET",
+			                url: "/files/" + $("select[name=device]:visible").val(),
+			                async: false,
+			                success : function(xml) {
+			                        $("select[class=action-filename]:visible").replaceWith(xml);
+			                }
+			        });
+			}
+		});
+			
 	});
 //]]>
 </script>

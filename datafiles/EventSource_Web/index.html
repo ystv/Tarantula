@@ -7,7 +7,7 @@
 <script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.0/jquery.min.js" type="text/javascript" />
 <script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.2/jquery-ui.min.js" type="text/javascript" />
 <link href="//ajax.aspnetcdn.com/ajax/jquery.ui/1.10.2/themes/smoothness/jquery-ui.css" rel="stylesheet" type="text/css" />
-<link rel="stylesheet" type="text/css" href="/tarantula.css" />
+<link rel="stylesheet" type="text/css" href="tarantula.css" />
 <script type="text/javascript">
 //<![CDATA[
 $(document).ready(function() {
@@ -22,14 +22,7 @@ $(document).ready(function() {
                 $("select[name=action-" + eventtype + "]").val();
         $(formname).show();
         if ($(formname + " .action-filename").length) {
-            $.ajax({
-                type: "GET",
-                url: "/files/" + $("select[name=device]:visible").val(),
-                async: false,
-                success : function(xml) {
-                        $(".action-filename:visible").replaceWith(xml);
-                }
-            });
+            updatefilelist(event);
         }
     }
 	
@@ -38,7 +31,7 @@ $(document).ready(function() {
 		if ($(".action-filename:visible").length) {
             $.ajax({
                 type: "GET",
-                url: "/files/" + $("select[name=device]:visible").val(),
+                url: "files/" + $("select[name=device]:visible").val(),
                 async: false,
                 success : function(xml) {
                         $(".action-filename:visible").replaceWith(xml);
@@ -92,7 +85,7 @@ $(document).ready(function() {
 		        eventxml = eventxml + "</extradata></event>";
 		        $.ajax({
 		                type: "GET",
-		                url: "/add/",
+		                url: "add/",
 		                async: false,
 		                data: eventxml,
 		                success : function (xml) {

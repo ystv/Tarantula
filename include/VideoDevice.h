@@ -81,14 +81,14 @@ public:
 /**
  * Definitions of available Video Actions
  */
-const ActionInformation VIDEOACTION_LOAD = {0, "Load", "Load a video file to be played",
-        {
-                {"filename", "string"},
-        }
-};
-const ActionInformation VIDEOACTION_PLAY = {1, "Play", "Load and play a video file immediately",
+const ActionInformation VIDEOACTION_PLAY = {0, "Play", "Load and play a video file immediately",
         {
                 {"filename", "string"}
+        }
+};
+const ActionInformation VIDEOACTION_LOAD = {1, "Load", "Load a video file to be played",
+        {
+                {"filename", "string"},
         }
 };
 const ActionInformation VIDEOACTION_PLAYLOADED = {2, "Play_Loaded", "Play a video file previously loaded with Load",

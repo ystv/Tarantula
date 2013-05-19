@@ -10,140 +10,162 @@
 <link rel="stylesheet" type="text/css" href="/tarantula.css" />
 <script type="text/javascript">
 //<![CDATA[
-	$(document).ready(function() {
-	$("#schedule_datepicker").datepicker({
-	        onSelect: function(dateText, inst) { 
-                        window.location.href = "/" + $.datepicker.formatDate("yymmdd", new Date(dateText));
+$(document).ready(function() {
+	
+	function loadaddform (event)
+    {
+        $("#add-form").dialog("open");
+        var eventtype = $("select[name=type]").val();
+        $("#add-form div[id=add-" + eventtype + "]").show();
+        $(".action-form").hide();
+        var formname = "#action-form-" + eventtype + "-" + 
+                $("select[name=action-" + eventtype + "]").val();
+        $(formname).show();
+        if ($(formname + " .action-filename").length) {
+            $.ajax({
+                type: "GET",
+                url: "/files/" + $("select[name=device]:visible").val(),
+                async: false,
+                success : function(xml) {
+                        $(".action-filename:visible").replaceWith(xml);
                 }
-        });
-	$("#schedule_datepicker").datepicker("setDate", new Date($("#currentdate").html()));
-		$(".accordion").accordion({
-			collapsible : true,
-			heightStyle : "content",
-			active : false
-		});
-
-		$("#add-form").dialog({
-			autoOpen : false,
-			height : 300,
-			width : 350,
-			modal : true,
-			buttons : {
-				"Create event" : function() {
-				        var eventxml = "<event><type>" + 
-				        $("select[name=type]:visible").val() + "</type>" + 
-				        "<device>" + $("select[name=device]:visible").val() + "</device>" +
-				        "<time>" + $.datepicker.formatDate("yy-mm-dd", 
-				                $("#schedule_datepicker").datepicker('getDate')) + 
-				        " " + $("input[name=time]:visible").val() + "</time>" +
-				        "<action>" + $("select[class=action-select]:visible").val() + "</action>" +
-				        "<extradata>";				       
-				        $(".action-form input:visible").each(function (index) {
-				                eventxml = eventxml + "<" + $(this).attr("name").split("-")[2] + 
-				                ">" + $(this).val() + "</" +  $(this).attr("name").split("-")[2] + ">";
-				        });
-				        if ($(".action-filename:visible").length) {
-				                eventxml = eventxml + "<filename duration=\"" + 
-				                $(".action-filename:visible option:selected").attr("tar-length") + 
-				                "\">" + $(".action-filename:visible").val() +
-				                "</filename>";
-				        }
-				        eventxml = eventxml + "</extradata></event>";
-				        $.ajax({
-				                type: "GET",
-				                url: "/add/",
-				                async: false,
-				                data: eventxml,
-				                success : function (xml) {
-				                        alert(xml);
-				                        
-				                }
-				        });
-				        $(this).dialog("close");
-				},
-				Cancel : function() {
-					$(this).dialog("close");
-				}
-			},
-			close : function() {
-				$("#add-form .add-sub").hide();
-			}
-		});
-		$("#add-form .add-sub").hide();
-		$(".action-form").hide();
-
-		$(".addbutton").button().click(function(event) {
-			$("#add-form").dialog("open");
-			$("#add-form select[name=type]").val(this.id);
-			$("#add-form div[id=add-" + this.id + "]").show();
-			$(".action-form").hide();
-			var formname = "#action-form-" + this.id + "-" + 
-			        $("select[name=action-" + this.id + "]").val();
-			$(formname).show();
-			if ($(formname + " .action-filename").length) {
-			        $.ajax({
-			                type: "GET",
-			                url: "/files/" + $("select[name=device]:visible").val(),
-			                async: false,
-			                success : function(xml) {
-			                        $("select[class=action-filename]:visible").replaceWith(xml);
-			                }
-			        });
-			}
-		});
-		
-		$("#add-form select[name=type]").change(function(event) {
-			$("#add-form .add-sub").hide();
-			$("#add-form div[id=add-" + $(this).val() + "]").show();
-			$(".action-form").hide();
-			var formname ="#action-form-" + $(this).val() + "-" + 
-			        $("select[name=action-" + $(this).val() + "]").val();
-			        
-			$(formname).show();
-			        
-		        if ($(formname + " .action-filename").length) {
-			        $.ajax({
-			                type: "GET",
-			                url: "/files/" + $("select[name=device]:visible").val(),
-			                async: false,
-			                success : function(xml) {
-			                        $("select[class=action-filename]:visible").replaceWith(xml);
-			                }
-			        });
-			}
-		});
-		
-		$(".action-select").change(function(event) {
-		        $(".action-form").hide();
-		        var formname = "#action-form-" + event.target.name.split("-")[1] + "-" + $(this).val();
-		        $(formname).show();
-		        
-		        if ($(formname + " .action-filename").length) {
-			        $.ajax({
-			                type: "GET",
-			                url: "/files/" + $("select[name=device]:visible").val(),
-			                async: false,
-			                success : function(xml) {
-			                        $("select[class=action-filename]:visible").replaceWith(xml);
-			                }
-			        });
-			}
-		        
-		});
-		$("select[name=device]").change(function(event) {
-			if ($(".action-filename:visible").length) {
-				$.ajax({
-			                type: "GET",
-			                url: "/files/" + $("select[name=device]:visible").val(),
-			                async: false,
-			                success : function(xml) {
-			                        $("select[class=action-filename]:visible").replaceWith(xml);
-			                }
-			        });
-			}
-		});
-			
+            });
+        }
+    }
+	
+	function updatefilelist (event)
+	{
+		if ($(".action-filename:visible").length) {
+            $.ajax({
+                type: "GET",
+                url: "/files/" + $("select[name=device]:visible").val(),
+                async: false,
+                success : function(xml) {
+                        $(".action-filename:visible").replaceWith(xml);
+                }
+                });
+        }
+	}
+	
+	$(".addbutton").button().click(function (event) {
+		$("#add-form select[name=type]").val(this.id);
+		loadaddform(event);
 	});
+	
+	$("#schedule_datepicker").datepicker({
+	    onSelect: function(dateText, inst) { 
+	        window.location.href = "/" + $.datepicker.formatDate("yymmdd", new Date(dateText));
+        }
+    });	
+	$("#schedule_datepicker").datepicker("setDate", new Date($("#currentdate").html()));
+	$(".accordion").accordion({
+		collapsible : true,
+		heightStyle : "content",
+		active : false
+	});
+
+	$("#add-form").dialog({
+		autoOpen : false,
+		height : 300,
+		width : 350,
+		modal : true,
+		buttons : {
+			"Create event" : function() {
+		        var eventxml = "<event><type>" + 
+		        $("select[name=type]:visible").val() + "</type>" + 
+		        "<device>" + $("select[name=device]:visible").val() + "</device>" +
+		        "<time>" + $.datepicker.formatDate("yy-mm-dd", 
+		                $("#schedule_datepicker").datepicker('getDate')) + 
+		        " " + $("input[name=time]:visible").val() + "</time>" +
+		        "<action>" + $("select[class=action-select]:visible").val() + "</action>" +
+		        "<extradata>";				       
+		        $(".action-form input:visible").each(function (index) {
+		                eventxml = eventxml + "<" + $(this).attr("name").split("-")[2] + 
+		                ">" + $(this).val() + "</" +  $(this).attr("name").split("-")[2] + ">";
+		        });
+		        if ($(".action-filename:visible").length) {
+		                eventxml = eventxml + "<filename duration=\"" + 
+		                $(".action-filename:visible option:selected").attr("tar-length") + 
+		                "\">" + $(".action-filename:visible").val() +
+		                "</filename>";
+		        }
+		        eventxml = eventxml + "</extradata></event>";
+		        $.ajax({
+		                type: "GET",
+		                url: "/add/",
+		                async: false,
+		                data: eventxml,
+		                success : function (xml) {
+		                        alert(xml);
+		                        location.reload();
+		                }
+		        });
+		        $(this).dialog("close");
+			},
+			Cancel : function() {
+				$(this).dialog("close");
+			}
+		},
+		close : function() {
+			$("#add-form .add-sub").hide();
+		}
+	});
+	$("#add-form .add-sub").hide();
+	$(".action-form").hide();
+	
+	$("#add-form select[name=type]").change(function(event) {
+		var chosentime = $("input[name=time]:visible").val();
+		$("#add-form .add-sub").hide();
+		$("#add-form div[id=add-" + $(this).val() + "]").show();
+		$(".action-form").hide();
+		var formname ="#action-form-" + $(this).val() + "-" + 
+		  $("select[name=action-" + $(this).val() + "]").val();
+		        
+		$(formname).show();
+		$("input[name=time]:visible").val(chosentime)
+		        
+        updatefilelist(event);
+	});
+	
+	$(".action-select").change(function(event) {
+	    var actiondata = {};
+	    $(".action-data-input:visible").each(function() {
+	    	actiondata[$(this).attr("name").split("-")[2]] = $(this).val()
+	    });
+	    
+        $(".action-form").hide();
+        var formname = "#action-form-" + event.target.name.split("-")[1] + "-" + $(this).val();
+        $(formname).show();
+        
+        updatefilelist(event);
+        
+        $(".action-data-input:visible").each(function() {
+			var elementname = $(this).attr("name").split("-")[2];
+			if ($.inArray(elementname, actiondata)) {
+			    $(this).val(actiondata[elementname]);
+			}
+            });
+	        
+	});
+	$("select[name=device]").change(updatefilelist);
+	
+	$(".add-after-link").click(function(event) {
+		event.preventDefault();
+		
+		$("select[name=type]").val($(this).siblings(".data-devicetype").text());
+		loadaddform(event);
+		
+		$("input[name=time]:visible").val($(this).siblings(".data-endtime").text());
+		
+		$("select[name=device]:visible").val($(".event-Device:visible").children(":last").text());
+		
+		$(".action-select:visible").val($(".action-select:visible").children().filter(
+				function(){ return $(this).text() === 
+					$(".event-Action:visible").children(":last").text();}).val());
+		updatefilelist(event);
+	});
+			
+});
 //]]>
 </script>
 </head>

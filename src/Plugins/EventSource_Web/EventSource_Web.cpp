@@ -170,6 +170,13 @@ void EventSource_Web::tick (std::vector<EventAction>* ActionQueue)
     // Process ready asynchronous tasks
     m_io_service->poll();
 
+    EventAction updateaction;
+    updateaction.action = ACTION_UPDATE_PLAYLIST;
+	updateaction.event.m_triggertime = time(NULL) - 3600;
+	updateaction.event.m_duration = 87000;
+	updateaction.event.m_channel = m_config.m_channel;
+	m_psnippets->m_localqueue.push_back(updateaction);
+
     m_polltime++;
     if (m_polltime > m_config.m_pollperiod)
     {
@@ -181,12 +188,6 @@ void EventSource_Web::tick (std::vector<EventAction>* ActionQueue)
 
     	updateaction.action = ACTION_UPDATE_PROCESSORS;
     	m_psnippets->m_localqueue.push_back(updateaction);
-
-    	updateaction.action = ACTION_UPDATE_PLAYLIST;
-    	updateaction.event.m_triggertime = time(NULL) - 3600;
-    	updateaction.event.m_duration = 87000;
-		updateaction.event.m_channel = m_config.m_channel;
-		m_psnippets->m_localqueue.push_back(updateaction);
 
     	m_polltime = 0;
     }
@@ -373,8 +374,10 @@ void EventSource_Web::updateDeviceActions (std::string device,
 
 				item = para.append_child("select");
 				item.append_attribute("name").set_value(
-						std::string("actionfile-" + thisaction.actionid).c_str());
-				item.append_attribute("class").set_value("action-filename");
+						std::string("action-" +
+								ConvertType::intToString(thisaction.actionid) +
+								"-" + thisoption.first).c_str());
+				item.append_attribute("class").set_value("action-filename action-data-input");
     		}
     		else
     		{
@@ -394,7 +397,8 @@ void EventSource_Web::updateDeviceActions (std::string device,
     							ConvertType::intToString(thisaction.actionid) +
     							"-" + thisoption.first).c_str());
     			item.append_attribute("class").set_value(
-    					std::string("actioninput-" + thisoption.second).c_str());
+    					std::string("actioninput-" + thisoption.second +
+    							"action-data-input").c_str());
 
     		}
     	}

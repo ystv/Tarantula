@@ -241,6 +241,7 @@ void rowgenerate(pugi::xml_node& parent, std::string key, std::string value)
 {
 	pugi::xml_node row = parent.append_child("tr");
 
+	row.append_attribute("class").set_value(std::string("event-" + key).c_str());
 	row.append_child("td").text().set(key.c_str());
 	row.append_child("td").text().set(value.c_str());
 }
@@ -255,14 +256,14 @@ void rowgenerate(pugi::xml_node& parent, std::string key, std::string value)
 void HTTPConnection::generateScheduleSegment(MouseCatcherEvent& targetevent,
 		pugi::xml_node& parent)
 {
-	struct tm * eventtime = localtime(&targetevent.m_triggertime);
-	char buffer[10];
-	strftime(buffer, 10, "%H:%M:%S", eventtime);
+	struct tm * eventstart_tm = localtime(&targetevent.m_triggertime);
+	char eventstart_buffer[10];
+	strftime(eventstart_buffer, 10, "%H:%M:%S", eventstart_tm);
 
-	long int extenttime = targetevent.m_triggertime + (targetevent.m_duration/25);
-	struct tm * eventtime2 = localtime(&extenttime);
-        char buffer2[10];
-        strftime(buffer2, 10, "%H:%M:%S", eventtime2);
+	long int eventend_int = targetevent.m_triggertime + (targetevent.m_duration/25);
+	struct tm * eventend_tm = localtime(&eventend_int);
+	char eventend_buffer[10];
+	strftime(eventend_buffer, 10, "%H:%M:%S", eventend_tm);
 
 	std::string devicetype = m_psnippets->m_devices[targetevent.m_targetdevice];
 
@@ -270,14 +271,15 @@ void HTTPConnection::generateScheduleSegment(MouseCatcherEvent& targetevent,
 	pugi::xml_node headingnode = parent.append_child("h3");
 	headingnode.append_attribute("id").set_value(std::string("eventhead-" +
 			ConvertType::intToString(targetevent.m_eventid)).c_str());
-	headingnode.text().set(std::string(std::string(buffer) + " - " +
-			std::string(buffer2) + "  " + devicetype).c_str());
+	headingnode.text().set(std::string(std::string(eventstart_buffer) + " - " +
+			std::string(eventend_buffer) + "  " + devicetype).c_str());
 
 	pugi::xml_node datadiv = parent.append_child("div");
 	pugi::xml_node datatable = datadiv.append_child("table");
 
 	// Fill table contents for parent event
 	rowgenerate(datatable, "Channel", targetevent.m_channel);
+	rowgenerate(datatable, "Device", targetevent.m_targetdevice);
 
 	// Get the name of the action
 	if (-1 == targetevent.m_action)
@@ -340,10 +342,28 @@ void HTTPConnection::generateScheduleSegment(MouseCatcherEvent& targetevent,
 	}
 
 	// Generate remove event link
-	pugi::xml_node remove_event = datadiv.append_child("a");
+	pugi::xml_node remove_event = datadiv.append_child("p").append_child("a");
 	remove_event.append_attribute("href").set_value(
 			std::string("/remove/" + ConvertType::intToString(targetevent.m_eventid)).c_str());
 	remove_event.text().set("Remove Event");
+
+	// Generate add-after link and time data
+	pugi::xml_node add_after = datadiv.append_child("p");
+
+	pugi::xml_node add_after_data = add_after.append_child("span");
+	add_after_data.append_attribute("style").set_value("display: none;");
+	add_after_data.append_attribute("class").set_value("data-endtime");
+	add_after_data.text().set(eventend_buffer);
+
+	add_after_data = add_after.append_child("span");
+	add_after_data.append_attribute("style").set_value("display: none;");
+	add_after_data.append_attribute("class").set_value("data-devicetype");
+	add_after_data.text().set(devicetype.c_str());
+
+	pugi::xml_node add_after_link = add_after.append_child("a");
+	add_after_link.append_attribute("href").set_value("");
+	add_after_link.append_attribute("class").set_value("add-after-link");
+	add_after_link.text().set("Add event after this");
 
 }
 
@@ -471,8 +491,8 @@ void HTTPConnection::handleIncomingData (
 					pugi::xml_document filedata;
 					pugi::xml_node rootnode = filedata.append_child("select");
 					rootnode.append_attribute("name").set_value(
-							std::string("actionfile-" + device).c_str());
-					rootnode.append_attribute("class").set_value("action-filename");
+							std::string("action-" + device + "-filename").c_str());
+					rootnode.append_attribute("class").set_value("action-filename action-data-input");
 
 					for (auto fileitem : m_psnippets->m_files[device])
 					{

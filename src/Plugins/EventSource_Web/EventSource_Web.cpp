@@ -183,8 +183,8 @@ void EventSource_Web::tick (std::vector<EventAction>* ActionQueue)
     	m_psnippets->m_localqueue.push_back(updateaction);
 
     	updateaction.action = ACTION_UPDATE_PLAYLIST;
-    	updateaction.event.m_triggertime = time(NULL);
-    	updateaction.event.m_duration = 86400;
+    	updateaction.event.m_triggertime = time(NULL) - 3600;
+    	updateaction.event.m_duration = 87000;
 		updateaction.event.m_channel = m_config.m_channel;
 		m_psnippets->m_localqueue.push_back(updateaction);
 

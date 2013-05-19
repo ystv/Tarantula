@@ -259,6 +259,11 @@ void HTTPConnection::generateScheduleSegment(MouseCatcherEvent& targetevent,
 	char buffer[10];
 	strftime(buffer, 10, "%H:%M:%S", eventtime);
 
+	long int extenttime = targetevent.m_triggertime + (targetevent.m_duration/25);
+	struct tm * eventtime2 = localtime(&extenttime);
+        char buffer2[10];
+        strftime(buffer2, 10, "%H:%M:%S", eventtime2);
+
 	std::string devicetype = m_psnippets->m_devices[targetevent.m_targetdevice];
 
 	// Headings and setup
@@ -266,7 +271,7 @@ void HTTPConnection::generateScheduleSegment(MouseCatcherEvent& targetevent,
 	headingnode.append_attribute("id").set_value(std::string("eventhead-" +
 			ConvertType::intToString(targetevent.m_eventid)).c_str());
 	headingnode.text().set(std::string(std::string(buffer) + " - " +
-			devicetype).c_str());
+			std::string(buffer2) + "  " + devicetype).c_str());
 
 	pugi::xml_node datadiv = parent.append_child("div");
 	pugi::xml_node datatable = datadiv.append_child("table");

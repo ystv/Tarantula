@@ -101,7 +101,7 @@ const ActionInformation VIDEOACTION_STOP = {3, "Stop", "Stop playing",
 };
 
 const std::vector<const ActionInformation*> video_device_action_list =
-    {&VIDEOACTION_LOAD, &VIDEOACTION_PLAY, &VIDEOACTION_PLAYLOADED, &VIDEOACTION_STOP};
+    {&VIDEOACTION_PLAY, &VIDEOACTION_LOAD, &VIDEOACTION_PLAYLOADED, &VIDEOACTION_STOP};
 
 /**
  * Video Device control base class

@@ -55,7 +55,7 @@ PlaylistDB::PlaylistDB () :
 
     // Queries used by other functions
     m_addevent_query = prepare("INSERT INTO events VALUES (?,?,?,?,?,?,?,0, strftime('%s', 'now'))");
-    m_getevent_query = prepare("SELECT RowID,* FROM events WHERE type = ? AND trigger < ? AND processed = 0");
+    m_getevent_query = prepare("SELECT RowID,* FROM events WHERE type = ? AND trigger = ? AND processed = 0");
     m_getchildevents_query = prepare("SELECT RowID,* FROM events WHERE parent = ? AND processed = 0");
     m_removeevent_query = prepare("DELETE FROM events WHERE rowid = ?; DELETE FROM extradata WHERE eventid = ?");
     m_processevent_query = prepare("UPDATE events SET processed = 1, lastupdate = strftime('%s', 'now') WHERE rowid = ?");

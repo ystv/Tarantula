@@ -1,23 +1,30 @@
-include ../Makefile.inc
+DIRS= libs/system libs/date_time
 
-FILES = libs/system/src/error_code.cpp
-
-LIBFILE = libs/libboost_system.a
+FILES = DateConversions.cpp
 
 OBJS = $(FILES:.cpp=.o)
 
-INCLUDE := ./ libs/system/src
+LIBFILE = libs/libdateconversions.a
 
-.PHONY: clean all
+INCLUDE := ./
 
-all: $(LIBFILE)
+include ../Makefile.inc
 
-$(LIBFILE): $(OBJS)
-	ar rcs $(LIBFILE) $(OBJS)
+.PHONY: clean all $(DIRS) 
 
+all: $(DIRS) $(LIBFILE)
+
+$(DIRS):
+	$(MAKE) --directory $@
+	
 $(OBJS): $(FILES)
-	$(CXX) $(COPTS) -o $@ $< -c -fPIC -DBOOST_SYSTEM_STATIC_LINK=\"1\"
+	$(CXX) $(COPTS) -fPIC -o $@ $< -c -fPIC
+	
+$(LIBFILE): $(OBJS)
+	ar rcs $(LIBFILE) $(OBJS) libs/date_time/src/gregorian/greg_month.o
 
 clean:
-	rm -f $(LIBFILE) $(OBJS)
-
+	$(MAKE) clean --directory libs/system
+	$(MAKE) clean --directory libs/date_time
+	rm -f $(OBJS:.cpp=.o)
+	rm -f $(LIBFILE)

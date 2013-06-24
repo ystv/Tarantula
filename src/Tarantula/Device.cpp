@@ -58,7 +58,7 @@ Device::Device (PluginConfig config, playlist_device_type_t type, Hook h) :
         }
         else if (!pollunits.compare("frames"))
         {
-            ///TODO
+            ///TODO #16
         }
         else if (!pollunits.compare("minutes"))
         {

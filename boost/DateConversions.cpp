@@ -25,20 +25,31 @@
 
 #include <string>
 #include <sstream>
+#include <istream>
 #include <boost/date_time/posix_time/posix_time_io.hpp>
 #include <ctime>
 
 #include "DateConversions.h"
 
 /**
- * Convert a date/time as string to local Unix timestamp.
+ * Convert a date/time as string to local Unix timestamp. Optional input format
+ * specification, default is YYYY-MM-DD HH:MM:SS.FFFF
  *
- * @param datetime String containing date/time to convert
- * @return time_t  Resulting timestamp
+ * @param datetime  String containing date/time to convert
+ * @param formatter Input format. If time is not set, do not include. Default: %Y-%m-%d %H:%M:%S%F
+ * @return time_t   Resulting timestamp
  */
-time_t DateConversions::datetimeToTimeT (std::string datetime)
+time_t DateConversions::datetimeToTimeT (std::string datetime, std::string formatter = "%Y-%m-%d %H:%M:%S%F")
 {
-    tm timestruct = boost::posix_time::to_tm(boost::posix_time::time_from_string(datetime.c_str()));
+    // Configure custom formatter
+    boost::posix_time::time_facet *facet = new  boost::posix_time::time_facet(formatter.c_str());
+    std::istringstream is(datetime);
+    is.imbue(std::locale(is.getloc(), facet));
+
+    boost::posix_time::ptime newtime;
+
+    is >> newtime;
+    tm timestruct = boost::posix_time::to_tm(newtime);
     time_t outputtime = mktime(&timestruct);
     return outputtime;
 }

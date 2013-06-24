@@ -171,11 +171,6 @@ void EventSource_Web::tick (std::vector<EventAction>* ActionQueue)
     m_io_service->poll();
 
     EventAction updateaction;
-    updateaction.action = ACTION_UPDATE_PLAYLIST;
-	updateaction.event.m_triggertime = time(NULL) - 3600;
-	updateaction.event.m_duration = 87000;
-	updateaction.event.m_channel = m_config.m_channel;
-	m_psnippets->m_localqueue.push_back(updateaction);
 
     m_polltime++;
     if (m_polltime > m_config.m_pollperiod)
@@ -226,12 +221,27 @@ void EventSource_Web::updatePlaylist (
         return;
     }
 
-    m_pevents->clear();
+    // Extract the additionaldata structure into a real form
+    std::shared_ptr<WebSource::EventActionData> ead = std::static_pointer_cast <WebSource::EventActionData> (additionaldata);
 
-    for (MouseCatcherEvent event : playlist)
+    // Generate and format XHTML for the playlist
+    pugi::xml_node schedulenode = ead->data.document_element();
+    for (MouseCatcherEvent currentevent : playlist)
     {
-    	m_pevents->insert(event);
+        generateScheduleSegment(currentevent, schedulenode);
     }
+
+    // Only send back the HTML if this was a standalone request
+    if (!ead->attachedrequest)
+    {
+        std::stringstream html;
+        schedulenode.print(html);
+        ead->connection->m_reply.content = html.str();
+        ead->connection->m_reply.status = http::server3::reply::ok;
+        ead->connection->commitResponse();
+    }
+
+    ead->complete = true;
 }
 
 /**
@@ -507,6 +517,143 @@ void EventSource_Web::updateFiles (std::string device,
 
     m_psnippets->m_files[device].clear();
     m_psnippets->m_files[device] = files;
+
+}
+
+/**
+ * Free function generates a table row from a key-value pair
+ *
+ * @param parent Parent node to insert table
+ * @param key
+ * @param value
+ */
+void rowgenerate(pugi::xml_node& parent, std::string key, std::string value)
+{
+    pugi::xml_node row = parent.append_child("tr");
+
+    row.append_attribute("class").set_value(std::string("event-" + key).c_str());
+    row.append_child("td").text().set(key.c_str());
+    row.append_child("td").text().set(value.c_str());
+}
+
+/**
+ * Generate a single accordion item for an event. Recurses through children and
+ * adds result to an xml_node.
+ *
+ * @param targetevent Event to generate item for
+ * @param parent      XML node for resulting HTML
+ */
+void EventSource_Web::generateScheduleSegment(MouseCatcherEvent& targetevent,
+        pugi::xml_node& parent)
+{
+    struct tm * eventstart_tm = localtime(&targetevent.m_triggertime);
+    char eventstart_buffer[10];
+    strftime(eventstart_buffer, 10, "%H:%M:%S", eventstart_tm);
+
+    long int eventend_int = targetevent.m_triggertime + (targetevent.m_duration/25);
+    struct tm * eventend_tm = localtime(&eventend_int);
+    char eventend_buffer[10];
+    strftime(eventend_buffer, 10, "%H:%M:%S", eventend_tm);
+
+    std::string devicetype = m_psnippets->m_devices[targetevent.m_targetdevice];
+
+    // Headings and setup
+    pugi::xml_node headingnode = parent.append_child("h3");
+    headingnode.append_attribute("id").set_value(std::string("eventhead-" +
+            ConvertType::intToString(targetevent.m_eventid)).c_str());
+    headingnode.text().set(std::string(std::string(eventstart_buffer) + " - " +
+            std::string(eventend_buffer) + "  " + devicetype).c_str());
+
+    pugi::xml_node datadiv = parent.append_child("div");
+    pugi::xml_node datatable = datadiv.append_child("table");
+
+    // Fill table contents for parent event
+    rowgenerate(datatable, "Channel", targetevent.m_channel);
+    rowgenerate(datatable, "Device", targetevent.m_targetdevice);
+
+    // Get the name of the action
+    if (-1 == targetevent.m_action)
+    {
+        rowgenerate(datatable, "Action", "Event Processor");
+    }
+    else
+    {
+        std::string actionname = "Unknown";
+        for (auto thisaction :
+                m_psnippets->m_deviceactions[devicetype].m_actions)
+        {
+            if (thisaction.actionid == targetevent.m_action)
+            {
+                actionname = thisaction.name;
+                break;
+            }
+        }
+        rowgenerate(datatable, "Action", actionname);
+    }
+
+    rowgenerate(datatable, "Duration", ConvertType::intToString(targetevent.m_duration));
+
+    std::string eventtype;
+    switch (targetevent.m_eventtype)
+    {
+        case EVENT_FIXED:
+            eventtype = "Fixed";
+            break;
+        case EVENT_CHILD:
+            eventtype = "Child";
+            break;
+        case EVENT_MANUAL:
+            eventtype = "Manual";
+            break;
+        default:
+            eventtype = "Unknown";
+            break;
+    }
+
+    rowgenerate(datatable, "Type", eventtype);
+    rowgenerate(datatable, "EventID", ConvertType::intToString(targetevent.m_eventid));
+
+    // Generate the additional data table
+    datadiv.append_child("h4").text().set("Additional Data");
+    pugi::xml_node additionaltable = datadiv.append_child("table");
+
+    for (auto dataline : targetevent.m_extradata)
+    {
+        rowgenerate(additionaltable, dataline.first, dataline.second);
+    }
+
+    // Generate child events
+    pugi::xml_node childevents = datadiv.append_child("div");
+    childevents.append_attribute("class").set_value("accordion");
+
+    for (auto child : targetevent.m_childevents)
+    {
+        generateScheduleSegment(child, childevents);
+    }
+
+    // Generate remove event link
+    pugi::xml_node remove_event = datadiv.append_child("p").append_child("a");
+    remove_event.append_attribute("href").set_value(
+            std::string("/remove/" + ConvertType::intToString(targetevent.m_eventid)).c_str());
+    remove_event.text().set("Remove Event");
+
+    // Generate add-after link and time data
+    pugi::xml_node add_after = datadiv.append_child("p");
+
+    pugi::xml_node add_after_data = add_after.append_child("span");
+    add_after_data.append_attribute("style").set_value("display: none;");
+    add_after_data.append_attribute("class").set_value("data-endtime");
+    add_after_data.text().set(eventend_buffer);
+
+    add_after_data = add_after.append_child("span");
+    add_after_data.append_attribute("style").set_value("display: none;");
+    add_after_data.append_attribute("class").set_value("data-devicetype");
+    add_after_data.text().set(devicetype.c_str());
+
+    pugi::xml_node add_after_link = add_after.append_child("a");
+    add_after_link.append_attribute("href").set_value("");
+    add_after_link.append_attribute("class").set_value("add-after-link");
+    add_after_link.text().set("Add event after this");
 
 }
 

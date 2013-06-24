@@ -46,6 +46,17 @@
 namespace WebSource
 {
 
+/**
+ * Type of request held by an EventActionData
+ */
+enum WebActionType
+{
+	WEBACTION_PLAYLIST,//!< WEBACTION_PLAYLIST Request for playlist from client
+	WEBACTION_FILES,   //!< WEBACTION_FILES    Request for device files
+	WEBACTION_ALL      //!< WEBACTION_ALL	   Request for a full update of playlist, actions, devices, etc
+};
+
+
 struct configdata
 {
 	std::string m_webpath;
@@ -76,6 +87,38 @@ struct HTMLSnippets
 	std::vector<EventAction> m_localqueue;
 	std::map<std::string, std::vector<std::pair<std::string, int>>> m_files;
 };
+
+// Forward declaration required for WaitingRequest, EventActionData
+class HTTPConnection;
+
+// Forward declaration to clear up circular dependency
+struct EventActionData;
+
+/**
+ * Container so that a request can spin off multiple EventActions and wait for
+ * their completion
+ */
+struct WaitingRequest
+{
+	boost::gregorian::date requesteddate;
+	std::shared_ptr<HTTPConnection> connection;
+	std::vector<std::shared_ptr<EventActionData>> actions;
+};
+
+/**
+ * Supporting data so update callbacks are processed correctly
+ */
+struct EventActionData
+{
+	bool complete;
+	std::shared_ptr<HTTPConnection> connection;
+	WebActionType type;
+	std::string error;
+	pugi::xml_document data;
+	std::shared_ptr<WaitingRequest> attachedrequest;
+};
+
+
 
 /**
  * Comparison operator to sort playlist efficiently by start time
@@ -111,6 +154,7 @@ public:
     void handleWrite (const boost::system::error_code& e);
     void handleIncomingData (const boost::system::error_code& error,
             size_t bytes_transferred);
+    void commitResponse(const std::string& mime_type = "text/plain");
 
     // HTML generation functions
     void generateSchedulePage (boost::gregorian::date date, http::server3::reply& rep);
@@ -128,5 +172,8 @@ public:
     std::shared_ptr<HTMLSnippets> m_psnippets;
 
     configdata m_config;
+
+private:
+	void requestPlaylistUpdate (std::string requesteddates);
 };
 }

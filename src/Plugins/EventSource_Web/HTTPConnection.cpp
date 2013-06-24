@@ -24,6 +24,8 @@
 
 #include <fstream>
 
+#include "DateConversions.h"
+
 #include "HTTPConnection.h"
 #include "Misc.h"
 
@@ -84,7 +86,8 @@ void HTTPConnection::start ()
 
 /**
  * Close the connection after data is written.
- * @param e
+ *
+ * @param e Boost system error code (just checked for presence)
  */
 void HTTPConnection::handleWrite (const boost::system::error_code& e)
 {
@@ -183,19 +186,18 @@ void HTTPConnection::generateSchedulePage (boost::gregorian::date date,
 	pagedocument.select_single_node("//div[@id='currentdate']").node().text()
 			.set(ss2.str().c_str());
 
-	// Grab all the events in the specified day
 	std::set<MouseCatcherEvent, MCE_compare>::iterator firstevent =
 			m_pevents->end();
 	std::set<MouseCatcherEvent, MCE_compare>::iterator lastevent =
 			m_pevents->end();
 
-	tm timemarker = boost::posix_time::to_tm(
-	            boost::posix_time::ptime(date));
+	// Work out the start and end markers of the specified day
+	tm timemarker = boost::posix_time::to_tm(boost::posix_time::ptime(date));
 	long int starttime = mktime(&timemarker);
-	timemarker = boost::posix_time::to_tm(boost::posix_time::ptime(
-			date + boost::gregorian::days(1)));
+	timemarker = boost::posix_time::to_tm(boost::posix_time::ptime(date + boost::gregorian::days(1)));
 	long int endtime = mktime(&timemarker);
 
+	// Set iterators to start and end of requested day.
 	for (std::set<MouseCatcherEvent, MCE_compare>::iterator it = m_pevents->begin();
 			it != m_pevents->end(); ++it)
 	{
@@ -226,9 +228,6 @@ void HTTPConnection::generateSchedulePage (boost::gregorian::date date,
 	{
 		generateScheduleSegment(currentevent, datanode);
 	}
-
-
-	// Add the snippets data for the add button etc.
 
 	// Dump the HTML to the reply
 	std::stringstream html;
@@ -367,7 +366,70 @@ void HTTPConnection::generateScheduleSegment(MouseCatcherEvent& targetevent,
 
 }
 
-std::string urlDecode(std::string& src)
+/**
+ * Insert a request for the playlist to be updated and sent back to a client.
+ * @param requesteddate Date to grab playlist for, blank for today
+ */
+void HTTPConnection::requestPlaylistUpdate (std::string requesteddate)
+{
+    EventAction playlistupdate;
+
+    playlistupdate.action = ACTION_UPDATE_PLAYLIST;
+
+    // Generate a trigger time
+    if (requesteddate.empty())
+    {
+        requesteddate = boost::gregorian::to_simple_string(boost::gregorian::day_clock::local_day());
+        playlistupdate.event.m_triggertime = DateConversions::datetimeToTimeT(requesteddate, "%Y-%b-%d");
+    }
+    else
+    {
+        try
+        {
+            playlistupdate.event.m_triggertime = DateConversions::datetimeToTimeT(requesteddate);
+        }
+        catch (std::exception&)
+        {
+            m_reply = http::server3::reply::stock_reply(
+                    http::server3::reply::internal_server_error);
+            commitResponse("text/plain");
+            return;
+        }
+    }
+
+    // Make window last for one day
+    playlistupdate.event.m_duration = 60*60*24;
+
+    // Set channel from global configuration file
+    playlistupdate.event.m_channel = m_config.m_channel;
+
+    // Prepare the additional data structures
+    std::shared_ptr<EventActionData> ead = std::make_shared<EventActionData>();
+    ead->complete = false;
+    ead->connection = shared_from_this();
+    ead->type = WEBACTION_PLAYLIST;
+    ead->attachedrequest.reset();
+
+    // Assemble the XHTML node that will form the accordion
+    pugi::xml_node datanode = ead->data.append_child("div");
+    datanode.append_attribute("id").set_value("scheduledata");
+    datanode.append_attribute("class").set_value("accordion");
+
+    // Add additional data to the request
+    playlistupdate.additionaldata.reset();
+    playlistupdate.additionaldata = std::shared_ptr<EventActionData>(ead);
+
+    // Add to local queue (to be added globally in tick())
+    m_psnippets->m_localqueue.push_back(playlistupdate);
+}
+
+/**
+ * Decode a string encoded using URL encoding.
+ *
+ * @param src Input string to decode
+ * @return    Decoded result
+ */
+static std::string urlDecode (std::string& src)
 {
     std::string ret;
     char ch;
@@ -383,6 +445,25 @@ std::string urlDecode(std::string& src)
         }
     }
     return (ret);
+}
+
+/**
+ * Finalise and send the response held in m_reply, then close the connection
+ *
+ * @param mime_type Optional MIME type, otherwise defaults to "text/plain"
+ */
+void HTTPConnection::commitResponse (const std::string& mime_type = "text/plain")
+{
+    m_reply.headers.resize(4);
+    m_reply.headers[0].name = "Content-Length";
+    m_reply.headers[0].value = boost::lexical_cast<std::string>(m_reply.content.size());
+    m_reply.headers[1].name = "Content-Type";
+    m_reply.headers[1].value = mime_type;
+
+    // Send the reply
+    boost::asio::async_write(m_socket, m_reply.to_buffers(), m_strand.wrap(
+        boost::bind(&HTTPConnection::handleWrite, shared_from_this(),
+                boost::asio::placeholders::error)));
 }
 
 /**
@@ -404,8 +485,6 @@ void HTTPConnection::handleIncomingData (
 		{
 			std::string path = http::server3::request_handler::handle_request(m_request);
 
-			std::string mime_type = "text/plain";
-
 			if (path.empty())
 			{
 				// Send bad request response
@@ -414,7 +493,7 @@ void HTTPConnection::handleIncomingData (
 			else
 			{
 				// Split up the path
-				unsigned int baseend = path.find_first_of('/', 1);
+				size_t baseend = path.find_first_of('/', 1);
 
 				std::string data("");
 				std::string base("");
@@ -472,6 +551,7 @@ void HTTPConnection::handleIncomingData (
 
 							m_reply.content = "Added successfully!";
 							m_reply.status = http::server3::reply::ok;
+							commitResponse();
 						}
 						else
 						{
@@ -482,6 +562,7 @@ void HTTPConnection::handleIncomingData (
 					{
 						m_reply.content = "Error!";
 						m_reply.status = http::server3::reply::ok;
+						commitResponse();
 					}
 				}
 				else if (!base.compare("files"))
@@ -509,6 +590,7 @@ void HTTPConnection::handleIncomingData (
 
 					m_reply.content = fileout.str();
 					m_reply.status = http::server3::reply::ok;
+					commitResponse();
 				}
 				else if (!base.compare("edit"))
 				{
@@ -530,20 +612,24 @@ void HTTPConnection::handleIncomingData (
 						m_reply.headers.resize(3);
 						m_reply.headers[2].name = "Location";
 						m_reply.headers[2].value = "/index.html";
+						commitResponse();
 					}
 					catch (std::exception&)
 					{
 						m_reply = http::server3::reply::stock_reply(
 								http::server3::reply::bad_request);
+						commitResponse();
 					}
+				}
+				else if (!base.compare("update"))
+				{
+				    requestPlaylistUpdate(data);
 				}
 				else if (!base.compare("index.html"))
 				{
-					// Grab the schedule page for today
-					generateSchedulePage(boost::gregorian::date
-							(boost::gregorian::day_clock::local_day()),
-							m_reply);
-					mime_type = "application/xhtml+xml";
+					// Set a request for today's page
+					generateSchedulePage(boost::gregorian::date(boost::gregorian::day_clock::local_day()), m_reply);
+					commitResponse("application/xhtml+xml");
 				}
 				else if (!base.compare("tarantula.css"))
 				{
@@ -551,10 +637,12 @@ void HTTPConnection::handleIncomingData (
 					std::ifstream is(std::string(
 							m_config.m_webpath + "/tarantula.css").c_str(),
 							std::ios::in | std::ios::binary);
+
 					if (!is)
 					{
 						m_reply = http::server3::reply::stock_reply(
 								http::server3::reply::not_found);
+						commitResponse();
 					}
 					else
 					{
@@ -562,8 +650,9 @@ void HTTPConnection::handleIncomingData (
 						buffer << is.rdbuf();
 						m_reply.content = buffer.str();
 						is.close();
-						mime_type = "text/css";
+
 						m_reply.status = http::server3::reply::ok;
+						commitResponse("text/css");
 					}
 				}
 				// Assume the path was a date
@@ -571,16 +660,14 @@ void HTTPConnection::handleIncomingData (
 				{
 					try
 					{
-						generateSchedulePage(boost::gregorian::date(
-								boost::gregorian::from_undelimited_string(base)),
-								m_reply);
-						mime_type = "application/xhtml+xml";
+						requestPlaylistUpdate(base);
 					}
 					catch (std::exception&)
 					{
 						// Return the 404 handler
 						m_reply = http::server3::reply::stock_reply(
 								http::server3::reply::not_found);
+						commitResponse();
 					}
 				}
 				else
@@ -588,20 +675,9 @@ void HTTPConnection::handleIncomingData (
 					// Return the 404 handler
 					m_reply = http::server3::reply::stock_reply(
 							http::server3::reply::not_found);
+					commitResponse();
 				}
 
-				m_reply.headers.resize(4);
-				m_reply.headers[0].name = "Content-Length";
-				m_reply.headers[0].value = boost::lexical_cast<std::string>(m_reply.content.size());
-				m_reply.headers[1].name = "Content-Type";
-				m_reply.headers[1].value = mime_type;
-
-				// Send the reply
-				boost::asio::async_write(m_socket, m_reply.to_buffers(),
-					m_strand.wrap(
-							boost::bind(&HTTPConnection::handleWrite,
-									shared_from_this(),
-									boost::asio::placeholders::error)));
 			}
 		}
 		else if (!result)

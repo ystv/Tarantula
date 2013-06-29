@@ -300,18 +300,6 @@ void EventSource_Web::updateDevices (
 
     m_psnippets->m_devices = devices;
 
-    // Get files for this device
-    EventAction files;
-    files.action = ACTION_UPDATE_FILES;
-    for (auto device : devices)
-    {
-    	if (device.second == "Video")
-    	{
-			files.event.m_targetdevice = device.first;
-			m_psnippets->m_localqueue.push_back(files);
-    	}
-    }
-
 }
 
 /**
@@ -515,8 +503,32 @@ void EventSource_Web::updateFiles (std::string device,
         return;
     }
 
-    m_psnippets->m_files[device].clear();
-    m_psnippets->m_files[device] = files;
+    // Extract the additionaldata structure into a real form
+    std::shared_ptr<WebSource::EventActionData> ead = std::static_pointer_cast <WebSource::EventActionData> (additionaldata);
+
+    pugi::xml_node rootnode = ead->data.document_element();
+
+    for (auto fileitem : files)
+    {
+        pugi::xml_node thisfile = rootnode.append_child("option");
+        thisfile.append_attribute("value").set_value(fileitem.first.c_str());
+        thisfile.append_attribute("tar-length").set_value(fileitem.second);
+        thisfile.text().set(std::string(fileitem.first + " - " +
+                ConvertType::intToString(fileitem.second/25) +
+                " seconds").c_str());
+    }
+
+    // Only send back the HTML if this was a standalone request
+    if (!ead->attachedrequest)
+    {
+        std::stringstream html;
+        rootnode.print(html);
+        ead->connection->m_reply.content = html.str();
+        ead->connection->m_reply.status = http::server3::reply::ok;
+        ead->connection->commitResponse();
+    }
+
+    ead->complete = true;
 
 }
 

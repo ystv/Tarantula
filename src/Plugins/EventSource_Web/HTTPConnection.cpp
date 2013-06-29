@@ -424,6 +424,47 @@ void HTTPConnection::requestPlaylistUpdate (std::string requesteddate)
 }
 
 /**
+ * Insert a request for a list of files to be grabbed and sent to the client
+ * @param device The device to grab files for
+ */
+void HTTPConnection::requestFilesUpdate (std::string device)
+{
+    if (device.empty())
+    {
+        m_reply = http::server3::reply::stock_reply(
+                http::server3::reply::internal_server_error);
+        commitResponse("text/plain");
+        return;
+    }
+
+    EventAction filesupdate;
+
+    filesupdate.action = ACTION_UPDATE_FILES;
+    filesupdate.event.m_targetdevice = device;
+
+    // Prepare additional data
+    std::shared_ptr<EventActionData> ead = std::make_shared<EventActionData>();
+    ead->complete = false;
+    ead->connection = shared_from_this();
+    ead->type = WEBACTION_FILES;
+    ead->attachedrequest.reset();
+
+    // Assemble the XHTML node to go back to the client
+    pugi::xml_node rootnode = ead->data.append_child("select");
+    rootnode.append_attribute("name").set_value(
+            std::string("action-" + device + "-filename").c_str());
+    rootnode.append_attribute("class").set_value("action-filename action-data-input");
+
+    // Add additional data to the request
+    filesupdate.additionaldata.reset();
+    filesupdate.additionaldata = std::shared_ptr<EventActionData>(ead);
+
+    // Add to local queue (to be added globally in tick())
+    m_psnippets->m_localqueue.push_back(filesupdate);
+
+}
+
+/**
  * Decode a string encoded using URL encoding.
  *
  * @param src Input string to decode
@@ -452,7 +493,7 @@ static std::string urlDecode (std::string& src)
  *
  * @param mime_type Optional MIME type, otherwise defaults to "text/plain"
  */
-void HTTPConnection::commitResponse (const std::string& mime_type = "text/plain")
+void HTTPConnection::commitResponse (const std::string& mime_type /*= "text/plain"*/)
 {
     m_reply.headers.resize(4);
     m_reply.headers[0].name = "Content-Length";
@@ -569,28 +610,7 @@ void HTTPConnection::handleIncomingData (
 				{
 					std::string device = urlDecode(data);
 
-					pugi::xml_document filedata;
-					pugi::xml_node rootnode = filedata.append_child("select");
-					rootnode.append_attribute("name").set_value(
-							std::string("action-" + device + "-filename").c_str());
-					rootnode.append_attribute("class").set_value("action-filename action-data-input");
-
-					for (auto fileitem : m_psnippets->m_files[device])
-					{
-						pugi::xml_node thisfile = rootnode.append_child("option");
-						thisfile.append_attribute("value").set_value(fileitem.first.c_str());
-						thisfile.append_attribute("tar-length").set_value(fileitem.second);
-						thisfile.text().set(std::string(fileitem.first + " - " +
-								ConvertType::intToString(fileitem.second/25) +
-								" seconds").c_str());
-					}
-
-					std::stringstream fileout;
-					rootnode.print(fileout);
-
-					m_reply.content = fileout.str();
-					m_reply.status = http::server3::reply::ok;
-					commitResponse();
+                    requestFilesUpdate(device);
 				}
 				else if (!base.compare("edit"))
 				{

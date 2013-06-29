@@ -175,5 +175,6 @@ public:
 
 private:
 	void requestPlaylistUpdate (std::string requesteddates);
+	void requestFilesUpdate (std::string device);
 };
 }

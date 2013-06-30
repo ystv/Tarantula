@@ -15,7 +15,7 @@ all: $(addprefix ../../../bin/,$(addsuffix .so,$(PLUGINNAME)))
 INCLUDE := ../../../include ../../../boost
 
 ../../../bin/$(PLUGINNAME).so : $(addprefix ../../../build/$(PLUGINNAME)-,$(FILES:.cpp=.o)) $(EXTRAS)
-	$(CXX) $(COPTS) --shared -fPIC -o $@ $(COMMON) $(COMMON_OBJS)  $(addprefix ../../../build/$(PLUGINNAME)-,$(FILES:.cpp=.o)) $(EXTRAS) -L../../../bin -L../../../boost/libs -lboost_system
+	$(CXX) $(COPTS) --shared -fPIC -o $@ $(COMMON) $(COMMON_OBJS)  $(addprefix ../../../build/$(PLUGINNAME)-,$(FILES:.cpp=.o)) $(EXTRAS) -L../../../bin -L../../../boost/libs -lboost_system -ldateconversions
 
 ../../../build/$(PLUGINNAME)-%.o: %.cpp
 	$(CXX) $(COPTS) --shared -fPIC -o $@ -c $<

@@ -191,7 +191,6 @@ void FillDB::addFile (std::string filename, std::string device, std::string type
  * Synchronise the in-memory database with the one on disk
  *
  * @param databasefile Name of database on disk
- * @todo Neaten this up to account for deleted rows on disk.
  */
 void FillDB::syncDatabase (std::string databasefile)
 {

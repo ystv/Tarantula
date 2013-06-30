@@ -40,14 +40,44 @@ $(document).ready(function() {
         }
 	}
 	
+	function updateplaylist (event)
+	{
+		$("#scheduledata").fadeOut("slow");
+		
+		// Turn off the accordion functionality 
+		$("#scheduledata").accordion("destroy");
+		
+		// Request new playlist 
+		$.ajax({
+                type: "GET",
+                url: "update/" + $.datepicker.formatDate("yy-M-dd", new Date($("#schedule_datepicker").datepicker("getDate"))),
+                async: false,
+                success : function(xml) {
+                     $("#scheduledata").replaceWith(xml);
+                }
+        });
+		
+		// Enable accordion and show schedule 
+		$("#scheduledata").accordion({
+	        collapsible : true,
+	        heightStyle : "content",
+	        active : false
+	    });
+		
+		$("#scheduledata").fadeIn("slow");
+		
+	}
+	
 	$(".addbutton").button().click(function (event) {
 		$("#add-form select[name=type]").val(this.id);
 		loadaddform(event);
 	});
 	
+	$("#updatebutton").button().click(updateplaylist);
+	
 	$("#schedule_datepicker").datepicker({
 	    onSelect: function(dateText, inst) { 
-	        window.location.href = "/" + $.datepicker.formatDate("yymmdd", new Date(dateText));
+	        updateplaylist();
         }
     });	
 	$("#schedule_datepicker").datepicker("setDate", new Date($("#currentdate").html()));
@@ -89,7 +119,6 @@ $(document).ready(function() {
 		                async: false,
 		                data: eventxml,
 		                success : function (xml) {
-		                        alert(xml);
 		                        location.reload();
 		                }
 		        });
@@ -145,7 +174,6 @@ $(document).ready(function() {
 	$(".add-after-link").click(function(event) {
 		event.preventDefault();
 		
-		$("select[name=type]").val($(this).siblings(".data-devicetype").text());
 		loadaddform(event);
 		
 		$("input[name=time]:visible").val($(this).siblings(".data-endtime").text());
@@ -171,7 +199,11 @@ $(document).ready(function() {
 			</div>
 		</div>
 		<div id="column-center">
-			<h2 class="margin-bottom" id="dateheader">Wednesday 14th May 2013</h2>
+		    <div>
+		        <h2 class="margin-bottom" id="dateheader" style="display: inline-block; width: 80%;">TESTDATE</h2>
+		        <button id="updatebutton" >Update</button>
+		    </div>
+			
 			<div id="scheduledata" class="accordion">
 				
 			</div>

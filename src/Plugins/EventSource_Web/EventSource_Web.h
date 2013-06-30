@@ -63,16 +63,20 @@ private:
     std::shared_ptr<boost::asio::io_service> m_io_service;
     boost::asio::ip::tcp::acceptor m_acceptor;
 
-
+    // Webserver handlers
     void startAccept ();
     void handleAccept (std::shared_ptr<WebSource::HTTPConnection> new_connection,
             const boost::system::error_code& error);
+
+    // Page generation functions
+    void generateScheduleSegment (MouseCatcherEvent& targetevent, pugi::xml_node& parent);
+    void generateSchedulePage (std::shared_ptr<WebSource::WaitingRequest> req);
 
     // Storage for page snippets from callbacks
     std::shared_ptr<std::set<MouseCatcherEvent, WebSource::MCE_compare>> m_pevents;
 
     // HTML snippets for other callback data
-    std::shared_ptr<WebSource::HTMLSnippets> m_psnippets;
+    std::shared_ptr<WebSource::ShareData> m_sharedata;
 
     WebSource::configdata m_config;
 

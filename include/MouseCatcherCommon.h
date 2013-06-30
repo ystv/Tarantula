@@ -58,6 +58,7 @@ public:
     //! Only for fixed and offset events, relative is relative to last event delivered
     long int m_triggertime;
     int m_action;
+    std::string m_action_name;
     int m_eventid;
 
     //! If set to zero duration is handled separately (ie video files or crosspoints with no duration). In seconds

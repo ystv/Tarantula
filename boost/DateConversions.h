@@ -32,7 +32,7 @@
 class DateConversions
 {
 public:
-    static time_t datetimeToTimeT (std::string datetime);
-    static std::string timeTToString (time_t timestamp, std::string formatter);
-    static std::string gregorianDateToString (boost::gregorian::date date, std::string formatter);
+    static time_t datetimeToTimeT (std::string datetime, std::string formatter = "%Y-%m-%d %H:%M:%S%F");
+    static std::string timeTToString (time_t timestamp, std::string formatter = "%Y-%m-%d %H:%M:%S%F");
+    static std::string gregorianDateToString (boost::gregorian::date date, std::string formatter = "%Y-%m-%d");
 };

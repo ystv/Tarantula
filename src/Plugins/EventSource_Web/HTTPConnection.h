@@ -46,6 +46,17 @@
 namespace WebSource
 {
 
+/**
+ * Type of request held by an EventActionData
+ */
+enum WebActionType
+{
+	WEBACTION_PLAYLIST,//!< WEBACTION_PLAYLIST Request for playlist from client
+	WEBACTION_FILES,   //!< WEBACTION_FILES    Request for device files
+	WEBACTION_ALL      //!< WEBACTION_ALL	   Request for a full update of playlist, actions, devices, etc
+};
+
+
 struct configdata
 {
 	std::string m_webpath;
@@ -66,16 +77,49 @@ struct typedata
 	std::shared_ptr<pugi::xml_document> m_pactionsnippet;
 };
 
+// Forward declaration required for WaitingRequest, EventActionData
+class HTTPConnection;
+
+// Forward declaration to clear up circular dependency
+struct EventActionData;
+
+/**
+ * Container so that a request can spin off multiple EventActions and wait for
+ * their completion
+ */
+struct WaitingRequest
+{
+	boost::gregorian::date requesteddate;
+	std::shared_ptr<HTTPConnection> connection;
+	std::vector<std::shared_ptr<EventActionData>> actions;
+	bool complete;
+};
+
 /**
  * Storage of HTML snippets generated in update callbacks
  */
-struct HTMLSnippets
+struct ShareData
 {
-	std::map<std::string, std::string> m_devices;
-	std::map<std::string, typedata> m_deviceactions;
-	std::vector<EventAction> m_localqueue;
-	std::map<std::string, std::vector<std::pair<std::string, int>>> m_files;
+    std::vector<EventAction> m_localqueue;
+
+    // Requests currently waiting for callbacks from core
+    std::vector<std::shared_ptr<WaitingRequest> > m_requests;
 };
+
+/**
+ * Supporting data so update callbacks are processed correctly
+ */
+struct EventActionData
+{
+	bool complete;
+	std::shared_ptr<HTTPConnection> connection;
+	WebActionType type;
+	std::string error;
+	pugi::xml_document data;
+	std::shared_ptr<WaitingRequest> attachedrequest;
+};
+
+
 
 /**
  * Comparison operator to sort playlist efficiently by start time
@@ -94,14 +138,14 @@ class HTTPConnection: public std::enable_shared_from_this<HTTPConnection>
 public:
 	HTTPConnection (boost::asio::io_service& io_service,
 			std::shared_ptr<std::set<MouseCatcherEvent, MCE_compare>> pevents,
-			std::shared_ptr<HTMLSnippets> psnippets,
+			std::shared_ptr<ShareData> psnippets,
 			configdata& config);
     ~HTTPConnection ();
 
     static std::shared_ptr<HTTPConnection> create (
             boost::asio::io_service& io_service,
             std::shared_ptr<std::set<MouseCatcherEvent, MCE_compare>> pevents,
-            std::shared_ptr<HTMLSnippets> psnippets,
+            std::shared_ptr<ShareData> psnippets,
 			configdata& config);
 
     boost::asio::ip::tcp::socket& socket ();
@@ -111,10 +155,7 @@ public:
     void handleWrite (const boost::system::error_code& e);
     void handleIncomingData (const boost::system::error_code& error,
             size_t bytes_transferred);
-
-    // HTML generation functions
-    void generateSchedulePage (boost::gregorian::date date, http::server3::reply& rep);
-    void generateScheduleSegment (MouseCatcherEvent& targetevent, pugi::xml_node& parent);
+    void commitResponse(const std::string& mime_type = "text/plain");
 
     boost::asio::ip::tcp::socket m_socket;
     boost::array<char, 8192> m_buffer;
@@ -125,8 +166,12 @@ public:
 
     // Pointer to the temporary event store held by the plugin
     std::shared_ptr<std::set<MouseCatcherEvent, MCE_compare>> m_pevents;
-    std::shared_ptr<HTMLSnippets> m_psnippets;
+    std::shared_ptr<ShareData> m_sharedata;
 
     configdata m_config;
+
+private:
+	void requestPlaylistUpdate (std::string requesteddates, std::shared_ptr<WaitingRequest> req = NULL);
+	void requestFilesUpdate (std::string device);
 };
 }

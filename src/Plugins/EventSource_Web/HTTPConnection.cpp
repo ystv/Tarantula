@@ -24,6 +24,8 @@
 
 #include <fstream>
 
+#include "DateConversions.h"
+
 #include "HTTPConnection.h"
 #include "Misc.h"
 
@@ -40,14 +42,14 @@ namespace WebSource
  */
 HTTPConnection::HTTPConnection (boost::asio::io_service& io_service,
 		std::shared_ptr<std::set<MouseCatcherEvent, MCE_compare>> pevents,
-		std::shared_ptr<HTMLSnippets> psnippets,
+		std::shared_ptr<ShareData> psnippets,
 		configdata& config) :
         m_socket(io_service),
         m_strand(io_service)
 {
     http::server3::request_parser m_parser;
     m_pevents = pevents;
-    m_psnippets = psnippets;
+    m_sharedata = psnippets;
     m_config = config;
 }
 
@@ -58,7 +60,7 @@ HTTPConnection::~HTTPConnection ()
 std::shared_ptr<HTTPConnection> HTTPConnection::create (
         boost::asio::io_service& io_service,
         std::shared_ptr<std::set<MouseCatcherEvent, MCE_compare>> pevents,
-        std::shared_ptr<HTMLSnippets> psnippets,
+        std::shared_ptr<ShareData> psnippets,
 		configdata& config)
 {
     return std::shared_ptr<HTTPConnection>(
@@ -84,7 +86,8 @@ void HTTPConnection::start ()
 
 /**
  * Close the connection after data is written.
- * @param e
+ *
+ * @param e Boost system error code (just checked for presence)
  */
 void HTTPConnection::handleWrite (const boost::system::error_code& e)
 {
@@ -97,277 +100,122 @@ void HTTPConnection::handleWrite (const boost::system::error_code& e)
 }
 
 /**
- * Generate the page showing the schedule for a particular day
+ * Insert a request for the playlist to be updated and sent back to a client.
  *
- * @param date Day to generate items for
- * @param rep  Reply to fill with resulting webpage
+ * @param requesteddate Date to grab playlist for, blank for today
+ * @param req           Pointer to a waiting request if one is available.
  */
-void HTTPConnection::generateSchedulePage (boost::gregorian::date date,
-		http::server3::reply& rep)
+void HTTPConnection::requestPlaylistUpdate (std::string requesteddate, std::shared_ptr<WaitingRequest> req)
 {
-	pugi::xml_document pagedocument;
+    EventAction playlistupdate;
 
-	pugi::xml_parse_result result = pagedocument.load_file(std::string(
-			m_config.m_webpath + "/index.html").c_str());
+    playlistupdate.action = ACTION_UPDATE_PLAYLIST;
 
-	// Return an error if parsing fails
-	if (pugi::status_ok != result.status)
-	{
-		rep = http::server3::reply::stock_reply(http::server3::reply::internal_server_error);
-		return;
-	}
+    // Generate a trigger time
+    if (requesteddate.empty())
+    {
+        requesteddate = boost::gregorian::to_simple_string(boost::gregorian::day_clock::local_day());
+        playlistupdate.event.m_triggertime = DateConversions::datetimeToTimeT(requesteddate, "%Y-%b-%d");
+    }
+    else
+    {
+        try
+        {
+            playlistupdate.event.m_triggertime = DateConversions::datetimeToTimeT(requesteddate, "%Y-%b-%d");
+        }
+        catch (std::exception&)
+        {
+            m_reply = http::server3::reply::stock_reply(
+                    http::server3::reply::internal_server_error);
+            commitResponse("text/plain");
+            return;
+        }
+    }
 
-	// Generate the event type related items
-	for (auto eventtype : m_psnippets->m_deviceactions)
-	{
-		// Add the Add button
-		pugi::xml_node addbutton = pagedocument.select_single_node(
-				"//div[@id='add-event-bounding']").node().append_child("button");
-		addbutton.append_attribute("class").set_value("button-big margin-bottom addbutton");
-		addbutton.append_attribute("id").set_value(eventtype.first.c_str());
-		addbutton.text().set(eventtype.first.c_str());
+    // Make window last for one day
+    playlistupdate.event.m_duration = 60*60*24;
 
-		// Add the event type drop-down option
-		pugi::xml_node dropdownoption = pagedocument.select_single_node(
-				"//select[@name='type']").node().append_child("option");
-		dropdownoption.append_attribute("value").set_value(eventtype.first.c_str());
-		dropdownoption.text().set(eventtype.first.c_str());
+    // Set channel from global configuration file
+    playlistupdate.event.m_channel = m_config.m_channel;
 
-		// Generate a sub-form for this type
-		pugi::xml_node subform = pagedocument.select_single_node(
-				"//div[@id='add-form']/form").node().append_child("div");
-		subform.append_attribute("id").set_value(std::string("add-" +
-				eventtype.first).c_str());
-		subform.append_attribute("class").set_value("add-sub formitem");
+    // Prepare the additional data structures
+    std::shared_ptr<EventActionData> ead = std::make_shared<EventActionData>();
+    ead->complete = false;
+    ead->connection = shared_from_this();
+    ead->attachedrequest.reset();
 
-		// Add the Device drop-down
-		pugi::xml_node para = subform.append_child("p");
-		para.append_attribute("class").set_value("form-line");
-		pugi::xml_node label = para.append_child("label");
+    if (!req)
+    {
+        ead->type = WEBACTION_PLAYLIST;
+    }
+    else
+    {
+        ead->type = WEBACTION_ALL;
+        ead->attachedrequest = std::shared_ptr<WaitingRequest>(req);
+        req->actions.push_back(ead);
+    }
 
-		if (!eventtype.second.m_isprocessor)
-		{
-			label.append_attribute("for").set_value("device");
-			label.text().set("Device");
-			para.append_copy(eventtype.second.m_pdevices->document_element());
-		}
+    // Assemble the XHTML node that will form the accordion
+    pugi::xml_node datanode = ead->data.append_child("div");
+    datanode.append_attribute("id").set_value("scheduledata");
+    datanode.append_attribute("class").set_value("accordion");
 
-		// Add the time field
-		para = subform.append_child("p");
-		para.append_attribute("class").set_value("form-line");
+    // Add additional data to the request
+    playlistupdate.additionaldata.reset();
+    playlistupdate.additionaldata = std::shared_ptr<EventActionData>(ead);
 
-		label = para.append_child("label");
-		label.append_attribute("for").set_value("time");
-		label.text().set("Time (HH:MM:SS)");
-		pugi::xml_node input = para.append_child("input");
-		input.append_attribute("class").set_value("form-input");
-		input.append_attribute("name").set_value("time");
-
-		// Add the action stuff (drop-down and a set of sub-forms)
-		subform.append_copy(eventtype.second.m_pactionsnippet->document_element());
-
-	}
-
-	// Set the date in the header and datepicker
-	boost::gregorian::date_facet* facet(new boost::gregorian::date_facet("%A %d %B %Y"));
-	std::stringstream ss;
-	ss.imbue(std::locale(ss.getloc(), facet));
-	ss << date;
-	pagedocument.select_single_node("//h2[@id='dateheader']").node().text()
-			.set(ss.str().c_str());
-
-	boost::gregorian::date_facet* facet2(new boost::gregorian::date_facet("%Y, %M, %D"));
-	std::stringstream ss2;
-	ss.imbue(std::locale(ss.getloc(), facet2));
-	ss2 << date;
-	pagedocument.select_single_node("//div[@id='currentdate']").node().text()
-			.set(ss2.str().c_str());
-
-	// Grab all the events in the specified day
-	std::set<MouseCatcherEvent, MCE_compare>::iterator firstevent =
-			m_pevents->end();
-	std::set<MouseCatcherEvent, MCE_compare>::iterator lastevent =
-			m_pevents->end();
-
-	tm timemarker = boost::posix_time::to_tm(
-	            boost::posix_time::ptime(date));
-	long int starttime = mktime(&timemarker);
-	timemarker = boost::posix_time::to_tm(boost::posix_time::ptime(
-			date + boost::gregorian::days(1)));
-	long int endtime = mktime(&timemarker);
-
-	for (std::set<MouseCatcherEvent, MCE_compare>::iterator it = m_pevents->begin();
-			it != m_pevents->end(); ++it)
-	{
-		if (firstevent == m_pevents->end() && (*it).m_triggertime > starttime
-				&& (*it).m_triggertime < endtime)
-		{
-			firstevent = it;
-		}
-
-		if ((*it).m_triggertime > endtime)
-		{
-			if (firstevent != m_pevents->end())
-			{
-				lastevent = it;
-				lastevent++;
-			}
-			break;
-		}
-	}
-
-	std::set<MouseCatcherEvent, MCE_compare> dayevents(firstevent, lastevent);
-
-	// Find the node to insert into
-	pugi::xml_node datanode = pagedocument.select_single_node("//div[@id='scheduledata']").node();
-
-	// Generate each item in the list
-	for (auto currentevent : dayevents)
-	{
-		generateScheduleSegment(currentevent, datanode);
-	}
-
-
-	// Add the snippets data for the add button etc.
-
-	// Dump the HTML to the reply
-	std::stringstream html;
-	pagedocument.save(html, "", pugi::format_no_declaration);
-	rep.content = html.str();
-	rep.status = http::server3::reply::ok;
-}
-
-void rowgenerate(pugi::xml_node& parent, std::string key, std::string value)
-{
-	pugi::xml_node row = parent.append_child("tr");
-
-	row.append_attribute("class").set_value(std::string("event-" + key).c_str());
-	row.append_child("td").text().set(key.c_str());
-	row.append_child("td").text().set(value.c_str());
+    // Add to local queue (to be added globally in tick())
+    m_sharedata->m_localqueue.push_back(playlistupdate);
 }
 
 /**
- * Generate a single accordion item for an event. Recurses through children and
- * adds result to an xml_node.
- *
- * @param targetevent Event to generate item for
- * @param parent      XML node for resulting HTML
+ * Insert a request for a list of files to be grabbed and sent to the client
+ * @param device The device to grab files for
  */
-void HTTPConnection::generateScheduleSegment(MouseCatcherEvent& targetevent,
-		pugi::xml_node& parent)
+void HTTPConnection::requestFilesUpdate (std::string device)
 {
-	struct tm * eventstart_tm = localtime(&targetevent.m_triggertime);
-	char eventstart_buffer[10];
-	strftime(eventstart_buffer, 10, "%H:%M:%S", eventstart_tm);
+    if (device.empty())
+    {
+        m_reply = http::server3::reply::stock_reply(
+                http::server3::reply::internal_server_error);
+        commitResponse("text/plain");
+        return;
+    }
 
-	long int eventend_int = targetevent.m_triggertime + (targetevent.m_duration/25);
-	struct tm * eventend_tm = localtime(&eventend_int);
-	char eventend_buffer[10];
-	strftime(eventend_buffer, 10, "%H:%M:%S", eventend_tm);
+    EventAction filesupdate;
 
-	std::string devicetype = m_psnippets->m_devices[targetevent.m_targetdevice];
+    filesupdate.action = ACTION_UPDATE_FILES;
+    filesupdate.event.m_targetdevice = device;
 
-	// Headings and setup
-	pugi::xml_node headingnode = parent.append_child("h3");
-	headingnode.append_attribute("id").set_value(std::string("eventhead-" +
-			ConvertType::intToString(targetevent.m_eventid)).c_str());
-	headingnode.text().set(std::string(std::string(eventstart_buffer) + " - " +
-			std::string(eventend_buffer) + "  " + devicetype).c_str());
+    // Prepare additional data
+    std::shared_ptr<EventActionData> ead = std::make_shared<EventActionData>();
+    ead->complete = false;
+    ead->connection = shared_from_this();
+    ead->type = WEBACTION_FILES;
+    ead->attachedrequest.reset();
 
-	pugi::xml_node datadiv = parent.append_child("div");
-	pugi::xml_node datatable = datadiv.append_child("table");
+    // Assemble the XHTML node to go back to the client
+    pugi::xml_node rootnode = ead->data.append_child("select");
+    rootnode.append_attribute("name").set_value(
+            std::string("action-" + device + "-filename").c_str());
+    rootnode.append_attribute("class").set_value("action-filename action-data-input");
 
-	// Fill table contents for parent event
-	rowgenerate(datatable, "Channel", targetevent.m_channel);
-	rowgenerate(datatable, "Device", targetevent.m_targetdevice);
+    // Add additional data to the request
+    filesupdate.additionaldata.reset();
+    filesupdate.additionaldata = std::shared_ptr<EventActionData>(ead);
 
-	// Get the name of the action
-	if (-1 == targetevent.m_action)
-	{
-		rowgenerate(datatable, "Action", "Event Processor");
-	}
-	else
-	{
-		std::string actionname = "Unknown";
-		for (auto thisaction :
-				m_psnippets->m_deviceactions[devicetype].m_actions)
-		{
-			if (thisaction.actionid == targetevent.m_action)
-			{
-				actionname = thisaction.name;
-				break;
-			}
-		}
-		rowgenerate(datatable, "Action", actionname);
-	}
-
-	rowgenerate(datatable, "Duration", ConvertType::intToString(targetevent.m_duration));
-
-	std::string eventtype;
-	switch (targetevent.m_eventtype)
-	{
-		case EVENT_FIXED:
-			eventtype = "Fixed";
-			break;
-		case EVENT_CHILD:
-			eventtype = "Child";
-			break;
-		case EVENT_MANUAL:
-			eventtype = "Manual";
-			break;
-		default:
-			eventtype = "Unknown";
-			break;
-	}
-
-	rowgenerate(datatable, "Type", eventtype);
-	rowgenerate(datatable, "EventID", ConvertType::intToString(targetevent.m_eventid));
-
-	// Generate the additional data table
-	datadiv.append_child("h4").text().set("Additional Data");
-	pugi::xml_node additionaltable = datadiv.append_child("table");
-
-	for (auto dataline : targetevent.m_extradata)
-	{
-		rowgenerate(additionaltable, dataline.first, dataline.second);
-	}
-
-	// Generate child events
-	pugi::xml_node childevents = datadiv.append_child("div");
-	childevents.append_attribute("class").set_value("accordion");
-
-	for (auto child : targetevent.m_childevents)
-	{
-		generateScheduleSegment(child, childevents);
-	}
-
-	// Generate remove event link
-	pugi::xml_node remove_event = datadiv.append_child("p").append_child("a");
-	remove_event.append_attribute("href").set_value(
-			std::string("/remove/" + ConvertType::intToString(targetevent.m_eventid)).c_str());
-	remove_event.text().set("Remove Event");
-
-	// Generate add-after link and time data
-	pugi::xml_node add_after = datadiv.append_child("p");
-
-	pugi::xml_node add_after_data = add_after.append_child("span");
-	add_after_data.append_attribute("style").set_value("display: none;");
-	add_after_data.append_attribute("class").set_value("data-endtime");
-	add_after_data.text().set(eventend_buffer);
-
-	add_after_data = add_after.append_child("span");
-	add_after_data.append_attribute("style").set_value("display: none;");
-	add_after_data.append_attribute("class").set_value("data-devicetype");
-	add_after_data.text().set(devicetype.c_str());
-
-	pugi::xml_node add_after_link = add_after.append_child("a");
-	add_after_link.append_attribute("href").set_value("");
-	add_after_link.append_attribute("class").set_value("add-after-link");
-	add_after_link.text().set("Add event after this");
+    // Add to local queue (to be added globally in tick())
+    m_sharedata->m_localqueue.push_back(filesupdate);
 
 }
 
-std::string urlDecode(std::string& src)
+/**
+ * Decode a string encoded using URL encoding.
+ *
+ * @param src Input string to decode
+ * @return    Decoded result
+ */
+static std::string urlDecode (std::string& src)
 {
     std::string ret;
     char ch;
@@ -383,6 +231,25 @@ std::string urlDecode(std::string& src)
         }
     }
     return (ret);
+}
+
+/**
+ * Finalise and send the response held in m_reply, then close the connection
+ *
+ * @param mime_type Optional MIME type, otherwise defaults to "text/plain"
+ */
+void HTTPConnection::commitResponse (const std::string& mime_type /*= "text/plain"*/)
+{
+    m_reply.headers.resize(4);
+    m_reply.headers[0].name = "Content-Length";
+    m_reply.headers[0].value = boost::lexical_cast<std::string>(m_reply.content.size());
+    m_reply.headers[1].name = "Content-Type";
+    m_reply.headers[1].value = mime_type;
+
+    // Send the reply
+    boost::asio::async_write(m_socket, m_reply.to_buffers(), m_strand.wrap(
+        boost::bind(&HTTPConnection::handleWrite, shared_from_this(),
+                boost::asio::placeholders::error)));
 }
 
 /**
@@ -404,8 +271,6 @@ void HTTPConnection::handleIncomingData (
 		{
 			std::string path = http::server3::request_handler::handle_request(m_request);
 
-			std::string mime_type = "text/plain";
-
 			if (path.empty())
 			{
 				// Send bad request response
@@ -414,7 +279,7 @@ void HTTPConnection::handleIncomingData (
 			else
 			{
 				// Split up the path
-				unsigned int baseend = path.find_first_of('/', 1);
+				size_t baseend = path.find_first_of('/', 1);
 
 				std::string data("");
 				std::string base("");
@@ -468,10 +333,11 @@ void HTTPConnection::handleIncomingData (
 								newevent.event.m_extradata[piece.name()] = piece.child_value();
 							}
 
-							m_psnippets->m_localqueue.push_back(newevent);
+							m_sharedata->m_localqueue.push_back(newevent);
 
 							m_reply.content = "Added successfully!";
 							m_reply.status = http::server3::reply::ok;
+							commitResponse();
 						}
 						else
 						{
@@ -482,33 +348,14 @@ void HTTPConnection::handleIncomingData (
 					{
 						m_reply.content = "Error!";
 						m_reply.status = http::server3::reply::ok;
+						commitResponse();
 					}
 				}
 				else if (!base.compare("files"))
 				{
 					std::string device = urlDecode(data);
 
-					pugi::xml_document filedata;
-					pugi::xml_node rootnode = filedata.append_child("select");
-					rootnode.append_attribute("name").set_value(
-							std::string("action-" + device + "-filename").c_str());
-					rootnode.append_attribute("class").set_value("action-filename action-data-input");
-
-					for (auto fileitem : m_psnippets->m_files[device])
-					{
-						pugi::xml_node thisfile = rootnode.append_child("option");
-						thisfile.append_attribute("value").set_value(fileitem.first.c_str());
-						thisfile.append_attribute("tar-length").set_value(fileitem.second);
-						thisfile.text().set(std::string(fileitem.first + " - " +
-								ConvertType::intToString(fileitem.second/25) +
-								" seconds").c_str());
-					}
-
-					std::stringstream fileout;
-					rootnode.print(fileout);
-
-					m_reply.content = fileout.str();
-					m_reply.status = http::server3::reply::ok;
+                    requestFilesUpdate(device);
 				}
 				else if (!base.compare("edit"))
 				{
@@ -523,27 +370,79 @@ void HTTPConnection::handleIncomingData (
 						removeaction.event.m_eventid = eventid;
 						removeaction.action = ACTION_REMOVE;
 						removeaction.event.m_channel = m_config.m_channel;
-						m_psnippets->m_localqueue.push_back(removeaction);
+						m_sharedata->m_localqueue.push_back(removeaction);
 
 						m_reply = http::server3::reply::stock_reply(
 								http::server3::reply::moved_temporarily);
 						m_reply.headers.resize(3);
 						m_reply.headers[2].name = "Location";
 						m_reply.headers[2].value = "/index.html";
+						commitResponse();
 					}
 					catch (std::exception&)
 					{
 						m_reply = http::server3::reply::stock_reply(
 								http::server3::reply::bad_request);
+						commitResponse();
 					}
+				}
+				else if (!base.compare("update"))
+				{
+				    requestPlaylistUpdate(data);
 				}
 				else if (!base.compare("index.html"))
 				{
-					// Grab the schedule page for today
-					generateSchedulePage(boost::gregorian::date
-							(boost::gregorian::day_clock::local_day()),
-							m_reply);
-					mime_type = "application/xhtml+xml";
+				    // Set up the request
+				    std::shared_ptr<WaitingRequest> req = std::make_shared<WaitingRequest>();
+				    req->complete = false;
+				    req->connection = shared_from_this();
+
+				    req->requesteddate = boost::gregorian::day_clock::local_day();
+			        std::string requesteddate = boost::gregorian::to_simple_string(req->requesteddate);
+
+				    // Create EventActions for devices and processors
+				    EventAction deviceaction;
+				    deviceaction.action = ACTION_UPDATE_DEVICES;
+
+				    // Prepare the additional data structures
+                    std::shared_ptr<EventActionData> ead = std::make_shared<EventActionData>();
+                    ead->complete = false;
+                    ead->connection = shared_from_this();
+                    ead->type = WEBACTION_ALL;
+                    ead->attachedrequest.reset();
+                    ead->attachedrequest = std::shared_ptr<WaitingRequest>(req);
+                    req->actions.push_back(ead);
+
+                    // Add additional data to the request
+                    deviceaction.additionaldata.reset();
+                    deviceaction.additionaldata = std::shared_ptr<EventActionData>(ead);
+
+                    m_sharedata->m_localqueue.push_back(deviceaction);
+
+                    // Create EventActions for devices and processors
+                    EventAction processoraction;
+                    processoraction.action = ACTION_UPDATE_PROCESSORS;
+
+                    // Prepare the additional data structures
+                    std::shared_ptr<EventActionData> ead2 = std::make_shared<EventActionData>();
+                    ead2->complete = false;
+                    ead2->connection = shared_from_this();
+                    ead2->type = WEBACTION_ALL;
+                    ead2->attachedrequest.reset();
+                    ead2->attachedrequest = std::shared_ptr<WaitingRequest>(req);
+                    req->actions.push_back(ead2);
+
+                    // Add additional data to the request
+                    processoraction.additionaldata.reset();
+                    processoraction.additionaldata = std::shared_ptr<EventActionData>(ead2);
+
+                    m_sharedata->m_localqueue.push_back(processoraction);
+
+                    // Request the playlist
+                    requestPlaylistUpdate(requesteddate, std::shared_ptr<WaitingRequest>(req));
+
+                    // Add the waiting request to the queue
+                    m_sharedata->m_requests.push_back(req);
 				}
 				else if (!base.compare("tarantula.css"))
 				{
@@ -551,10 +450,12 @@ void HTTPConnection::handleIncomingData (
 					std::ifstream is(std::string(
 							m_config.m_webpath + "/tarantula.css").c_str(),
 							std::ios::in | std::ios::binary);
+
 					if (!is)
 					{
 						m_reply = http::server3::reply::stock_reply(
 								http::server3::reply::not_found);
+						commitResponse();
 					}
 					else
 					{
@@ -562,8 +463,9 @@ void HTTPConnection::handleIncomingData (
 						buffer << is.rdbuf();
 						m_reply.content = buffer.str();
 						is.close();
-						mime_type = "text/css";
+
 						m_reply.status = http::server3::reply::ok;
+						commitResponse("text/css");
 					}
 				}
 				// Assume the path was a date
@@ -571,16 +473,14 @@ void HTTPConnection::handleIncomingData (
 				{
 					try
 					{
-						generateSchedulePage(boost::gregorian::date(
-								boost::gregorian::from_undelimited_string(base)),
-								m_reply);
-						mime_type = "application/xhtml+xml";
+						requestPlaylistUpdate(base);
 					}
 					catch (std::exception&)
 					{
 						// Return the 404 handler
 						m_reply = http::server3::reply::stock_reply(
 								http::server3::reply::not_found);
+						commitResponse();
 					}
 				}
 				else
@@ -588,20 +488,9 @@ void HTTPConnection::handleIncomingData (
 					// Return the 404 handler
 					m_reply = http::server3::reply::stock_reply(
 							http::server3::reply::not_found);
+					commitResponse();
 				}
 
-				m_reply.headers.resize(4);
-				m_reply.headers[0].name = "Content-Length";
-				m_reply.headers[0].value = boost::lexical_cast<std::string>(m_reply.content.size());
-				m_reply.headers[1].name = "Content-Type";
-				m_reply.headers[1].value = mime_type;
-
-				// Send the reply
-				boost::asio::async_write(m_socket, m_reply.to_buffers(),
-					m_strand.wrap(
-							boost::bind(&HTTPConnection::handleWrite,
-									shared_from_this(),
-									boost::asio::placeholders::error)));
 			}
 		}
 		else if (!result)

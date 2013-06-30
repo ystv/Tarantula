@@ -77,17 +77,6 @@ struct typedata
 	std::shared_ptr<pugi::xml_document> m_pactionsnippet;
 };
 
-/**
- * Storage of HTML snippets generated in update callbacks
- */
-struct HTMLSnippets
-{
-	std::map<std::string, std::string> m_devices;
-	std::map<std::string, typedata> m_deviceactions;
-	std::vector<EventAction> m_localqueue;
-	std::map<std::string, std::vector<std::pair<std::string, int>>> m_files;
-};
-
 // Forward declaration required for WaitingRequest, EventActionData
 class HTTPConnection;
 
@@ -103,6 +92,18 @@ struct WaitingRequest
 	boost::gregorian::date requesteddate;
 	std::shared_ptr<HTTPConnection> connection;
 	std::vector<std::shared_ptr<EventActionData>> actions;
+	bool complete;
+};
+
+/**
+ * Storage of HTML snippets generated in update callbacks
+ */
+struct ShareData
+{
+    std::vector<EventAction> m_localqueue;
+
+    // Requests currently waiting for callbacks from core
+    std::vector<std::shared_ptr<WaitingRequest> > m_requests;
 };
 
 /**
@@ -137,14 +138,14 @@ class HTTPConnection: public std::enable_shared_from_this<HTTPConnection>
 public:
 	HTTPConnection (boost::asio::io_service& io_service,
 			std::shared_ptr<std::set<MouseCatcherEvent, MCE_compare>> pevents,
-			std::shared_ptr<HTMLSnippets> psnippets,
+			std::shared_ptr<ShareData> psnippets,
 			configdata& config);
     ~HTTPConnection ();
 
     static std::shared_ptr<HTTPConnection> create (
             boost::asio::io_service& io_service,
             std::shared_ptr<std::set<MouseCatcherEvent, MCE_compare>> pevents,
-            std::shared_ptr<HTMLSnippets> psnippets,
+            std::shared_ptr<ShareData> psnippets,
 			configdata& config);
 
     boost::asio::ip::tcp::socket& socket ();
@@ -156,10 +157,6 @@ public:
             size_t bytes_transferred);
     void commitResponse(const std::string& mime_type = "text/plain");
 
-    // HTML generation functions
-    void generateSchedulePage (boost::gregorian::date date, http::server3::reply& rep);
-    void generateScheduleSegment (MouseCatcherEvent& targetevent, pugi::xml_node& parent);
-
     boost::asio::ip::tcp::socket m_socket;
     boost::array<char, 8192> m_buffer;
     boost::asio::io_service::strand m_strand;
@@ -169,12 +166,12 @@ public:
 
     // Pointer to the temporary event store held by the plugin
     std::shared_ptr<std::set<MouseCatcherEvent, MCE_compare>> m_pevents;
-    std::shared_ptr<HTMLSnippets> m_psnippets;
+    std::shared_ptr<ShareData> m_sharedata;
 
     configdata m_config;
 
 private:
-	void requestPlaylistUpdate (std::string requesteddates);
+	void requestPlaylistUpdate (std::string requesteddates, std::shared_ptr<WaitingRequest> req = NULL);
 	void requestFilesUpdate (std::string device);
 };
 }

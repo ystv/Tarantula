@@ -301,12 +301,8 @@ namespace MouseCatcherCore
         }
         else
         {
-            g_logger.warn("GetTypeActions",
-                    "Unable to get actions for nonexistent device "
-                            + action.event.m_targetdevice);
-            action.returnmessage =
-                    "Unable to get actions for nonexistent device "
-                            + action.event.m_targetdevice;
+            g_logger.warn("GetTypeActions", "Unable to get actions for nonexistent device " + action.event.m_targetdevice);
+            action.returnmessage = "Unable to get actions for nonexistent device " + action.event.m_targetdevice;
         }
     }
 
@@ -482,6 +478,10 @@ namespace MouseCatcherCore
             pgeneratedevent->m_action = pplaylistevent->m_action;
             pgeneratedevent->m_extradata = pplaylistevent->m_extras;
             pgeneratedevent->m_eventid = pplaylistevent->m_eventid;
+
+            // Get an action name
+            pgeneratedevent->m_action_name = g_devices[pgeneratedevent->m_targetdevice]->m_actionlist->
+                    at(pgeneratedevent->m_action)->name;
 
             // Recursively grab child events
             std::vector<PlaylistEntry> eventchildren =

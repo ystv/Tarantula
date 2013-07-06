@@ -21,7 +21,8 @@
 *   Version     : 1.0
 *****************************************************************************/
 
-#define CASPARHOST "127.0.0.1"
+#define CASPARHOST "192.168.11.42"
+#define CASPARPORT "5250"
 
 #include <libCaspar/libCaspar.h>
 #include <iostream>
@@ -29,6 +30,14 @@
 #include <unistd.h>
 
 using namespace std;
+
+shared_ptr<CasparConnection> caspCon;
+
+void runrandomvideo (std::vector<std::string>& resp);
+void domedialist (std::vector<std::string>& resp);
+void dotemplatelist (std::vector<std::string>& resp);
+void dolayerstatus (std::vector<std::string>& resp);
+void doframelist (std::string medianame, std::vector<std::string>& resp);
 
 int main(int argc,char *argv[]) {
     cout << "libCasparTestApp - Don't expect this to test everything - I'm too lasy for that!" <<endl;
@@ -109,20 +118,55 @@ int main(int argc,char *argv[]) {
     cout << "Got: " << cc2.form();
 
     cout << endl << "Now testing CasparConnection." <<endl;
-    CasparConnection caspCon(CASPARHOST);
+    caspCon = make_shared<CasparConnection>(CASPARHOST, CASPARPORT);
     std::vector<std::string> resp;
-    caspCon.sendCommand(CasparCommand(CASPAR_COMMAND_CLS), resp);
-    cout << "Got " << resp.size() << " responses." << endl;
+    caspCon->sendCommand(CasparCommand(CASPAR_COMMAND_CLS, &runrandomvideo));
+    caspCon->run();
 
-    CasparCommand ccclr(CASPAR_COMMAND_CLEAR_PRODUCER);
-    ccclr.addParam("1");
-    caspCon.sendCommand(ccclr, resp);
+    if (caspCon->m_errorflag)
+    {
+        cout << "Error!";
+        caspCon->m_errorflag = false;
+    }
 
 
+    cout << endl << "Now testing CasparQueryResponseProcessor::getMediaList." <<endl;
+    CasparCommand query(CASPAR_COMMAND_CLS, &domedialist);
+
+    caspCon->sendCommand(query);
+    caspCon->run();
+
+    cout << endl << "Now testing CasparQueryResponseProcessor::getTemplateList." <<endl;
+    query = CasparCommand(CASPAR_COMMAND_TLS, &dotemplatelist);
+
+    caspCon->sendCommand(query);
+    caspCon->run();
+
+    cout << endl << "Now testing CasparQueryResponseProcessor::readLayerStatus." <<endl;
+    CasparCommand statuscom(CASPAR_COMMAND_INFO_EXPANDED, &dolayerstatus);
+    statuscom.addParam("1");
+
+    caspCon->sendCommand(statuscom);
+    caspCon->run();
+    cout << endl << "Now testing CasparFlashCommand. " << endl;
+    CasparFlashCommand flashcom(1);
+    flashcom.setLayer(2);
+    flashcom.play("Phone");
+
+    resp.clear();
+    caspCon->sendCommand(flashcom);
+    caspCon->run();
+    cout << endl << "Testing complete." << endl;
+
+    return 0;
+}
+
+void runrandomvideo (std::vector<std::string>& response)
+{
     srand(static_cast<unsigned>(time(0)));
-    int vid = rand() % (resp.size()-2);
+    int vid = rand() % (response.size()-2);
     cout << "Chosen vid is no. " << vid <<endl;
-    std::string line = resp[vid+2];
+    std::string line = response[vid+2];
 
     line = line.substr(0,line.find(' ')-1);
     line.erase(0,1);
@@ -130,56 +174,49 @@ int main(int argc,char *argv[]) {
     ccf1.setLayer(1);
     ccf1.setTransition(CASPAR_TRANSITION_CUT,0);
     ccf1.load(line,false);
-    resp.clear();
 
-    caspCon.sendCommand(ccf1,resp);
+    caspCon->sendCommand(ccf1);
     CasparVideoCommand ccf2(1);
     ccf2.play();
-    resp.clear();
 
-    caspCon.sendCommand(ccf2,resp);
-    resp.clear();
+    caspCon->sendCommand(ccf2);
 
+}
 
-    cout << endl << "Now testing CasparQueryResponseProcessor::getMediaList." <<endl;
-    CasparCommand query(CASPAR_COMMAND_CLS);
-    resp.clear();
-
-    caspCon.sendCommand(query, resp);
+void domedialist (std::vector<std::string>& resp)
+{
     std::vector<std::string> medianames;
     std::map<std::string, int> medialist;
+    std::string line;
 
     //Call the processor
     CasparQueryResponseProcessor::getMediaList(resp, medianames);
 
     //Iterate over media list getting lengths and adding to files list
-	for (std::string item : medianames)
-	{
-		// To grab duration from CasparCG we have to load the file and pull info
-		CasparCommand durationquery(CASPAR_COMMAND_LOADBG);
-		durationquery.addParam("1");
-		durationquery.addParam("5");
-		durationquery.addParam(item);
-		caspCon.sendCommand(durationquery, resp);
+    for (std::string item : medianames)
+    {
+        // To grab duration from CasparCG we have to load the file and pull info
+        CasparCommand durationquery(CASPAR_COMMAND_LOADBG);
+        durationquery.addParam("1");
+        durationquery.addParam("5");
+        durationquery.addParam(item);
+        caspCon->sendCommand(durationquery);
 
-		CasparCommand infoquery(CASPAR_COMMAND_INFO);
-		infoquery.addParam("1");
-		infoquery.addParam("5");
-		resp.clear();
-		caspCon.sendCommand(infoquery, resp);
+        CasparCommand infoquery(CASPAR_COMMAND_INFO, boost::bind(&doframelist, item, _1));
+        infoquery.addParam("1");
+        infoquery.addParam("5");
+        caspCon->sendCommand(infoquery);
+    }
 
-		medialist[item] = CasparQueryResponseProcessor::readFileFrames(resp);
-	}
+}
 
-    cout << endl << "Got a list of " << medialist.size() << " items. " << line <<
-            " shows as having " << medialist[line] << " frames."<<endl;
+void doframelist (std::string medianame, std::vector<std::string>& resp)
+{
+    cout << "Got item " << medianame << " with " << CasparQueryResponseProcessor::readFileFrames(resp) << " frames."<<endl;
+}
 
-
-    cout << endl << "Now testing CasparQueryResponseProcessor::getTemplateList." <<endl;
-    query = CasparCommand(CASPAR_COMMAND_TLS);
-
-    resp.clear();
-    caspCon.sendCommand(query,resp);
+void dotemplatelist (std::vector<std::string>& resp)
+{
     std::vector<std::string> templatelist;
 
     //Call the processor
@@ -189,29 +226,13 @@ int main(int argc,char *argv[]) {
             << templatelist[item];
     //Fixes an irritating bug where the transition-producer runs first
     usleep(200);
+}
 
-
-    cout << endl << "Now testing CasparQueryResponseProcessor::readLayerStatus." <<endl;
-    CasparCommand statuscom(CASPAR_COMMAND_INFO_EXPANDED);
-    statuscom.addParam("1");
-
-    resp.clear();
-    caspCon.sendCommand(statuscom,resp);
+void dolayerstatus (std::vector<std::string>& resp)
+{
     std::string filename;
     int frames = CasparQueryResponseProcessor::readLayerStatus(resp, filename);
 
     cout << endl << "Got response filename " << filename << " and " <<
             frames << " frames left";
-
-    cout << endl << "Now testing CasparFlashCommand. " << endl;
-    CasparFlashCommand flashcom(1);
-    flashcom.setLayer(2);
-    flashcom.play("Phone");
-
-    resp.clear();
-    caspCon.sendCommand(flashcom, resp);
-
-    cout << endl << "Testing complete." << endl;
-
-    return 0;
 }

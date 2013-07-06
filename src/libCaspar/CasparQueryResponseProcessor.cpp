@@ -134,7 +134,11 @@ int CasparQueryResponseProcessor::readLayerStatus (std::vector<std::string>& res
 int CasparQueryResponseProcessor::readFileFrames(std::vector<std::string>& response)
 {
 	std::stringstream ss;
-	ss << response[2];
+
+	for (unsigned int i = 1; i < response.size(); i++)
+	{
+	    ss << response[i];
+	}
 
 	int frames = -1;
 

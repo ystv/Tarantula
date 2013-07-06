@@ -42,6 +42,18 @@ CasparCommand::CasparCommand ()
 CasparCommand::CasparCommand (CasparCommandType cct)
 {
     setType(cct);
+    m_handler = NULL;
+}
+
+/**
+ * Form a command with a known command type and a specific handler function
+ *
+ * @param cct CasparCommandType The type of command
+ */
+CasparCommand::CasparCommand (CasparCommandType cct, ResponseHandler handler)
+{
+    setType(cct);
+    m_handler = handler;
 }
 
 /**
@@ -104,6 +116,16 @@ std::string CasparCommand::form ()
     }
 
     return m_commandquery;
+}
+
+/**
+ * Get the function pointer to the response handler
+ *
+ * @return Function pointer to response handling function
+ */
+ResponseHandler CasparCommand::getHandler ()
+{
+    return m_handler;
 }
 
 /**

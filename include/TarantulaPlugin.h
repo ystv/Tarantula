@@ -92,10 +92,13 @@ class Plugin
 {
 public:
     Plugin (PluginConfig config, Hook h);
+    virtual ~Plugin();
     std::string getPluginName ();
     plugin_status_t getStatus ();
     // Get the name of the config file the plugin was loaded from (for reloading)
     std::string getConfigFilename ();
+    // Disable the plugin if permanently crashed
+    void disablePlugin();
 protected:
     std::string m_pluginname;
     Hook m_hook;

@@ -68,22 +68,12 @@ public:
 private:
     CasparConnection *m_pcaspcon;
 
-    //!So we can run the sockets in a background thread and avoid blocking
-    std::queue<CasparCommand> m_commandqueue;
-
-    //!Holds the responses from commands
-    std::queue<std::vector<std::string>> m_responsequeue;
-
-    //!Mutex for commandQueue
-    pthread_mutex_t m_queuemutex;
-
-    //! Thread for main command/response queue
-    pthread_t m_netthread;
-
     //! Configured hostname and port number
     std::string m_hostname;
-    int m_port;
+    std::string m_port;
+
+    void cb_updatefiles (std::vector<std::string>& resp);
+    void cb_updatelength (VideoFile filedata, std::vector<std::string>& resp);
+    void cb_info (std::vector<std::string>& resp);
 };
 
-//thread
-void *NetworkThread (void *ptr);

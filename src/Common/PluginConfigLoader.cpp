@@ -186,13 +186,12 @@ void loadAllPlugins (std::string path, std::string type)
                 PluginStateData state;
 
                 state.type = type;
-                state.reloadsremaining = g_baseconfig.getPluginReloadCount();
+                state.reloadsremaining = g_pbaseconfig->getPluginReloadCount();
                 state.ppluginreference = NULL;
 
                 if (plugin_config.getConfig().m_enabled)
                 {
-                    LoadPlugin(plugin_config.getConfig(),
-                            state.ppluginreference);
+                    LoadPlugin(plugin_config.getConfig(), &state.ppluginreference);
                 }
 
                 if (NULL != state.ppluginreference)

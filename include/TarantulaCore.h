@@ -27,6 +27,7 @@
 #include <vector>
 #include <map>
 #include <string>
+#include <memory>
 
 #include "BaseConfigLoader.h"
 
@@ -51,7 +52,7 @@ extern Log g_logger;
 extern std::vector<cbBegunPlaying> g_begunplayingcallbacks;
 extern std::vector<cbEndPlaying> g_endplayingcallbacks;
 extern std::vector<cbTick> g_tickcallbacks;
-extern BaseConfigLoader g_baseconfig;
+extern std::shared_ptr<BaseConfigLoader> g_pbaseconfig;
 
 extern std::map<std::string, Device*> g_devices;
 extern std::vector<PluginStateData> g_plugins;

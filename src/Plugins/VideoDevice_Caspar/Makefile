@@ -9,7 +9,7 @@ EXTRAS = ../../../build/Common-TarantulaPlugin.o ../../../build/Tarantula-Device
 
 all: $(addprefix ../../../bin/,$(addsuffix .so,$(PLUGINNAME)))
 
-INCLUDE := ../../../include
+INCLUDE := ../../../include ../../../boost
 
 ../../../bin/$(PLUGINNAME).so : $(addprefix ../../../build/$(PLUGINNAME)-,$(FILES:.cpp=.o)) $(EXTRAS)
 	$(CXX) $(COPTS) --shared -fPIC -o $@ $(COMMON_OBJS)  $(addprefix ../../../build/$(PLUGINNAME)-,$(FILES:.cpp=.o)) $(EXTRAS) -L../../../bin -lCaspar

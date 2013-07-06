@@ -33,6 +33,11 @@ Plugin::Plugin (PluginConfig config, Hook h)
     m_configfile = config.m_filename;
 }
 
+Plugin::~Plugin()
+{
+
+}
+
 std::string Plugin::getPluginName ()
 {
     return m_pluginname;
@@ -46,4 +51,9 @@ plugin_status_t Plugin::getStatus ()
 std::string Plugin::getConfigFilename ()
 {
     return m_configfile;
+}
+
+void Plugin::disablePlugin ()
+{
+    m_status = UNLOAD;
 }

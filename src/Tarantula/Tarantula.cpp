@@ -40,7 +40,6 @@
 #include "MouseCatcherCommon.h"
 #include "MouseCatcherCore.h"
 #include "Misc.h"
-#include "TarantulaPlugin.h"
 
 using std::cout;
 using std::cerr;
@@ -57,7 +56,7 @@ std::vector<PluginStateData> g_plugins;
 //It doesn't work if I put these elsewhere, plugins unload each other ~SN
 std::vector<MouseCatcherSourcePlugin*> g_mcsources;
 std::map<std::string, MouseCatcherProcessorPlugin*> g_mcprocessors;
-BaseConfigLoader g_baseconfig;
+std::shared_ptr<BaseConfigLoader> g_pbaseconfig;
 DebugData g_dbg;
 
 // Functions used only in this file
@@ -86,17 +85,16 @@ int main (int argc, char *argv[])
     Log_Screen ls(h);
 
     // Load all non-Mousecatcher plugins
-    BaseConfigLoader g_BaseConfig("config_base/Base.xml");
-    loadAllPlugins("config_base/" + g_BaseConfig.getDevicesPath(), "Device");
-    loadAllPlugins("config_base/" + g_BaseConfig.getInterfacesPath(),
+    g_pbaseconfig = std::make_shared<BaseConfigLoader>("config_base/Base.xml");
+    loadAllPlugins("config_base/" + g_pbaseconfig->getDevicesPath(), "Device");
+    loadAllPlugins("config_base/" + g_pbaseconfig->getInterfacesPath(),
             "Interface");
-    loadAllPlugins("config_base/" + g_BaseConfig.getLogsPath(), "Logger");
+    loadAllPlugins("config_base/" + g_pbaseconfig->getLogsPath(), "Logger");
     g_logger.info("Tarantula Core",
-            "Config loaded. System name is: " + g_BaseConfig.getSystemName());
+            "Config loaded. System name is: " + g_pbaseconfig->getSystemName());
 
     // Run all the channel constructors from the config file's details
-    std::vector<ChannelDetails> loadedchannels =
-            g_BaseConfig.getLoadedChannels();
+    std::vector<ChannelDetails> loadedchannels = g_pbaseconfig->getLoadedChannels();
 
     for (ChannelDetails thischannel : loadedchannels)
     {
@@ -115,8 +113,8 @@ int main (int argc, char *argv[])
     }
 
     // Initialise MouseCatcher
-    MouseCatcherCore::init("config_base/" + g_BaseConfig.getEventSourcesPath(),
-            "config_base/" + g_BaseConfig.getEventProcessorsPath());
+    MouseCatcherCore::init("config_base/" + g_pbaseconfig->getEventSourcesPath(),
+            "config_base/" + g_pbaseconfig->getEventProcessorsPath());
 
     // Tick loop with length set by framerate
     while (1)
@@ -128,6 +126,9 @@ int main (int argc, char *argv[])
         // Call all registered tick callbacks
         tick();
 
+        // Check plugin health
+        processPluginStates();
+
         clock_gettime(CLOCK_MONOTONIC, &ts);
         timespec end = ts;
         clock_t diff = end.tv_nsec - begin.tv_nsec;
@@ -137,7 +138,7 @@ int main (int argc, char *argv[])
             clock_t sdiff = end.tv_sec - begin.tv_sec;
             diff = sdiff * 1000000000 + end.tv_nsec - begin.tv_nsec;
         }
-        clock_t remaining = (1000000000 / g_BaseConfig.getFramerate()) - diff;
+        clock_t remaining = (1000000000 / g_pbaseconfig->getFramerate()) - diff;
         remaining /= 1000;
         g_dbg.lastTickTimeUsed = (double) diff / 1000000;
 
@@ -169,7 +170,7 @@ void reloadPlugin (PluginStateData& state)
     // Reload the plugin
     PluginConfigLoader plugin_config;
     plugin_config.loadConfig(file, state.type);
-    LoadPlugin(plugin_config.getConfig(), state.ppluginreference);
+    LoadPlugin(plugin_config.getConfig(), &state.ppluginreference);
 
 }
 
@@ -201,7 +202,7 @@ void processPluginStates ()
                 {
                     g_logger.OMGWTF(pluginstate.ppluginreference->getPluginName(),
                             "Plugin startup failure is permanent. Unloading plugin");
-                    delete pluginstate.ppluginreference;
+                    pluginstate.ppluginreference->disablePlugin();
                     pluginstate.ppluginreference = NULL;
                 }
                 break;
@@ -217,8 +218,8 @@ void processPluginStates ()
                 else
                 {
                     g_logger.OMGWTF(pluginstate.ppluginreference->getPluginName(),
-                            "Plugin failure is permanent. Unloading plugin");
-                    delete pluginstate.ppluginreference;
+                            "Plugin failure is permanent. Disabling plugin");
+                    pluginstate.ppluginreference->disablePlugin();
                     pluginstate.ppluginreference = NULL;
                 }
                 break;
@@ -227,8 +228,7 @@ void processPluginStates ()
             {
                 g_logger.info(pluginstate.ppluginreference->getPluginName(),
                         "Unload requested. Unloading plugin");
-
-                delete pluginstate.ppluginreference;
+                pluginstate.ppluginreference->disablePlugin();
                 pluginstate.ppluginreference = NULL;
                 break;
             }

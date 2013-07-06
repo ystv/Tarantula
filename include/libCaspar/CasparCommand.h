@@ -28,6 +28,8 @@
 #include <string>
 #include <map>
 #include <vector>
+#include <boost/bind.hpp>
+#include <boost/function.hpp>
 
 enum CasparCommandType
 {
@@ -68,6 +70,9 @@ enum CasparCommandType
     CASPAR_COMMAND_BYE
 };
 
+// Typedef for handler function
+typedef boost::function<void(std::vector<std::string>&)> ResponseHandler;
+
 /**
  * This class is pretty dumb - it just strings commands together.
  * it would be possible (and recommended really) to extend this class to make it
@@ -77,9 +82,12 @@ class CasparCommand
 {
 public:
     CasparCommand (CasparCommandType cct);
+    CasparCommand (CasparCommandType cct, ResponseHandler handler);
     void addParam (std::string param);
     void clearParams ();
     std::string form (); // Form the command to a string
+
+    ResponseHandler getHandler ();
 protected:
     //!Can only do this from a subclass
     CasparCommand ();
@@ -89,4 +97,6 @@ private:
     std::map<CasparCommandType, std::string> CasparCommandTypeText;
     std::string getCommandQuery (CasparCommandType command);
     std::string m_commandquery;
+
+    ResponseHandler m_handler;
 };

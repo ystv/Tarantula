@@ -26,7 +26,8 @@
 #pragma once
 
 struct GlobalStuff;
+class Plugin;
 
 GlobalStuff* NewGS ();
-void LoadPlugin (PluginConfig cfg, void* pref);
+void LoadPlugin (PluginConfig cfg, Plugin** pref);
 void unLoad (const char* filename);

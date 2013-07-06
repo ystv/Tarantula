@@ -27,7 +27,9 @@
 
 #include <libCaspar/libCaspar.h>
 #include <libCaspar/CasparCommand.h>
+#include <boost/asio.hpp>
 #include <string>
+#include <queue>
 
 #define E_NO_RESPONSE -1
 #define E_COMMAND_NOT_UNDERSTOOD 400
@@ -51,13 +53,32 @@
 class CasparConnection
 {
 public:
-    CasparConnection ();
-    CasparConnection (std::string host);
+    CasparConnection (std::string host, std::string port);
     ~CasparConnection ();
-    void sendCommand (CasparCommand cmd, std::vector<std::string> &response);
-    bool m_connected;
-private:
-    int m_skt;
+
     std::string receiveLine ();
+    bool tick ();
+    void run ();
+    void sendCommand (CasparCommand cmd);
+
+    bool m_errorflag;      //! Connection error
+    bool m_badcommandflag; //! Connection still good but CasparCG returned an error
+    bool m_connectstate;   //! Connection completion flag
+
+private:
     std::string queryResponse (int responsecode);
+    std::vector <std::string> m_datalines;
+    std::queue <CasparCommand> m_commandqueue;
+
+    boost::asio::io_service m_io_service;
+    boost::asio::ip::tcp::socket m_socket;
+    boost::asio::streambuf m_recvdata;
+
+    void cb_connect (const boost::system::error_code& err);
+    void cb_write (const boost::system::error_code& err);
+    void cb_firstread (const boost::system::error_code& err);
+    void cb_doneread (const boost::system::error_code& err);
+    void processData (std::istream& is);
+    void sendQueuedCommand ();
+
 };

@@ -113,10 +113,8 @@ void TCPConnection::handleIncomingData (
  * @param h		 Link back to GlobalStuff structures
  */
 EventSource_XML_Network::EventSource_XML_Network (PluginConfig config, Hook h) :
-        MouseCatcherSourcePlugin(config, h), m_io_service(
-                new boost::asio::io_service), m_acceptor(*m_io_service,
-                boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(),
-                        9815))
+        MouseCatcherSourcePlugin(config, h), m_io_service(new boost::asio::io_service),
+        m_acceptor(*m_io_service, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), 9815))
 {
     // create a new tcp server
     try

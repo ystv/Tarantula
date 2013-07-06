@@ -147,8 +147,7 @@ void BaseConfigLoader::LoadConfig (std::string filename)
             m_framerate = 25;
         }
 
-        m_pluginreloadcount =
-                systemnode.child("PluginReloadCount").text().as_int(-1);
+        m_pluginreloadcount = systemnode.child("PluginReloadCount").text().as_int(-1);
         if (-1 == m_pluginreloadcount)
         {
             g_logger.warn("Base Config Loader",

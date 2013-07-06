@@ -52,6 +52,14 @@ VideoDevice::VideoDevice (PluginConfig config, Hook h) :
 }
 
 /**
+ * Default destructor
+ */
+VideoDevice::~VideoDevice()
+{
+
+}
+
+/**
  * Load a file and play it immediately
  *
  * @param filename ustring The filename to play

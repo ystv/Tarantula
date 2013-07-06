@@ -68,9 +68,9 @@ public:
 
 extern "C"
 {
-    void LoadPlugin (Hook h, PluginConfig config, void * pluginref)
+    void LoadPlugin (Hook h, PluginConfig config, Plugin** pluginref)
     {
         //must declare as pointer to avoid object being deleted once function call is complete!
-        pluginref = new demoXpoint(config, h);
+        *pluginref = new demoXpoint(config, h);
     }
 }

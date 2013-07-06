@@ -109,6 +109,7 @@ const std::vector<const ActionInformation*> video_device_action_list =
 class VideoDevice: public Device {
 public:
     VideoDevice (PluginConfig config, Hook h);
+    virtual ~VideoDevice();
 
     virtual void getFiles ()=0; //Read list of video files
     virtual void cue (std::string clip)=0;

@@ -55,7 +55,7 @@ GlobalStuff* NewGS ()
  * @param pref Pointer be used as the plugin reference, filled by the plugin
  * itself
  */
-void LoadPlugin (PluginConfig cfg, void* pref)
+void LoadPlugin (PluginConfig cfg, Plugin** pref)
 {
     std::stringstream logmsg; // For assembling log messages
 

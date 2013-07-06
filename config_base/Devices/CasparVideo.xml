@@ -5,12 +5,12 @@
 	    <Type>Device</Type>
 	    <Library>VideoDevice_Caspar</Library>
 	    <Instance>Main Video Server</Instance>
-	    <Enabled>true</Enabled>
+	    <Enabled>false</Enabled>
 	</PluginLoad>
 	<PluginData mode="simple">
 	    <Type>Video</Type>
 	    <PollPeriod units="seconds">5</PollPeriod>
-	    <Host>192.168.11.42</Host>
+	    <Host>127.0.0.1</Host>
 	    <Port>5250</Port>
 	</PluginData>
 </TarantulaPlugin>

@@ -21,7 +21,7 @@
 *   Version     : 1.0
 *****************************************************************************/
 
-#define CASPARHOST "192.168.11.42"
+#define CASPARHOST "127.0.0.1"
 #define CASPARPORT "5250"
 
 #include <libCaspar/libCaspar.h>

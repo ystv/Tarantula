@@ -55,7 +55,7 @@ GlobalStuff* NewGS ()
  * @param pref Pointer be used as the plugin reference, filled by the plugin
  * itself
  */
-void LoadPlugin (PluginConfig cfg, Plugin** pref)
+std::shared_ptr<Plugin> ActivatePlugin (PluginConfig cfg, std::shared_ptr<Plugin>& pref)
 {
     std::stringstream logmsg; // For assembling log messages
 
@@ -67,7 +67,7 @@ void LoadPlugin (PluginConfig cfg, Plugin** pref)
         logmsg << "Could not open plugin file " << cfg.m_library << " "
                 << dlerror();
         g_logger.error("Plugin Loader", logmsg.str());
-        return;
+        return NULL;
     }
 
     void *ppluginhdl = dlsym(ppluginf, "LoadPlugin");
@@ -77,13 +77,14 @@ void LoadPlugin (PluginConfig cfg, Plugin** pref)
                 << "Could not get Loadplugin function from SO file. Is it a valid plugin?";
         g_logger.error("Plugin Loader", logmsg.str());
         dlclose(ppluginf);
-        return;
+        return NULL;
     }
     // So by this point we have a handle to the plugin function. Now let's call it.
     LoadPluginFunc plugfunc = (LoadPluginFunc) ppluginhdl;
     Hook h;
     h.gs = NewGS();
-    return plugfunc(h, cfg, pref);
+    plugfunc(h, cfg, pref);
+    return pref;
 }
 
 /**

@@ -27,6 +27,7 @@
 #include "PluginConfig.h"
 #include "TarantulaPlugin.h"
 #include "pugixml.hpp"
+#include "Log.h"
 
 /**
  * Default constructor
@@ -54,7 +55,7 @@ Device::Device (PluginConfig config, playlist_device_type_t type, Hook h) :
         if (!pollunits.compare(""))
         {
             g_logger.info(config.m_instance,
-                    "PollPeriod had no units. Assumming seconds.");
+                    "PollPeriod had no units. Assuming seconds.");
         }
         else if (!pollunits.compare("frames"))
         {
@@ -103,8 +104,11 @@ void Device::poll ()
  */
 void deviceTicks ()
 {
-    for (std::pair<std::string, Device*> thisdevice : g_devices)
+    for (std::pair<std::string, std::shared_ptr<Device>> thisdevice : g_devices)
     {
-        thisdevice.second->poll();
+        if (thisdevice.second)
+        {
+            thisdevice.second->poll();
+        }
     }
 }

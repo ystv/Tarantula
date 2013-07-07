@@ -39,8 +39,6 @@
 CrosspointDevice::CrosspointDevice (PluginConfig config, Hook h) :
         Device(config, EVENTDEVICE_CROSSPOINT, h)
 {
-    (*h.gs->Devices)[config.m_instance] = this;
-
     m_actionlist = &crosspoint_device_action_list;
 
     m_readConfig(config);
@@ -237,9 +235,10 @@ void CrosspointDevice::m_readConfig (PluginConfig config)
  * @param device Pointer to the device the event relates to
  * @param event Pointer to the event to be run
  */
-void CrosspointDevice::RunDeviceEvent (Device* pdevice, PlaylistEntry* pevent)
+void CrosspointDevice::runDeviceEvent (std::shared_ptr<Device> pdevice, PlaylistEntry* pevent)
 {
-    CrosspointDevice *peventdevice = static_cast<CrosspointDevice*>(pdevice);
+    std::shared_ptr<CrosspointDevice> peventdevice =
+            std::dynamic_pointer_cast<CrosspointDevice>(pdevice);
 
     if (pevent->m_action == CROSSPOINTACTION_SWITCH)
     {
@@ -267,7 +266,7 @@ void CrosspointDevice::RunDeviceEvent (Device* pdevice, PlaylistEntry* pevent)
     }
     else
     {
-        g_logger.error("Video Device RunDeviceEvent",
+        g_logger.error("Crosspoint Device RunDeviceEvent",
                 "Event " + ConvertType::intToString(pevent->m_eventid)
                         + " has a non-existent action");
 

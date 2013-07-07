@@ -444,11 +444,14 @@ void HTTPConnection::handleIncomingData (
                     // Add the waiting request to the queue
                     m_sharedata->m_requests.push_back(req);
 				}
-				else if (!base.compare("tarantula.css"))
+				else if (!base.compare("tarantula.css") ||
+				        !base.compare("jquery.js") ||
+				        !base.compare("jquery-ui.js") ||
+				        !base.compare("jquery-ui.css"))
 				{
-					// Open the stylesheet and send it
+					// Open the file and send it
 					std::ifstream is(std::string(
-							m_config.m_webpath + "/tarantula.css").c_str(),
+							m_config.m_webpath + "/" + base).c_str(),
 							std::ios::in | std::ios::binary);
 
 					if (!is)
@@ -467,6 +470,28 @@ void HTTPConnection::handleIncomingData (
 						m_reply.status = http::server3::reply::ok;
 						commitResponse("text/css");
 					}
+				}
+				else if (!base.compare("images"))
+				{
+				    // Open the file and send it
+                    std::ifstream is(std::string(
+                            m_config.m_webpath + "/images/" + data).c_str(),
+                            std::ios::in | std::ios::binary);
+                    if (!is)
+                    {
+                        m_reply = http::server3::reply::stock_reply(
+                                http::server3::reply::not_found);
+                        commitResponse();
+                    }
+                    else
+                    {
+                        std::stringstream buffer;
+                        buffer << is.rdbuf();
+                        m_reply.content = buffer.str();
+                        is.close();
+                        m_reply.status = http::server3::reply::ok;
+                        commitResponse("text/css");
+                    }
 				}
 				// Assume the path was a date
 				else if (!base.empty())

@@ -141,10 +141,11 @@ void VideoDevice_Demo::updateHardwareStatus ()
 
 extern "C"
 {
-    void LoadPlugin (Hook h, PluginConfig config, void * pluginref)
+    void LoadPlugin (Hook h, PluginConfig config, std::shared_ptr<Plugin>& pluginref)
     {
         //must declare as pointer to avoid object being deleted once function call is complete!
-        pluginref = new VideoDevice_Demo(config, h);
+        std::shared_ptr<VideoDevice_Demo> plugtemp = std::make_shared<VideoDevice_Demo>(config, h);
+        pluginref = std::dynamic_pointer_cast<Plugin>(plugtemp);
     }
 }
 

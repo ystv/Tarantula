@@ -118,7 +118,7 @@ int main(int argc,char *argv[]) {
     cout << "Got: " << cc2.form();
 
     cout << endl << "Now testing CasparConnection." <<endl;
-    caspCon = make_shared<CasparConnection>(CASPARHOST, CASPARPORT);
+    caspCon = make_shared<CasparConnection>(CASPARHOST, CASPARPORT, 1000);
     std::vector<std::string> resp;
     caspCon->sendCommand(CasparCommand(CASPAR_COMMAND_CLS, &runrandomvideo));
     caspCon->run();

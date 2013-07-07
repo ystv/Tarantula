@@ -142,10 +142,11 @@ void CGDevice_Demo::update (int layer, std::map<std::string, std::string> *pdata
 
 extern "C"
 {
-    void LoadPlugin (Hook h, PluginConfig config, void * pluginref)
+    void LoadPlugin (Hook h, PluginConfig config, std::shared_ptr<Plugin>& pluginref)
     {
         //must declare as pointer to avoid object being deleted once function call is complete!
-        pluginref = new CGDevice_Demo(config, h);
+        std::shared_ptr<CGDevice_Demo> plugtemp = std::make_shared<CGDevice_Demo>(config, h);
+        pluginref = std::dynamic_pointer_cast<Plugin>(plugtemp);
     }
 }
 

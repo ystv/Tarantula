@@ -25,9 +25,11 @@
 
 #pragma once
 
+#include <memory>
+
 struct GlobalStuff;
 class Plugin;
 
 GlobalStuff* NewGS ();
-void LoadPlugin (PluginConfig cfg, Plugin** pref);
+std::shared_ptr<Plugin> ActivatePlugin (PluginConfig cfg, std::shared_ptr<Plugin>& pref);
 void unLoad (const char* filename);

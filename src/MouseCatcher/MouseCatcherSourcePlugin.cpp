@@ -41,7 +41,6 @@
 MouseCatcherSourcePlugin::MouseCatcherSourcePlugin (PluginConfig config, Hook h) :
         Plugin(config, h)
 {
-    g_mcsources.push_back(this);
 }
 
 /**

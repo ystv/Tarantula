@@ -34,8 +34,8 @@
 #include <vector>
 
 //! All active source plugins
-extern std::vector<MouseCatcherSourcePlugin*> g_mcsources;
-extern std::map<std::string, MouseCatcherProcessorPlugin*> g_mcprocessors;
+extern std::vector<std::shared_ptr<MouseCatcherSourcePlugin>> g_mcsources;
+extern std::map<std::string, std::shared_ptr<MouseCatcherProcessorPlugin>> g_mcprocessors;
 
 /**
  * The MouseCatcher tool for event retrieval, mapping and processing and eventual insertion
@@ -67,7 +67,7 @@ namespace MouseCatcherCore
     bool convertToPlaylistEvent (MouseCatcherEvent * const mcevent,
             int parentid, PlaylistEntry *playlistevent);
     bool convertToMCEvent (PlaylistEntry * const playlistevent,
-            Channel* channel, MouseCatcherEvent *generatedevent, Log *log);
+            std::shared_ptr<Channel> channel, MouseCatcherEvent *generatedevent, Log *log);
     void getEvents (int channelid, time_t starttime, int length,
                 std::vector<MouseCatcherEvent>& eventvector);
 }

@@ -50,18 +50,21 @@ Log g_logger;
 std::vector<cbBegunPlaying> g_begunplayingcallbacks;
 std::vector<cbEndPlaying> g_endplayingcallbacks;
 std::vector<cbTick> g_tickcallbacks;
-std::vector<Channel*> g_channels;
-std::map<std::string, Device*> g_devices;
+std::vector<std::shared_ptr<Channel>> g_channels;
+std::map<std::string, std::shared_ptr<Device>> g_devices;
 std::vector<PluginStateData> g_plugins;
 //It doesn't work if I put these elsewhere, plugins unload each other ~SN
-std::vector<MouseCatcherSourcePlugin*> g_mcsources;
-std::map<std::string, MouseCatcherProcessorPlugin*> g_mcprocessors;
+std::vector<std::shared_ptr<MouseCatcherSourcePlugin>> g_mcsources;
+std::map<std::string, std::shared_ptr<MouseCatcherProcessorPlugin>> g_mcprocessors;
 std::shared_ptr<BaseConfigLoader> g_pbaseconfig;
 DebugData g_dbg;
 
 // Functions used only in this file
 static void processPluginStates ();
 static void reloadPlugin (PluginStateData& state);
+void cb_devices (std::shared_ptr<Plugin> thisplugin);
+void cb_interfaces (std::shared_ptr<Plugin> thisplugin);
+void cb_loggers (std::shared_ptr<Plugin> thisplugin);
 
 int main (int argc, char *argv[])
 {
@@ -86,10 +89,10 @@ int main (int argc, char *argv[])
 
     // Load all non-Mousecatcher plugins
     g_pbaseconfig = std::make_shared<BaseConfigLoader>("config_base/Base.xml");
-    loadAllPlugins("config_base/" + g_pbaseconfig->getDevicesPath(), "Device");
+    loadAllPlugins("config_base/" + g_pbaseconfig->getDevicesPath(), "Device", &cb_devices);
     loadAllPlugins("config_base/" + g_pbaseconfig->getInterfacesPath(),
-            "Interface");
-    loadAllPlugins("config_base/" + g_pbaseconfig->getLogsPath(), "Logger");
+            "Interface", &cb_interfaces);
+    loadAllPlugins("config_base/" + g_pbaseconfig->getLogsPath(), "Logger", &cb_loggers);
     g_logger.info("Tarantula Core",
             "Config loaded. System name is: " + g_pbaseconfig->getSystemName());
 
@@ -98,11 +101,11 @@ int main (int argc, char *argv[])
 
     for (ChannelDetails thischannel : loadedchannels)
     {
-        Channel *pcl;
+        std::shared_ptr<Channel> pcl;
 
         try
         {
-            pcl = new Channel(thischannel.m_channame, thischannel.m_xpname,
+            pcl = std::make_shared<Channel>(thischannel.m_channame, thischannel.m_xpname,
                     thischannel.m_xpport);
             g_channels.push_back(pcl);
         }
@@ -155,6 +158,38 @@ int main (int argc, char *argv[])
 }
 
 /**
+ * Callback to add device plugins to the list of devices
+ *
+ * @param thisplugin Pointer to new plugin
+ */
+void cb_devices (std::shared_ptr<Plugin> thisplugin)
+{
+    std::shared_ptr<Device> thisdevice = std::dynamic_pointer_cast<Device>(thisplugin);
+
+    g_devices[thisdevice->getPluginName()] = std::shared_ptr<Device>(thisdevice);
+}
+
+/**
+ * Callback to add interface plugins to the list of interfaces
+ *
+ * @param thisplugin Pointer to new plugin
+ */
+void cb_interfaces (std::shared_ptr<Plugin> thisplugin)
+{
+    //!TODO Write interfaces stuff
+}
+
+/**
+ * Dummy callback for logging plugins
+ *
+ * @param thisplugin Pointer to new plugin
+ */
+void cb_loggers (std::shared_ptr<Plugin> thisplugin)
+{
+    // Nothing to do
+}
+
+/**
  * Unload and reload a crashed plugin
  */
 void reloadPlugin (PluginStateData& state)
@@ -162,15 +197,15 @@ void reloadPlugin (PluginStateData& state)
     std::string file = state.ppluginreference->getConfigFilename();
 
     // Unload the plugin
-    delete state.ppluginreference;
-    state.ppluginreference = NULL;
+    //state.ppluginreference.reset();
+    state.ppluginreference->disablePlugin();
 
     state.reloadsremaining--;
 
     // Reload the plugin
     PluginConfigLoader plugin_config;
     plugin_config.loadConfig(file, state.type);
-    LoadPlugin(plugin_config.getConfig(), &state.ppluginreference);
+    ActivatePlugin(plugin_config.getConfig(), state.ppluginreference);
 
 }
 
@@ -202,8 +237,7 @@ void processPluginStates ()
                 {
                     g_logger.OMGWTF(pluginstate.ppluginreference->getPluginName(),
                             "Plugin startup failure is permanent. Unloading plugin");
-                    pluginstate.ppluginreference->disablePlugin();
-                    pluginstate.ppluginreference = NULL;
+                    pluginstate.ppluginreference.reset();
                 }
                 break;
             }
@@ -219,8 +253,7 @@ void processPluginStates ()
                 {
                     g_logger.OMGWTF(pluginstate.ppluginreference->getPluginName(),
                             "Plugin failure is permanent. Disabling plugin");
-                    pluginstate.ppluginreference->disablePlugin();
-                    pluginstate.ppluginreference = NULL;
+                    pluginstate.ppluginreference.reset();
                 }
                 break;
             }
@@ -228,8 +261,7 @@ void processPluginStates ()
             {
                 g_logger.info(pluginstate.ppluginreference->getPluginName(),
                         "Unload requested. Unloading plugin");
-                pluginstate.ppluginreference->disablePlugin();
-                pluginstate.ppluginreference = NULL;
+                pluginstate.ppluginreference.reset();
                 break;
             }
             case READY:

@@ -28,7 +28,6 @@
 #include <string>
 #include <iostream>
 #include "TarantulaCore.h"
-#include "Log.h"
 #include "PlaylistDB.h"
 
 //define callbacks
@@ -74,5 +73,5 @@ void channelTick ();
 void channelBegunPlaying (std::string name, int id);
 void channelEndPlaying (std::string name, int id);
 
-extern std::vector<Channel*> g_channels; //declared here because adding it to TarantulaCore creates reference loops.
+extern std::vector<std::shared_ptr<Channel>> g_channels; //declared here because adding it to TarantulaCore creates reference loops.
 

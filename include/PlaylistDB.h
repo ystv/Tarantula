@@ -28,7 +28,6 @@
 #include <iostream>
 #include <cstdlib>
 #include <map>
-#include "Log.h"
 #include "MemDB.h" //parent class
 
 

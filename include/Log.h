@@ -27,6 +27,7 @@
 #include <string>
 #include <vector>
 
+
 /**
  * Base class for logging plugins.
  */

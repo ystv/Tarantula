@@ -37,6 +37,11 @@ public:
         m_status = READY;
     }
 
+    ~demoXpoint ()
+    {
+
+    }
+
     /**
      * Switch the given output stream to the specified input stream
      * @param output Output channel name to switch
@@ -68,9 +73,10 @@ public:
 
 extern "C"
 {
-    void LoadPlugin (Hook h, PluginConfig config, Plugin** pluginref)
+    void LoadPlugin (Hook h, PluginConfig config, std::shared_ptr<Plugin>& pluginref)
     {
         //must declare as pointer to avoid object being deleted once function call is complete!
-        *pluginref = new demoXpoint(config, h);
+        std::shared_ptr<demoXpoint> plugtemp = std::make_shared<demoXpoint>(config, h);
+        pluginref = std::dynamic_pointer_cast<Plugin>(plugtemp);
     }
 }

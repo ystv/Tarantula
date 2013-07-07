@@ -53,7 +53,7 @@
 class CasparConnection
 {
 public:
-    CasparConnection (std::string host, std::string port);
+    CasparConnection (std::string host, std::string port, long int connecttimeout);
     ~CasparConnection ();
 
     std::string receiveLine ();
@@ -69,6 +69,8 @@ private:
     std::string queryResponse (int responsecode);
     std::vector <std::string> m_datalines;
     std::queue <CasparCommand> m_commandqueue;
+
+    long int m_connecttimeout;
 
     boost::asio::io_service m_io_service;
     boost::asio::ip::tcp::socket m_socket;

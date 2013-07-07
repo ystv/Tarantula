@@ -77,9 +77,10 @@ void EventProcessor_Demo::handleEvent (MouseCatcherEvent originalEvent,
 
 extern "C"
 {
-    void LoadPlugin (Hook h, PluginConfig config, void * pluginref)
+    void LoadPlugin (Hook h, PluginConfig config, std::shared_ptr<Plugin>& pluginref)
     {
         //must declare as pointer to avoid object being deleted once function call is complete!
-        pluginref = new EventProcessor_Demo(config, h);
+        std::shared_ptr<EventProcessor_Demo> plugtemp = std::make_shared<EventProcessor_Demo>(config, h);
+        pluginref = std::dynamic_pointer_cast<Plugin>(plugtemp);
     }
 }

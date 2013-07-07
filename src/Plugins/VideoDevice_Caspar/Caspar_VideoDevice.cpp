@@ -42,11 +42,13 @@ VideoDevice_Caspar::VideoDevice_Caspar (PluginConfig config, Hook h) :
     m_hostname = config.m_plugindata_map.at("Host");
     m_port = config.m_plugindata_map.at("Port");
 
+    long int connecttimeout = ConvertType::stringToInt(config.m_plugindata_map.at("ConnectTimeout"));
+
     h.gs->L->info("Caspar Media", "Connecting to " + m_hostname + ":" + m_port);
 
     try
     {
-        m_pcaspcon = new CasparConnection(m_hostname, m_port);
+        m_pcaspcon = std::make_shared<CasparConnection>(m_hostname, m_port, connecttimeout);
     }
     catch (...)
     {
@@ -64,8 +66,6 @@ VideoDevice_Caspar::VideoDevice_Caspar (PluginConfig config, Hook h) :
 
 VideoDevice_Caspar::~VideoDevice_Caspar ()
 {
-    if (m_pcaspcon != NULL)
-        delete m_pcaspcon;
 }
 
 /**
@@ -293,9 +293,11 @@ void VideoDevice_Caspar::cb_info (std::vector<std::string>& resp)
 
 extern "C"
 {
-    void LoadPlugin (Hook h, PluginConfig config, Plugin** pluginref)
+    void LoadPlugin (Hook h, PluginConfig config, std::shared_ptr<Plugin>& pluginref)
     {
         //must declare as pointer to avoid object being deleted once function call is complete!
-        *pluginref = new VideoDevice_Caspar(config, h);
+        std::shared_ptr<VideoDevice_Caspar> plugtemp = std::make_shared<VideoDevice_Caspar>(config, h);
+
+        pluginref = std::dynamic_pointer_cast<Plugin>(plugtemp);
     }
 }

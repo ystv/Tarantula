@@ -54,7 +54,7 @@ extern std::vector<cbEndPlaying> g_endplayingcallbacks;
 extern std::vector<cbTick> g_tickcallbacks;
 extern std::shared_ptr<BaseConfigLoader> g_pbaseconfig;
 
-extern std::map<std::string, Device*> g_devices;
+extern std::map<std::string, std::shared_ptr<Device>> g_devices;
 extern std::vector<PluginStateData> g_plugins;
 
 extern DebugData g_dbg;

@@ -39,7 +39,7 @@
  * @param formatter Input format. If time is not set, do not include. Default: %Y-%m-%d %H:%M:%S%F
  * @return time_t   Resulting timestamp
  */
-time_t DateConversions::datetimeToTimeT (std::string datetime, std::string formatter = "%Y-%m-%d %H:%M:%S%F")
+time_t DateConversions::datetimeToTimeT (std::string datetime, std::string formatter /*= "%Y-%m-%d %H:%M:%S%F"*/)
 {
     // Configure custom formatter
     boost::posix_time::time_facet *facet = new  boost::posix_time::time_facet(formatter.c_str());
@@ -61,7 +61,7 @@ time_t DateConversions::datetimeToTimeT (std::string datetime, std::string forma
  * @param formatter Output format. Default: YYYY-mmm-DD HH:MM:SS.fffffffff
  * @return          String of date/time
  */
-std::string DateConversions::timeTToString (time_t timestamp, std::string formatter = "%Y-%m-%d %H:%M:%S%F")
+std::string DateConversions::timeTToString (time_t timestamp, std::string formatter /*= "%Y-%m-%d %H:%M:%S%F"*/)
 {
     // Configure custom formatter
     boost::posix_time::time_facet *facet = new  boost::posix_time::time_facet(formatter.c_str());
@@ -82,7 +82,7 @@ std::string DateConversions::timeTToString (time_t timestamp, std::string format
  * @param formatter Format string. Defaults to YYYY-MM-DD
  * @return          Resulting string
  */
-std::string DateConversions::gregorianDateToString (boost::gregorian::date date, std::string formatter = "%Y-%m-%d")
+std::string DateConversions::gregorianDateToString (boost::gregorian::date date, std::string formatter /*= "%Y-%m-%d"*/)
 {
     // Configure custom formatter
     boost::gregorian::date_facet *facet = new boost::gregorian::date_facet(formatter.c_str());

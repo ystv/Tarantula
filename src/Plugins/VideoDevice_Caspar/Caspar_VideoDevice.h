@@ -66,7 +66,7 @@ public:
     void stop ();
     virtual void poll ();
 private:
-    CasparConnection *m_pcaspcon;
+    std::shared_ptr<CasparConnection> m_pcaspcon;
 
     //! Configured hostname and port number
     std::string m_hostname;

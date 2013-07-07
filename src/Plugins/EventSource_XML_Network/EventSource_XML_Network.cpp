@@ -735,11 +735,11 @@ void EventSource_XML_Network::updateFiles (std::string device,
 
 extern "C"
 {
-    void LoadPlugin (Hook h, PluginConfig config, void * pluginref)
+    void LoadPlugin (Hook h, PluginConfig config, std::shared_ptr<Plugin>& pluginref)
     {
         //must declare as pointer to avoid object being deleted once function call is complete!
-        pluginref = new EventSource_XML_Network(config, h);
+        std::shared_ptr<EventSource_XML_Network> plugtemp = std::make_shared<EventSource_XML_Network>(config, h);
+        pluginref = std::dynamic_pointer_cast<Plugin>(plugtemp);
     }
-
 }
 

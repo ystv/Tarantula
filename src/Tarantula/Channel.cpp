@@ -28,9 +28,10 @@
 #include "VideoDevice.h"
 #include "CGDevice.h"
 #include "Misc.h"
+#include "Log.h"
 
 //this is here because if it were in core header, it would create a loop.
-extern std::vector<Channel*> g_channels;
+extern std::vector<std::shared_ptr<Channel>> g_channels;
 
 int end = 0;
 
@@ -43,7 +44,7 @@ Channel::Channel ()
     m_xpport = "YSTV Stream";
     m_xpdevicename = "DemoXpointDefaultName";
     //try and get a more sensible default XP name
-    for (std::pair<std::string, Device*> currentdevice : g_devices)
+    for (std::pair<std::string, std::shared_ptr<Device>> currentdevice : g_devices)
     {
         if (currentdevice.second->getType() == EVENTDEVICE_CROSSPOINT)
         {
@@ -88,13 +89,15 @@ void Channel::init ()
     }
 
     // And check the port is real too
-    if ((static_cast<CrosspointDevice*> (g_devices[m_xpdevicename]))->
-            getVideoPortfromName(m_xpport) < 0)
+    if (std::shared_ptr<CrosspointDevice> cpd = std::static_pointer_cast<CrosspointDevice> (g_devices[m_xpdevicename]))
     {
-        g_logger.error("Channel " + m_channame,
-                "Crosspoint port " + m_xpport + " does not exist!!");
+        if (cpd->getVideoPortfromName(m_xpport) < 0)
+        {
+            g_logger.error("Channel " + m_channame,
+                    "Crosspoint port " + m_xpport + " does not exist!!");
 
-        throw (std::exception());
+            throw (std::exception());
+        }
     }
 
 }
@@ -161,7 +164,7 @@ void Channel::runEvent (PlaylistEntry *pevent)
     {
         case EVENTDEVICE_CROSSPOINT:
         {
-            CrosspointDevice::RunDeviceEvent(g_devices[pevent->m_device], pevent);
+            CrosspointDevice::runDeviceEvent(g_devices[pevent->m_device], pevent);
             break;
         }
         case EVENTDEVICE_VIDEODEVICE:
@@ -194,7 +197,7 @@ int Channel::createEvent (PlaylistEntry *pev)
  */
 void channelTick ()
 {
-    for (Channel* pthischannel : g_channels)
+    for (std::shared_ptr<Channel> pthischannel : g_channels)
     {
         pthischannel->tick();
     }
@@ -209,7 +212,7 @@ void channelTick ()
  */
 void channelBegunPlaying (std::string name, int id)
 {
-    for (Channel* pthischannel : g_channels)
+    for (std::shared_ptr<Channel> pthischannel : g_channels)
     {
         pthischannel->begunPlaying(name, id);
     }
@@ -224,7 +227,7 @@ void channelBegunPlaying (std::string name, int id)
  */
 void channelEndPlaying (std::string name, int id)
 {
-    for (Channel* pthischannel : g_channels)
+    for (std::shared_ptr<Channel> pthischannel : g_channels)
     {
         pthischannel->endPlaying(name, id);
     }
@@ -239,12 +242,15 @@ void channelEndPlaying (std::string name, int id)
  */
 int Channel::getChannelByName (std::string channelname)
 {
-    for (std::vector<Channel*>::iterator it = g_channels.begin();
+    for (std::vector<std::shared_ptr<Channel>>::iterator it = g_channels.begin();
             it != g_channels.end(); ++it)
     {
-        if (!channelname.compare((*it)->m_channame))
+        if (*it)
         {
-            return it - g_channels.begin();
+            if (!channelname.compare((*it)->m_channame))
+            {
+                return it - g_channels.begin();
+            }
         }
     }
 

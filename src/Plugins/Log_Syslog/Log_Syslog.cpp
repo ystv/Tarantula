@@ -136,9 +136,9 @@ void Log_Syslog::LogMsg (std::string where, std::string message, int severity)
 //now for the bit to bind it as a plugin
 extern "C"
 {
-    void LoadPlugin (Hook h, PluginConfig config, void * pluginref)
+    void LoadPlugin (Hook h, PluginConfig config, std::shared_ptr<Plugin>& pluginref)
     {
-        //must declare as pointer to avoid object being deleted once function call is complete!
-        pluginref = new Log_Syslog(h, config);
+        //Log plugins are handled seperately and have non-standard plugin load functions
+        Log_Syslog *log_syslog = new Log_Syslog(h, config);
     }
 }

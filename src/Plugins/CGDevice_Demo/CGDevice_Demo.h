@@ -31,7 +31,7 @@ class PluginConfig;
 class Hook;
 
 
-class CGDevice_Demo : CGDevice {
+class CGDevice_Demo : public CGDevice {
 public:
     CGDevice_Demo (PluginConfig config, Hook h);
     virtual ~CGDevice_Demo ();

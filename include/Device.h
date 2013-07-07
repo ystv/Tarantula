@@ -50,7 +50,7 @@ public:
     //! Pointer to vector of available actions
     const std::vector<const ActionInformation*> *m_actionlist;
 
-    static void runDeviceEvent (Device *pdevice, PlaylistEntry *pevent);
+    static void runDeviceEvent (std::shared_ptr<Device> pdevice, PlaylistEntry *pevent);
 protected:
     playlist_device_type_t m_type;
     //! Last event played on the device

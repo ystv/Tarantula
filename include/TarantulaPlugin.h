@@ -33,7 +33,9 @@
 #include "Channel.h"
 #include "Log.h"
 
+class Log;
 class Device;
+class Plugin;
 
 // Callbacks
 typedef void (*cbBegunPlaying) (std::string, int);
@@ -45,8 +47,8 @@ typedef void (*cbTick) ();
 // Struct passed to all plugins to enable access to parts of core.
 struct GlobalStuff
 {
-    std::map<std::string, Device*> *Devices;
-    std::vector<Channel*> *Channels;
+    std::map<std::string, std::shared_ptr<Device>> *Devices;
+    std::vector<std::shared_ptr<Channel>> *Channels;
     DebugData *dbg;
 
     Log *L; //Global Instance of a logging class.
@@ -69,7 +71,7 @@ void begunPlaying (std::string name, int id);
 void EndPlaying (std::string name, int id);
 
 //Define plugin functions
-typedef void (*LoadPluginFunc) (Hook, PluginConfig, void*);
+typedef void (*LoadPluginFunc) (Hook, PluginConfig, std::shared_ptr<Plugin>&);
 //End Define
 
 /**
@@ -112,7 +114,7 @@ private:
  */
 struct PluginStateData
 {
-    Plugin* ppluginreference;
+    std::shared_ptr<Plugin> ppluginreference;
     int reloadsremaining;
     std::string type;
 };

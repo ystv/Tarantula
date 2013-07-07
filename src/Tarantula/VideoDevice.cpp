@@ -47,7 +47,6 @@ VideoDeviceStatus::VideoDeviceStatus ()
 VideoDevice::VideoDevice (PluginConfig config, Hook h) :
         Device(config, EVENTDEVICE_VIDEODEVICE, h)
 {
-    (*h.gs->Devices)[config.m_instance] = this;
     m_actionlist = &video_device_action_list;
 }
 
@@ -77,9 +76,9 @@ void VideoDevice::immediatePlay (std::string filename)
  * @param device Pointer to the device the event relates to
  * @param event Pointer to the event to be run
  */
-void VideoDevice::runDeviceEvent (Device* pdevice, PlaylistEntry* pevent)
+void VideoDevice::runDeviceEvent (std::shared_ptr<Device> pdevice, PlaylistEntry* pevent)
 {
-    VideoDevice *peventdevice = static_cast<VideoDevice*>(pdevice);
+    std::shared_ptr<VideoDevice> peventdevice = std::dynamic_pointer_cast<VideoDevice>(pdevice);
 
     if (VIDEOACTION_LOAD == pevent->m_action)
     {

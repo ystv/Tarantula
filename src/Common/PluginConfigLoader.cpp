@@ -168,9 +168,10 @@ PluginConfig PluginConfigLoader::getConfig ()
 /**
  * Loads all the plugins in the directory specified
  *
- * @param path ustring Path to config files
+ * @param path     ustring Path to config files
+ * @param callback A function to add the plugin to some list
  */
-void loadAllPlugins (std::string path, std::string type)
+void loadAllPlugins (std::string path, std::string type, PluginLoadCallback callback)
 {
     DIR *dp;
     dirent *de;
@@ -191,7 +192,12 @@ void loadAllPlugins (std::string path, std::string type)
 
                 if (plugin_config.getConfig().m_enabled)
                 {
-                    LoadPlugin(plugin_config.getConfig(), &state.ppluginreference);
+                    std::shared_ptr<Plugin> newplugin = ActivatePlugin(plugin_config.getConfig(), state.ppluginreference);
+
+                    if (NULL != newplugin)
+                    {
+                        callback(newplugin);
+                    }
                 }
 
                 if (NULL != state.ppluginreference)

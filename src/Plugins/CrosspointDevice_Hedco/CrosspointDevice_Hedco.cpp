@@ -195,10 +195,11 @@ void CrosspointDevice_Hedco::updateHardwareStatus ()
 
 extern "C"
 {
-    void LoadPlugin (Hook h, PluginConfig config, void * pluginref)
+    void LoadPlugin (Hook h, PluginConfig config, std::shared_ptr<Plugin>& pluginref)
     {
         //must declare as pointer to avoid object being deleted once function call is complete!
-        pluginref = new CrosspointDevice_Hedco(config, h);
+        std::shared_ptr<CrosspointDevice_Hedco> plugtemp = std::make_shared<CrosspointDevice_Hedco>(config, h);
+        pluginref = std::dynamic_pointer_cast<Plugin>(plugtemp);
     }
 }
 

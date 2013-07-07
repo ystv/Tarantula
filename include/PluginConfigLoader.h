@@ -27,6 +27,9 @@
 #include "pugixml.hpp"
 #include "Log.h"
 #include "PluginConfig.h"
+#include <memory>
+
+class Plugin;
 
 // Macro to set extension of library files
 #ifdef _WIN32
@@ -34,6 +37,8 @@
 #else
 #define LIBRARY_EXTENSION ".so"
 #endif
+
+typedef void (*PluginLoadCallback)(std::shared_ptr<Plugin>);
 
 /**
  * Plugin configuration parsing error values.
@@ -50,7 +55,7 @@ enum plugin_config_error_t
 };
 
 // Helper function to load plugins
-void loadAllPlugins (std::string path, std::string type);
+void loadAllPlugins (std::string path, std::string type, PluginLoadCallback);
 
 /**
  * Basic plugin configuration loader. Will parse the required configuration

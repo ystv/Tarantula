@@ -39,10 +39,11 @@
 /**
  * Open a connection to a CasparCG server
  *
- * @param host The hostname/IP of the server
- * @param port Port number to connect to
+ * @param host           The hostname/IP of the server
+ * @param port           Port number to connect to
+ * @param connecttimeout Number of ticks before connection times out
  */
-CasparConnection::CasparConnection (std::string host, std::string port) :
+CasparConnection::CasparConnection (std::string host, std::string port, long int connecttimeout) :
     m_io_service(),
     m_socket(m_io_service)
 {
@@ -51,6 +52,7 @@ CasparConnection::CasparConnection (std::string host, std::string port) :
     boost::asio::ip::tcp::resolver::query resq(host, port);
     boost::asio::ip::tcp::resolver::iterator resiter = res.resolve(resq);
 
+    m_connecttimeout = connecttimeout;
 
     /* Spawn off an async connect operation */
     boost::asio::async_connect(m_socket, resiter,
@@ -63,7 +65,6 @@ CasparConnection::CasparConnection (std::string host, std::string port) :
 
 CasparConnection::~CasparConnection ()
 {
-    m_io_service.reset();
 }
 
 
@@ -97,6 +98,17 @@ bool CasparConnection::tick ()
     {
         m_io_service.poll();
         m_io_service.reset();
+
+        if (!m_connectstate)
+        {
+            m_connecttimeout--;
+        }
+
+        if (0 == m_connecttimeout)
+        {
+            m_errorflag = true;
+            return false;
+        }
         return true;
     }
     else

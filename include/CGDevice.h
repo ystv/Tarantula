@@ -71,7 +71,7 @@ public:
     virtual void update (int layer, std::map<std::string, std::string> *pdata)=0;
 
     void getHardwareStatus ();
-    static void runDeviceEvent (Device *pdevice, PlaylistEntry *pevent);
+    static void runDeviceEvent (std::shared_ptr<Device> pdevice, PlaylistEntry *pevent);
     void getTemplateList (std::vector<std::pair<std::string, int>>& templates);
 
 protected:

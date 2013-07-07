@@ -25,8 +25,9 @@
 
 #include "MouseCatcherProcessorPlugin.h"
 #include "PluginConfig.h"
+#include "Log.h"
 
-extern std::map<std::string, MouseCatcherProcessorPlugin*> g_mcprocessors;
+extern std::map<std::string, std::shared_ptr<MouseCatcherProcessorPlugin>> g_mcprocessors;
 
 /**
  * Load a Processor plugin and set the base config up
@@ -48,8 +49,6 @@ MouseCatcherProcessorPlugin::MouseCatcherProcessorPlugin (PluginConfig config, H
         h.gs->L->info("EventProcessor Loader",
                 "No description set for " + config.m_instance);
     }
-
-    g_mcprocessors[m_pluginname] = this;
 }
 
 /**
@@ -68,5 +67,16 @@ MouseCatcherProcessorPlugin::~MouseCatcherProcessorPlugin ()
 ProcessorInformation MouseCatcherProcessorPlugin::getProcessorInformation ()
 {
     return m_processorinfo;
+}
+
+/**
+ * Placeholder function.
+ *
+ * @param originalEvent
+ * @param resultingEvent
+ */
+void MouseCatcherProcessorPlugin::handleEvent(MouseCatcherEvent originalEvent, MouseCatcherEvent& resultingEvent)
+{
+
 }
 

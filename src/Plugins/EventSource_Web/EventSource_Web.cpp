@@ -826,11 +826,11 @@ void EventSource_Web::generateSchedulePage (std::shared_ptr<WebSource::WaitingRe
 
 extern "C"
 {
-    void LoadPlugin (Hook h, PluginConfig config, void * pluginref)
+    void LoadPlugin (Hook h, PluginConfig config, std::shared_ptr<Plugin>& pluginref)
     {
         //must declare as pointer to avoid object being deleted once function call is complete!
-        pluginref = new EventSource_Web(config, h);
+        std::shared_ptr<EventSource_Web> plugtemp = std::make_shared<EventSource_Web>(config, h);
+        pluginref = std::dynamic_pointer_cast<Plugin>(plugtemp);
     }
-
 }
 

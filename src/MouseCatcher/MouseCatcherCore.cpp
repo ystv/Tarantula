@@ -36,12 +36,16 @@
 #include "VideoDevice.h"
 #include "CGDevice.h"
 
-extern std::vector<MouseCatcherSourcePlugin*> g_mcsources;
-extern std::map<std::string, MouseCatcherProcessorPlugin*> g_mcprocessors;
+extern std::vector<std::shared_ptr<MouseCatcherSourcePlugin>> g_mcsources;
+extern std::map<std::string,
+    std::shared_ptr<MouseCatcherProcessorPlugin>> g_mcprocessors;
 
 namespace MouseCatcherCore
 {
     std::vector<EventAction> *g_pactionqueue;
+
+    void cb_eventsource (std::shared_ptr<Plugin> thisplugin);
+    void cb_eventprocessor (std::shared_ptr<Plugin> thisplugin);
 
     /**
      * Encapsulates loading plugins, registering callbacks and logging activation
@@ -53,10 +57,24 @@ namespace MouseCatcherCore
     {
         g_pactionqueue = new std::vector<EventAction>;
         g_logger.info("MouseCatcherCore", "Now initialising MouseCatcher core");
-        loadAllPlugins(sourcepath, "EventSource");
-        loadAllPlugins(processorpath, "EventProcessor");
+        loadAllPlugins(sourcepath, "EventSource", cb_eventsource);
+        loadAllPlugins(processorpath, "EventProcessor", cb_eventprocessor);
         g_tickcallbacks.push_back(MouseCatcherCore::eventSourcePluginTicks);
         g_tickcallbacks.push_back(MouseCatcherCore::eventQueueTicks);
+    }
+
+    void cb_eventsource (std::shared_ptr<Plugin> thisplugin)
+    {
+        std::shared_ptr<MouseCatcherSourcePlugin> thissource =
+                std::dynamic_pointer_cast<MouseCatcherSourcePlugin>(thisplugin);
+        g_mcsources.push_back(std::shared_ptr<MouseCatcherSourcePlugin>(thissource));
+    }
+
+    void cb_eventprocessor (std::shared_ptr<Plugin> thisplugin)
+    {
+        std::shared_ptr<MouseCatcherProcessorPlugin> thisproc =
+                std::dynamic_pointer_cast<MouseCatcherProcessorPlugin>(thisplugin);
+        g_mcprocessors[thisproc->getPluginName()] = std::shared_ptr<MouseCatcherProcessorPlugin>(thisproc);
     }
 
     /**
@@ -64,10 +82,12 @@ namespace MouseCatcherCore
      */
     void eventSourcePluginTicks ()
     {
-        for (std::vector<MouseCatcherSourcePlugin*>::iterator it =
-                g_mcsources.begin(); it != g_mcsources.end(); it++)
+        for (std::shared_ptr<MouseCatcherSourcePlugin> thisplugin : g_mcsources)
         {
-            (*it)->tick(g_pactionqueue);
+            if (thisplugin)
+            {
+                thisplugin->tick(g_pactionqueue);
+            }
         }
     }
 
@@ -96,8 +116,7 @@ namespace MouseCatcherCore
                 // Action fields do not apply to processors, set it to -1
                 originalevent.m_action = -1;
 
-                g_mcprocessors[event.m_targetdevice]->handleEvent(originalevent,
-                        event);
+                g_mcprocessors[event.m_targetdevice]->handleEvent(originalevent, event);
             }
             else
             {
@@ -157,8 +176,8 @@ namespace MouseCatcherCore
             std::vector<MouseCatcherEvent>& eventvector)
     {
         std::vector<PlaylistEntry> playlistevents;
-        std::vector<Channel*>::iterator channelstart;
-        std::vector<Channel*>::iterator channelend;
+        std::vector<std::shared_ptr<Channel>>::iterator channelstart;
+        std::vector<std::shared_ptr<Channel>>::iterator channelend;
 
         if (channelid != -1)
         {
@@ -171,7 +190,7 @@ namespace MouseCatcherCore
             channelend = g_channels.end();
         }
 
-        for (std::vector<Channel*>::iterator it = channelstart;
+        for (std::vector<std::shared_ptr<Channel>>::iterator it = channelstart;
                 it != channelend; ++it)
         {
             playlistevents = (*it)->m_pl.getEventList(starttime, length);
@@ -271,7 +290,7 @@ namespace MouseCatcherCore
     void getLoadedDevices (EventAction& action)
     {
         std::map<std::string, std::string> devices;
-        for(std::pair<std::string, Device*> currentdevice :  g_devices)
+        for(std::pair<std::string, std::shared_ptr<Device>> currentdevice :  g_devices)
         {
             devices[currentdevice.first] =
                     playlist_device_type_vector.at(currentdevice.second->getType());
@@ -319,21 +338,20 @@ namespace MouseCatcherCore
 
             if (EVENTDEVICE_VIDEODEVICE == g_devices[action.event.m_targetdevice]->getType())
             {
-                VideoDevice *dev = dynamic_cast<VideoDevice*>(g_devices[action.event.m_targetdevice]);
+                std::shared_ptr<VideoDevice> dev =
+                        std::static_pointer_cast<VideoDevice>(g_devices[action.event.m_targetdevice]);
                 dev->getFileList(files);
             }
             else if (EVENTDEVICE_CGDEVICE == g_devices[action.event.m_targetdevice]->getType())
             {
-                CGDevice *dev = dynamic_cast<CGDevice*>(g_devices[action.event.m_targetdevice]);
+                std::shared_ptr<CGDevice> dev =
+                        std::static_pointer_cast<CGDevice>(g_devices[action.event.m_targetdevice]);
                 dev->getTemplateList(files);
             }
             else
             {
-                g_logger.warn("GetTypeActions",
-                        "Unable to get files for invalid device "
-                                + action.event.m_targetdevice);
-                action.returnmessage = "Unable to get files for invalid device "
-                        + action.event.m_targetdevice;
+                g_logger.warn("GetTypeActions", "Unable to get files for invalid device " + action.event.m_targetdevice);
+                action.returnmessage = "Unable to get files for invalid device " + action.event.m_targetdevice;
                 return;
             }
             action.thisplugin->updateFiles(action.event.m_targetdevice, files,
@@ -341,11 +359,8 @@ namespace MouseCatcherCore
         }
         else
         {
-            g_logger.warn("GetTypeActions",
-                    "Unable to get files for nonexistent device "
-                            + action.event.m_targetdevice);
-            action.returnmessage = "Unable to get files for nonexistent device "
-                    + action.event.m_targetdevice;
+            g_logger.warn("GetTypeActions", "Unable to get files for nonexistent device " + action.event.m_targetdevice);
+            action.returnmessage = "Unable to get files for nonexistent device " + action.event.m_targetdevice;
         }
     }
 
@@ -358,15 +373,16 @@ namespace MouseCatcherCore
     {
         std::map<std::string, ProcessorInformation> processors;
 
-        for (std::pair<std::string, MouseCatcherProcessorPlugin*> thisprocessor :
+        for (std::pair<std::string, std::shared_ptr<MouseCatcherProcessorPlugin>> thisprocessor :
                 g_mcprocessors)
         {
-            processors[thisprocessor.first] =
-                    thisprocessor.second->getProcessorInformation();
+            if (thisprocessor.second)
+            {
+                processors[thisprocessor.first] = thisprocessor.second->getProcessorInformation();
+            }
         }
 
-        action.thisplugin->updateEventProcessors(processors,
-                action.additionaldata);
+        action.thisplugin->updateEventProcessors(processors, action.additionaldata);
     }
 
     /**
@@ -465,7 +481,7 @@ namespace MouseCatcherCore
      * @param plog            Pointer to global logging instance
      * @return                True on success, false on failure
      */
-    bool convertToMCEvent (PlaylistEntry *pplaylistevent, Channel* pchannel,
+    bool convertToMCEvent (PlaylistEntry *pplaylistevent, std::shared_ptr<Channel> pchannel,
             MouseCatcherEvent *pgeneratedevent, Log *plog)
     {
         try

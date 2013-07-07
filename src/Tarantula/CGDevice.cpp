@@ -28,13 +28,12 @@
 #include "TarantulaPlugin.h"
 #include "Misc.h"
 #include "PlaylistDB.h"
+#include "Log.h"
 
 CGDevice::CGDevice (PluginConfig config, Hook h) :
         Device(config, EVENTDEVICE_CGDEVICE, h)
 {
-    (*h.gs->Devices)[config.m_instance] = this;
     m_actionlist = &CG_device_action_list;
-
 }
 
 /**
@@ -86,9 +85,9 @@ void parseExtraData (PlaylistEntry *pevent, std::string *pgraphicname,
  * @param device
  * @param event
  */
-void CGDevice::runDeviceEvent (Device* device, PlaylistEntry* event)
+void CGDevice::runDeviceEvent (std::shared_ptr<Device> device, PlaylistEntry* event)
 {
-    CGDevice *eventdevice = static_cast<CGDevice*>(device);
+    std::shared_ptr<CGDevice> eventdevice = std::dynamic_pointer_cast<CGDevice>(device);
 
     if (CGACTION_ADD == event->m_action)
     {

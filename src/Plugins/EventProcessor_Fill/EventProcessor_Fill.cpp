@@ -518,9 +518,10 @@ void EventProcessor_Fill::addFile (std::string filename, std::string device, std
 
 extern "C"
 {
-    void LoadPlugin (Hook h, PluginConfig config, void * pluginref)
+    void LoadPlugin (Hook h, PluginConfig config, std::shared_ptr<Plugin>& pluginref)
     {
         //must declare as pointer to avoid object being deleted once function call is complete!
-        pluginref = new EventProcessor_Fill(config, h);
+        std::shared_ptr<EventProcessor_Fill> plugtemp = std::make_shared<EventProcessor_Fill>(config, h);
+        pluginref = std::dynamic_pointer_cast<Plugin>(plugtemp);
     }
 }

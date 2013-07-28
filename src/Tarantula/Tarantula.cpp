@@ -201,7 +201,7 @@ void processPluginStates ()
                 {
                     g_logger.OMGWTF(pluginstate.ppluginreference->getPluginName(),
                             "Plugin startup failure is permanent. Unloading plugin");
-                    pluginstate.ppluginreference.reset();
+                    pluginstate.ppluginreference->disablePlugin();
                 }
                 break;
             }

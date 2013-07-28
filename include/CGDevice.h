@@ -42,13 +42,13 @@ struct CGLayer
  * Definitions of available CG Actions
  */
 const ActionInformation CGACTION_ADD = { 0, "Add", "Adds a new CG event", { {
-        "graphicname", "string" }, { "hostlayer", "int" }, { "templatedata...",
+        "graphicname", "string" }, { "hostlayer", "int" }, { "templatedata",
         "string" } } };
 const ActionInformation CGACTION_PLAY = { 1, "Play",
         "Plays template on by one step", { { "hostlayer", "int" } } };
 const ActionInformation CGACTION_UPDATE = { 2, "Update",
         "Replace existing template data with new data", {
-                { "hostlayer", "int" }, { "templatedata...", "string" } } };
+                { "hostlayer", "int" }, { "templatedata", "string" } } };
 const ActionInformation CGACTION_REMOVE = { 3, "Remove",
         "Stop template and clear layer", { { "hostlayer", "int" } } };
 
@@ -62,7 +62,7 @@ class CGDevice: public Device
 {
 public:
     CGDevice (PluginConfig config, Hook h);
-    virtual ~CGDevice () = 0;
+    virtual ~CGDevice ();
 
     virtual void add (std::string graphicname, int layer,
             std::map<std::string, std::string> *pdata)=0;

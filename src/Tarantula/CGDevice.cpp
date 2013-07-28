@@ -37,6 +37,14 @@ CGDevice::CGDevice (PluginConfig config, Hook h) :
 }
 
 /**
+ * Destructor. Cannot be pure virtual.
+ */
+CGDevice::~CGDevice()
+{
+
+}
+
+/**
  * Free function to convert extradata map in a PlaylistEntry to the formats
  * for a CG device command.
  *
@@ -51,7 +59,10 @@ CGDevice::CGDevice (PluginConfig config, Hook h) :
 void parseExtraData (PlaylistEntry *pevent, std::string *pgraphicname,
         int *playernumber, std::map<std::string, std::string> *pdata)
 {
-    *pgraphicname = "";
+    if (pgraphicname)
+    {
+        *pgraphicname = "";
+    }
 
     for (std::pair<std::string, std::string> thiselement : pevent->m_extras)
     {
@@ -59,7 +70,7 @@ void parseExtraData (PlaylistEntry *pevent, std::string *pgraphicname,
         {
             *pgraphicname = thiselement.second;
         }
-        else if (!thiselement.first.compare("layer"))
+        else if (!thiselement.first.compare("hostlayer"))
         {
             try
             {

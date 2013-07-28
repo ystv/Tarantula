@@ -10,9 +10,9 @@
 	<PluginData mode="simple">
 	    <Type>Graphics</Type>
 	    <PollPeriod units="seconds">5</PollPeriod>
-	    <Host>192.168.11.42</Host>
+	    <Host>127.0.0.1</Host>
 	    <Port>5250</Port>
-	    <ProducerLayer>1</ProducerLayer>
 	    <Layer>2</Layer>
+	    <ConnectTimeout>10</ConnectTimeout>
 	</PluginData>
 </TarantulaPlugin>

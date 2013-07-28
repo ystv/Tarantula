@@ -12,5 +12,6 @@
 	    <PollPeriod units="seconds">5</PollPeriod>
 	    <Host>127.0.0.1</Host>
 	    <Port>5250</Port>
+	    <ConnectTimeout>10</ConnectTimeout>
 	</PluginData>
 </TarantulaPlugin>

@@ -39,10 +39,20 @@ VideoDevice_Caspar::VideoDevice_Caspar (PluginConfig config, Hook h) :
         VideoDevice(config, h)
 {
     // Pull server name and port from configuration data
-    m_hostname = config.m_plugindata_map.at("Host");
-    m_port = config.m_plugindata_map.at("Port");
+    long int connecttimeout = 10;
+    try
+    {
+        m_hostname = config.m_plugindata_map.at("Host");
+        m_port = config.m_plugindata_map.at("Port");
 
-    long int connecttimeout = ConvertType::stringToInt(config.m_plugindata_map.at("ConnectTimeout"));
+        connecttimeout = ConvertType::stringToInt(config.m_plugindata_map.at("ConnectTimeout"));
+    }
+    catch (std::exception& ex)
+    {
+        m_hook.gs->L->error(m_pluginname, "Configuration data invalid or not supplied");
+        m_status = FAILED;
+        return;
+    }
 
     h.gs->L->info("Caspar Media", "Connecting to " + m_hostname + ":" + m_port);
 
@@ -73,6 +83,12 @@ VideoDevice_Caspar::~VideoDevice_Caspar ()
  */
 void VideoDevice_Caspar::poll ()
 {
+    if (m_status != READY && m_status != WAITING)
+    {
+        m_hook.gs->L->warn(m_pluginname, "Not in ready state for poll()");
+        return;
+    }
+
     if (!(m_pcaspcon->tick()) || (m_pcaspcon->m_errorflag))
     {
         m_status = CRASHED;

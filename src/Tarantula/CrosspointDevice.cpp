@@ -235,40 +235,35 @@ void CrosspointDevice::m_readConfig (PluginConfig config)
  * @param device Pointer to the device the event relates to
  * @param event Pointer to the event to be run
  */
-void CrosspointDevice::runDeviceEvent (std::shared_ptr<Device> pdevice, PlaylistEntry* pevent)
+void CrosspointDevice::runDeviceEvent (std::shared_ptr<Device> pdevice, PlaylistEntry& event)
 {
     std::shared_ptr<CrosspointDevice> peventdevice =
             std::dynamic_pointer_cast<CrosspointDevice>(pdevice);
 
-    if (pevent->m_action == CROSSPOINTACTION_SWITCH)
+    if (event.m_action == CROSSPOINTACTION_SWITCH)
     {
-        if (1 == pevent->m_extras.count("input")
-                && 1 == pevent->m_extras.count("output"))
+        if (1 == event.m_extras.count("input") && 1 == event.m_extras.count("output"))
         {
             try
             {
-                peventdevice->switchOP(pevent->m_extras["output"],
-                        pevent->m_extras["input"]);
+                peventdevice->switchOP(event.m_extras["output"], event.m_extras["input"]);
             } catch (...)
             {
-                g_logger.warn(pevent->m_device,
-                        "An error occurred switching output "
-                                + pevent->m_extras["output"] + " to input "
-                                + pevent->m_extras["input"]);
+                g_logger.warn(event.m_device,
+                        "An error occurred switching output " + event.m_extras["output"] + " to input "
+                                + event.m_extras["input"]);
             }
         }
         else
         {
             g_logger.warn("Crosspoint Device RunDeviceEvent",
-                    "Event " + ConvertType::intToString(pevent->m_eventid)
-                            + " malformed, no output/input specified");
+                    "Event " + ConvertType::intToString(event.m_eventid) + " malformed, no output/input specified");
         }
     }
     else
     {
         g_logger.error("Crosspoint Device RunDeviceEvent",
-                "Event " + ConvertType::intToString(pevent->m_eventid)
-                        + " has a non-existent action");
+                "Event " + ConvertType::intToString(event.m_eventid) + " has a non-existent action");
 
     }
 }

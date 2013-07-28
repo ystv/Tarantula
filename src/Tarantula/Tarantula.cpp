@@ -57,6 +57,10 @@ std::vector<PluginStateData> g_plugins;
 std::vector<std::shared_ptr<MouseCatcherSourcePlugin>> g_mcsources;
 std::map<std::string, std::shared_ptr<MouseCatcherProcessorPlugin>> g_mcprocessors;
 std::shared_ptr<BaseConfigLoader> g_pbaseconfig;
+
+//! Callback functions to run immediately before an event
+std::unordered_map<long int, PreProcessorHandler> g_postprocessorlist;
+
 DebugData g_dbg;
 
 // Functions used only in this file

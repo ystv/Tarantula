@@ -12,7 +12,7 @@ COMMON = $(shell ls -m ../../../build/Common-*.o|sed 's/,//g')
 
 all: $(addprefix ../../../bin/,$(addsuffix .so,$(PLUGINNAME)))
 
-INCLUDE := ../../../include
+INCLUDE := ../../../include ../../../boost
 
 ../../../bin/$(PLUGINNAME).so : $(addprefix ../../../build/$(PLUGINNAME)-,$(FILES:.cpp=.o)) $(EXTRAS)
 	$(CXX) $(COPTS) --shared -fPIC -o $@ $(COMMON) $(COMMON_OBJS)  $(addprefix ../../../build/$(PLUGINNAME)-,$(FILES:.cpp=.o)) $(EXTRAS) -L../../../bin

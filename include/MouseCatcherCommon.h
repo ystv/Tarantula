@@ -27,7 +27,11 @@
 #include <vector>
 #include <map>
 #include <memory>
+#include <boost/function.hpp>
+
 #include "PlaylistDB.h"
+
+typedef boost::function<void(PlaylistEntry&)> PreProcessorHandler;
 
 class MouseCatcherSourcePlugin;
 
@@ -65,6 +69,7 @@ public:
     int m_duration;
     std::map<std::string, std::string> m_extradata;
     std::vector<MouseCatcherEvent> m_childevents;
+    PreProcessorHandler m_postprocessor;
 
 };
 

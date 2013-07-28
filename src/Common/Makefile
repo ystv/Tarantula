@@ -1,6 +1,6 @@
 include ../../Makefile.inc
 
-INCLUDE := ../../include ../sqlite-amalgamation/
+INCLUDE := ../../include ../sqlite-amalgamation/ ../../boost
 
 NAME = Common
 

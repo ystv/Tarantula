@@ -50,11 +50,11 @@ PlaylistDB::PlaylistDB () :
         MemDB()
 {
     // Do the initial database setup
-    oneTimeExec("CREATE TABLE events (type INT, trigger INT64, device TEXT, devicetype INT, action, duration INT, parent INT, processed INT, lastupdate INT64)");
+    oneTimeExec("CREATE TABLE events (type INT, trigger INT64, device TEXT, devicetype INT, action, duration INT, parent INT, processed INT, lastupdate INT64, callback INT64)");
     oneTimeExec("CREATE TABLE extradata (eventid INT, key TEXT, value TEXT, processed INT)");
 
     // Queries used by other functions
-    m_addevent_query = prepare("INSERT INTO events VALUES (?,?,?,?,?,?,?,0, strftime('%s', 'now'))");
+    m_addevent_query = prepare("INSERT INTO events VALUES (?,?,?,?,?,?,?,0, strftime('%s', 'now'),?)");
     m_getevent_query = prepare("SELECT RowID,* FROM events WHERE type = ? AND trigger = ? AND processed = 0");
     m_getchildevents_query = prepare("SELECT RowID,* FROM events WHERE parent = ? AND processed = 0");
     m_removeevent_query = prepare("DELETE FROM events WHERE rowid = ?; DELETE FROM extradata WHERE eventid = ?");
@@ -83,6 +83,7 @@ int PlaylistDB::addEvent (PlaylistEntry *pobj)
     m_addevent_query->addParam(5, DBParam(pobj->m_action));
     m_addevent_query->addParam(6, DBParam(pobj->m_duration));
     m_addevent_query->addParam(7, DBParam(pobj->m_parent));
+    m_addevent_query->addParam(8, DBParam(pobj->m_postprocessorid));
 
     m_addevent_query->bindParams();
     int eventid = -1;
@@ -126,6 +127,7 @@ void PlaylistDB::populateEvent (sqlite3_stmt *pstmt, PlaylistEntry *pple)
     pple->m_action = sqlite3_column_int(pstmt, 5);
     pple->m_duration = sqlite3_column_int(pstmt, 6);
     pple->m_parent = sqlite3_column_int(pstmt, 7);
+    pple->m_postprocessorid = sqlite3_column_int(pstmt, 10);
 }
 
 /**

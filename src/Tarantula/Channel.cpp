@@ -113,7 +113,7 @@ void Channel::tick ()
     //Execute events on devices
     for (PlaylistEntry thisevent : events)
     {
-        runEvent(&thisevent);
+        runEvent(thisevent);
     }
 }
 
@@ -129,7 +129,7 @@ void Channel::begunPlaying (std::string name, int id)
     // Run the child events
     for (PlaylistEntry thisevent : childevents)
     {
-        runEvent(&thisevent);
+        runEvent(thisevent);
     }
 }
 
@@ -149,32 +149,37 @@ void Channel::endPlaying (std::string name, int id)
  *
  * @param event The event to run
  */
-void Channel::runEvent (PlaylistEntry *pevent)
+void Channel::runEvent (PlaylistEntry& event)
 {
-    if ((0 == g_devices.count(pevent->m_device))
-            && (pevent->m_devicetype != EVENTDEVICE_PROCESSOR))
+    if ((0 == g_devices.count(event.m_device)) && (event.m_devicetype != EVENTDEVICE_PROCESSOR))
     {
         g_logger.warn("Channel Runner",
-                "Device " + pevent->m_device + " not found for event ID "
-                        + ConvertType::intToString(pevent->m_eventid));
+                "Device " + event.m_device + " not found for event ID " + ConvertType::intToString(event.m_eventid));
         return;
     }
 
-    switch (pevent->m_devicetype)
+    // Run the callback function
+    if (event.m_postprocessorid != -1)
+    {
+        g_postprocessorlist[event.m_postprocessorid](event);
+        g_postprocessorlist.erase(event.m_postprocessorid);
+    }
+
+    switch (event.m_devicetype)
     {
         case EVENTDEVICE_CROSSPOINT:
         {
-            CrosspointDevice::runDeviceEvent(g_devices[pevent->m_device], pevent);
+            CrosspointDevice::runDeviceEvent(g_devices[event.m_device], event);
             break;
         }
         case EVENTDEVICE_VIDEODEVICE:
         {
-            VideoDevice::runDeviceEvent(g_devices[pevent->m_device], pevent);
+            VideoDevice::runDeviceEvent(g_devices[event.m_device], event);
             break;
         }
         case EVENTDEVICE_CGDEVICE:
         {
-            CGDevice::runDeviceEvent(g_devices[pevent->m_device], pevent);
+            CGDevice::runDeviceEvent(g_devices[event.m_device], event);
             break;
         }
         case EVENTDEVICE_PROCESSOR:
@@ -182,7 +187,7 @@ void Channel::runEvent (PlaylistEntry *pevent)
     }
 
     // Marks event as processed
-    m_pl.processEvent(pevent->m_eventid);
+    m_pl.processEvent(event.m_eventid);
 }
 
 int Channel::createEvent (PlaylistEntry *pev)

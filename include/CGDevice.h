@@ -71,7 +71,7 @@ public:
     virtual void update (int layer, std::map<std::string, std::string> *pdata)=0;
 
     void getHardwareStatus ();
-    static void runDeviceEvent (std::shared_ptr<Device> pdevice, PlaylistEntry *pevent);
+    static void runDeviceEvent (std::shared_ptr<Device> pdevice, PlaylistEntry& event);
     void getTemplateList (std::vector<std::pair<std::string, int>>& templates);
 
 protected:
@@ -82,5 +82,5 @@ protected:
 };
 
 // Convienience free function for parsing data
-void parseExtraData (PlaylistEntry *pevent, std::string *pgraphicname,
+void parseExtraData (PlaylistEntry& event, std::string *pgraphicname,
         int *playernumber, std::map<std::string, std::string> *pdata);

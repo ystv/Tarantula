@@ -2,7 +2,7 @@
 
 include ../../Makefile.inc
 
-INCLUDE := ../../include
+INCLUDE := ../../include ../../boost
 
 NAME = $(shell pwd |sed  's/\// /g' |awk '{print $$NF}')
 

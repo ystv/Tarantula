@@ -117,7 +117,7 @@ public:
     virtual void stop ()=0;
     virtual void immediatePlay (std::string filename); // Can be overridden, defaults to a cue then a play.
 
-    static void runDeviceEvent (std::shared_ptr<Device> pdevice, PlaylistEntry *pevent);
+    static void runDeviceEvent (std::shared_ptr<Device> pdevice, PlaylistEntry& event);
 
     //! Override so EndPlaying is called correctly
     void poll ();

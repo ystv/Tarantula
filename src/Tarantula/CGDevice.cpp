@@ -56,7 +56,7 @@ CGDevice::~CGDevice()
  * @param layernumber
  * @param data        The data to pass to the template.
  */
-void parseExtraData (PlaylistEntry *pevent, std::string *pgraphicname,
+void parseExtraData (PlaylistEntry& event, std::string *pgraphicname,
         int *playernumber, std::map<std::string, std::string> *pdata)
 {
     if (pgraphicname)
@@ -64,7 +64,7 @@ void parseExtraData (PlaylistEntry *pevent, std::string *pgraphicname,
         *pgraphicname = "";
     }
 
-    for (std::pair<std::string, std::string> thiselement : pevent->m_extras)
+    for (std::pair<std::string, std::string> thiselement : event.m_extras)
     {
         if (!thiselement.first.compare("graphicname"))
         {
@@ -77,8 +77,7 @@ void parseExtraData (PlaylistEntry *pevent, std::string *pgraphicname,
                 *playernumber = ConvertType::stringToInt(thiselement.second);
             } catch (...)
             {
-                g_logger.warn("CG Device RunDeviceEvent",
-                        "No layer in event " + pevent->m_eventid);
+                g_logger.warn("CG Device RunDeviceEvent", "No layer in event " + event.m_eventid);
                 throw std::exception();
             }
         }
@@ -96,11 +95,11 @@ void parseExtraData (PlaylistEntry *pevent, std::string *pgraphicname,
  * @param device
  * @param event
  */
-void CGDevice::runDeviceEvent (std::shared_ptr<Device> device, PlaylistEntry* event)
+void CGDevice::runDeviceEvent (std::shared_ptr<Device> device, PlaylistEntry& event)
 {
     std::shared_ptr<CGDevice> eventdevice = std::dynamic_pointer_cast<CGDevice>(device);
 
-    if (CGACTION_ADD == event->m_action)
+    if (CGACTION_ADD == event.m_action)
     {
         int layer;
         std::string graphicname;
@@ -112,10 +111,10 @@ void CGDevice::runDeviceEvent (std::shared_ptr<Device> device, PlaylistEntry* ev
             eventdevice->add(graphicname, layer, &templatedata);
         } catch (...)
         {
-            g_logger.error(event->m_device, "Unable to add event " + event->m_eventid);
+            g_logger.error(event.m_device, "Unable to add event " + event.m_eventid);
         }
     }
-    else if (CGACTION_PLAY == event->m_action)
+    else if (CGACTION_PLAY == event.m_action)
     {
         int layer;
 
@@ -125,10 +124,10 @@ void CGDevice::runDeviceEvent (std::shared_ptr<Device> device, PlaylistEntry* ev
             eventdevice->play(layer);
         } catch (...)
         {
-            g_logger.error(event->m_device, "Unable to play event " + event->m_eventid);
+            g_logger.error(event.m_device, "Unable to play event " + event.m_eventid);
         }
     }
-    else if (CGACTION_UPDATE == event->m_action)
+    else if (CGACTION_UPDATE == event.m_action)
     {
         int layer;
         std::map<std::string, std::string> templatedata;
@@ -139,11 +138,10 @@ void CGDevice::runDeviceEvent (std::shared_ptr<Device> device, PlaylistEntry* ev
             eventdevice->update(layer, &templatedata);
         } catch (...)
         {
-            g_logger.error(event->m_device,
-                    "Unable to update in event " + event->m_eventid);
+            g_logger.error(event.m_device, "Unable to update in event " + event.m_eventid);
         }
     }
-    else if (CGACTION_REMOVE == event->m_action)
+    else if (CGACTION_REMOVE == event.m_action)
     {
         int layer;
 
@@ -153,15 +151,13 @@ void CGDevice::runDeviceEvent (std::shared_ptr<Device> device, PlaylistEntry* ev
             eventdevice->remove(layer);
         } catch (...)
         {
-            g_logger.error(event->m_device,
-                    "Unable to remove in event " + event->m_eventid);
+            g_logger.error(event.m_device, "Unable to remove in event " + event.m_eventid);
         }
     }
     else
     {
         g_logger.error("CG Device RunDeviceEvent",
-                "Event " + ConvertType::intToString(event->m_eventid)
-                        + " has a non-existent action");
+                "Event " + ConvertType::intToString(event.m_eventid) + " has a non-existent action");
 
     }
 }

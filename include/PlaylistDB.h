@@ -119,6 +119,7 @@ public:
     int m_duration;
     int m_parent;
     std::map<std::string, std::string> m_extras;
+    long int m_postprocessorid;
     PlaylistEntry ();
 };
 

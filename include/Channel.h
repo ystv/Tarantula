@@ -62,7 +62,7 @@ public:
     static int getChannelByName (std::string channelname);
 
 private:
-    void runEvent (PlaylistEntry *pev);
+    void runEvent (PlaylistEntry& pevent);
 };
 
 /*

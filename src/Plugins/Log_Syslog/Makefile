@@ -9,7 +9,7 @@ EXTRAS = ../../../build/Common-TarantulaPlugin.o ../../../build/Common-Log.o
 
 all: $(addprefix ../../../bin/,$(addsuffix .so,$(PLUGINNAME)))
 
-INCLUDE := ../../../include
+INCLUDE := ../../../include ../../../boost
 
 ../../../bin/$(PLUGINNAME).so : $(addprefix ../../../build/$(PLUGINNAME)-,$(FILES:.cpp=.o)) $(EXTRAS)
 	$(CXX) $(COPTS) --shared -fpic -o $@ $(COMMON_OBJS)  $(addprefix ../../../build/$(PLUGINNAME)-,$(FILES:.cpp=.o)) $(EXTRAS)

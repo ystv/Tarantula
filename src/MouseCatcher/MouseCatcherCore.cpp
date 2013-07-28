@@ -487,6 +487,12 @@ namespace MouseCatcherCore
             pgeneratedevent->m_extradata = pplaylistevent->m_extras;
             pgeneratedevent->m_eventid = pplaylistevent->m_eventid;
 
+            // Add a postprocessor if set
+            if (pplaylistevent->m_postprocessorid > -1)
+            {
+                pgeneratedevent->m_postprocessor = g_postprocessorlist[pplaylistevent->m_postprocessorid];
+            }
+
             // Get an action name
             pgeneratedevent->m_action_name = g_devices[pgeneratedevent->m_targetdevice]->m_actionlist->
                     at(pgeneratedevent->m_action)->name;
@@ -550,6 +556,17 @@ namespace MouseCatcherCore
         pplaylistevent->m_trigger = pmcevent->m_triggertime;
         pplaylistevent->m_action = pmcevent->m_action;
         pplaylistevent->m_extras = pmcevent->m_extradata;
+
+        // Add a postprocessor if set
+        if (pmcevent->m_postprocessor)
+        {
+            g_postprocessorlist.emplace(g_postprocessorlist.size(), pmcevent->m_postprocessor);
+            pplaylistevent->m_postprocessorid = g_postprocessorlist.size()-1;
+        }
+        else
+        {
+            pplaylistevent->m_postprocessorid = -1;
+        }
 
         if (parentid > -1)
         {

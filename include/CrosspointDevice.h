@@ -81,7 +81,7 @@ public:
 
     std::map<std::string, std::string> getStatus ();
 
-    static void runDeviceEvent (std::shared_ptr<Device> pdevice, PlaylistEntry *pevent);
+    static void runDeviceEvent (std::shared_ptr<Device> pdevice, PlaylistEntry& event);
 
     virtual void switchOP (std::string output, std::string input)=0;
 

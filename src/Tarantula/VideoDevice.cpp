@@ -76,78 +76,71 @@ void VideoDevice::immediatePlay (std::string filename)
  * @param device Pointer to the device the event relates to
  * @param event Pointer to the event to be run
  */
-void VideoDevice::runDeviceEvent (std::shared_ptr<Device> pdevice, PlaylistEntry* pevent)
+void VideoDevice::runDeviceEvent (std::shared_ptr<Device> pdevice, PlaylistEntry& event)
 {
     std::shared_ptr<VideoDevice> peventdevice = std::dynamic_pointer_cast<VideoDevice>(pdevice);
 
-    if (VIDEOACTION_LOAD == pevent->m_action)
+    if (VIDEOACTION_LOAD == event.m_action)
     {
-        if (1 == pevent->m_extras.count("filename"))
+        if (1 == event.m_extras.count("filename"))
         {
             try
             {
-                peventdevice->cue(pevent->m_extras["filename"]);
+                peventdevice->cue(event.m_extras["filename"]);
             } catch (...)
             {
-                g_logger.error(pevent->m_device,
-                        "An error occurred cueing file "
-                                + pevent->m_extras["filename"]);
+                g_logger.error(event.m_device, "An error occurred cueing file " + event.m_extras["filename"]);
             }
         }
         else
         {
             g_logger.warn("Video Device runDeviceEvent",
-                    "Event " + ConvertType::intToString(pevent->m_eventid)
-                            + " malformed, no filename");
+                    "Event " + ConvertType::intToString(event.m_eventid) + " malformed, no filename");
         }
     }
-    else if (VIDEOACTION_PLAY == pevent->m_action)
+    else if (VIDEOACTION_PLAY == event.m_action)
     {
-        if (1 == pevent->m_extras.count("filename"))
+        if (1 == event.m_extras.count("filename"))
         {
             try
             {
-                peventdevice->immediatePlay(pevent->m_extras["filename"]);
+                peventdevice->immediatePlay(event.m_extras["filename"]);
             } catch (...)
             {
-                g_logger.error(pevent->m_device,
-                        "An error occurred playing file "
-                                + pevent->m_extras["filename"]);
+                g_logger.error(event.m_device,
+                        "An error occurred playing file " + event.m_extras["filename"]);
             }
         }
         else
         {
             g_logger.warn("Video Device runDeviceEvent",
-                    "Event " + ConvertType::intToString(pevent->m_eventid)
-                            + " malformed, no filename");
+                    "Event " + ConvertType::intToString(event.m_eventid) + " malformed, no filename");
         }
     }
-    else if (VIDEOACTION_PLAYLOADED == pevent->m_action)
+    else if (VIDEOACTION_PLAYLOADED == event.m_action)
     {
         try
         {
             peventdevice->play();
         } catch (...)
         {
-            g_logger.error(pevent->m_device, "An error occurred playing");
+            g_logger.error(event.m_device, "An error occurred playing");
         }
     }
-    else if (VIDEOACTION_STOP == pevent->m_action)
+    else if (VIDEOACTION_STOP == event.m_action)
     {
         try
         {
             peventdevice->stop();
         } catch (...)
         {
-            g_logger.error(pevent->m_device,
-                    "An error occurred stopping playback");
+            g_logger.error(event.m_device, "An error occurred stopping playback");
         }
     }
     else
     {
         g_logger.error("Video Device runDeviceEvent",
-                "Event " + ConvertType::intToString(pevent->m_eventid)
-                        + " has a non-existent action");
+                "Event " + ConvertType::intToString(event.m_eventid) + " has a non-existent action");
 
     }
 }

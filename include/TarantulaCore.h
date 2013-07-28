@@ -28,6 +28,8 @@
 #include <map>
 #include <string>
 #include <memory>
+#include <unordered_map>
+#include <boost/function.hpp>
 
 #include "BaseConfigLoader.h"
 
@@ -35,12 +37,13 @@
 class Log;
 class Device;
 struct PluginStateData;
-
+class PlaylistEntry;
 
 // Define callbacks
 typedef void (*cbBegunPlaying) (std::string, int);
 typedef void (*cbEndPlaying) (std::string, int);
 typedef void (*cbTick) ();
+typedef boost::function<void(PlaylistEntry&)> PreProcessorHandler;
 
 struct DebugData
 {
@@ -56,5 +59,6 @@ extern std::shared_ptr<BaseConfigLoader> g_pbaseconfig;
 
 extern std::map<std::string, std::shared_ptr<Device>> g_devices;
 extern std::vector<PluginStateData> g_plugins;
+extern std::unordered_map<long int, PreProcessorHandler> g_postprocessorlist;
 
 extern DebugData g_dbg;

@@ -47,6 +47,9 @@ class MouseCatcherProcessorPlugin: public Plugin
 public:
     MouseCatcherProcessorPlugin (PluginConfig config, Hook h);
     virtual ~MouseCatcherProcessorPlugin ();
+
+    void addPluginReference (std::shared_ptr<Plugin> thisplugin);
+
     virtual void handleEvent (MouseCatcherEvent originalEvent,
             MouseCatcherEvent& resultingEvent);
 

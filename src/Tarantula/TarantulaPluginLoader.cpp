@@ -84,7 +84,14 @@ std::shared_ptr<Plugin> ActivatePlugin (PluginConfig cfg, std::shared_ptr<Plugin
 
     try
     {
+        // Load the plugin and call a constructor
         plugfunc(h, cfg, pref);
+
+        if (pref)
+        {
+            // Call a function to add the plugin to a management list (other than g_plugins)
+            pref->addPluginReference(pref);
+        }
     }
     catch (std::exception& ex)
     {

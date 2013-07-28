@@ -52,6 +52,18 @@ MouseCatcherSourcePlugin::~MouseCatcherSourcePlugin ()
 }
 
 /**
+ * Add this plugin to the list managing this type
+ *
+ *  @param thisplugin Pointer to new plugin
+ */
+void MouseCatcherSourcePlugin::addPluginReference (std::shared_ptr<Plugin> thisplugin)
+{
+    std::shared_ptr<MouseCatcherSourcePlugin> thissource =
+            std::dynamic_pointer_cast<MouseCatcherSourcePlugin>(thisplugin);
+    g_mcsources.push_back(std::shared_ptr<MouseCatcherSourcePlugin>(thissource));
+}
+
+/**
  * Static predicate used to erase completed items from the ActionQueue
  * @param a		 The EventAction checked
  * @param plugin The plugin running the queue checks

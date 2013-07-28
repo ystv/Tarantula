@@ -60,6 +60,18 @@ MouseCatcherProcessorPlugin::~MouseCatcherProcessorPlugin ()
 }
 
 /**
+ * Add this plugin to the list managing this type
+ *
+ *  @param thisplugin Pointer to new plugin
+ */
+void MouseCatcherProcessorPlugin::addPluginReference (std::shared_ptr<Plugin> thisplugin)
+{
+    std::shared_ptr<MouseCatcherProcessorPlugin> thisproc =
+            std::dynamic_pointer_cast<MouseCatcherProcessorPlugin>(thisplugin);
+    g_mcprocessors[thisproc->getPluginName()] = std::shared_ptr<MouseCatcherProcessorPlugin>(thisproc);
+}
+
+/**
  * Get the ProcessorInformation struct for this plugin
  *
  * @return Struct containing plugin name, description and data

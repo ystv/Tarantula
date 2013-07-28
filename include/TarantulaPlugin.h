@@ -95,6 +95,8 @@ class Plugin
 public:
     Plugin (PluginConfig config, Hook h);
     virtual ~Plugin();
+
+    virtual void addPluginReference (std::shared_ptr<Plugin> thisplugin);
     std::string getPluginName ();
     plugin_status_t getStatus ();
     // Get the name of the config file the plugin was loaded from (for reloading)

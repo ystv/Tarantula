@@ -38,6 +38,9 @@ class MouseCatcherSourcePlugin: public Plugin
 public:
     MouseCatcherSourcePlugin (PluginConfig config, Hook h);
     virtual ~MouseCatcherSourcePlugin ();
+
+    void addPluginReference (std::shared_ptr<Plugin> thisplugin);
+
     virtual void tick (std::vector<EventAction> *ActionQueue)=0;
 
     // Callbacks used to update plugin from the core

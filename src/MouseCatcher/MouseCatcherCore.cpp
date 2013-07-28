@@ -25,6 +25,7 @@
 
 #include <dirent.h> //for reading the directories
 #include <vector>
+#include <algorithm>
 
 #include "MouseCatcherCommon.h"
 #include "MouseCatcherCore.h"
@@ -44,9 +45,6 @@ namespace MouseCatcherCore
 {
     std::vector<EventAction> *g_pactionqueue;
 
-    void cb_eventsource (std::shared_ptr<Plugin> thisplugin);
-    void cb_eventprocessor (std::shared_ptr<Plugin> thisplugin);
-
     /**
      * Encapsulates loading plugins, registering callbacks and logging activation
      *
@@ -57,24 +55,10 @@ namespace MouseCatcherCore
     {
         g_pactionqueue = new std::vector<EventAction>;
         g_logger.info("MouseCatcherCore", "Now initialising MouseCatcher core");
-        loadAllPlugins(sourcepath, "EventSource", cb_eventsource);
-        loadAllPlugins(processorpath, "EventProcessor", cb_eventprocessor);
+        loadAllPlugins(sourcepath, "EventSource");
+        loadAllPlugins(processorpath, "EventProcessor");
         g_tickcallbacks.push_back(MouseCatcherCore::eventSourcePluginTicks);
         g_tickcallbacks.push_back(MouseCatcherCore::eventQueueTicks);
-    }
-
-    void cb_eventsource (std::shared_ptr<Plugin> thisplugin)
-    {
-        std::shared_ptr<MouseCatcherSourcePlugin> thissource =
-                std::dynamic_pointer_cast<MouseCatcherSourcePlugin>(thisplugin);
-        g_mcsources.push_back(std::shared_ptr<MouseCatcherSourcePlugin>(thissource));
-    }
-
-    void cb_eventprocessor (std::shared_ptr<Plugin> thisplugin)
-    {
-        std::shared_ptr<MouseCatcherProcessorPlugin> thisproc =
-                std::dynamic_pointer_cast<MouseCatcherProcessorPlugin>(thisplugin);
-        g_mcprocessors[thisproc->getPluginName()] = std::shared_ptr<MouseCatcherProcessorPlugin>(thisproc);
     }
 
     /**
@@ -89,6 +73,11 @@ namespace MouseCatcherCore
                 thisplugin->tick(g_pactionqueue);
             }
         }
+
+        // Delete all plugins that are unloaded
+        g_mcsources.erase(std::remove_if(g_mcsources.begin(), g_mcsources.end(),
+                        [](std::shared_ptr<MouseCatcherSourcePlugin> d){return d->getStatus() == UNLOAD;}),
+                        g_mcsources.end());
     }
 
     /**
@@ -373,12 +362,15 @@ namespace MouseCatcherCore
     {
         std::map<std::string, ProcessorInformation> processors;
 
-        for (std::pair<std::string, std::shared_ptr<MouseCatcherProcessorPlugin>> thisprocessor :
-                g_mcprocessors)
+        for (std::pair<std::string, std::shared_ptr<MouseCatcherProcessorPlugin>> thisprocessor : g_mcprocessors)
         {
-            if (thisprocessor.second)
+            if (UNLOAD == thisprocessor.second->getStatus())
             {
                 processors[thisprocessor.first] = thisprocessor.second->getProcessorInformation();
+            }
+            else
+            {
+                g_mcprocessors.erase(thisprocessor.first);
             }
         }
 

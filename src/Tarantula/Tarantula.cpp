@@ -62,9 +62,6 @@ DebugData g_dbg;
 // Functions used only in this file
 static void processPluginStates ();
 static void reloadPlugin (PluginStateData& state);
-void cb_devices (std::shared_ptr<Plugin> thisplugin);
-void cb_interfaces (std::shared_ptr<Plugin> thisplugin);
-void cb_loggers (std::shared_ptr<Plugin> thisplugin);
 
 int main (int argc, char *argv[])
 {
@@ -89,10 +86,9 @@ int main (int argc, char *argv[])
 
     // Load all non-Mousecatcher plugins
     g_pbaseconfig = std::make_shared<BaseConfigLoader>("config_base/Base.xml");
-    loadAllPlugins("config_base/" + g_pbaseconfig->getDevicesPath(), "Device", &cb_devices);
-    loadAllPlugins("config_base/" + g_pbaseconfig->getInterfacesPath(),
-            "Interface", &cb_interfaces);
-    loadAllPlugins("config_base/" + g_pbaseconfig->getLogsPath(), "Logger", &cb_loggers);
+    loadAllPlugins("config_base/" + g_pbaseconfig->getDevicesPath(), "Device");
+    loadAllPlugins("config_base/" + g_pbaseconfig->getInterfacesPath(), "Interface");
+    loadAllPlugins("config_base/" + g_pbaseconfig->getLogsPath(), "Logger");
     g_logger.info("Tarantula Core",
             "Config loaded. System name is: " + g_pbaseconfig->getSystemName());
 
@@ -157,37 +153,6 @@ int main (int argc, char *argv[])
     return 0;
 }
 
-/**
- * Callback to add device plugins to the list of devices
- *
- * @param thisplugin Pointer to new plugin
- */
-void cb_devices (std::shared_ptr<Plugin> thisplugin)
-{
-    std::shared_ptr<Device> thisdevice = std::dynamic_pointer_cast<Device>(thisplugin);
-
-    g_devices[thisdevice->getPluginName()] = std::shared_ptr<Device>(thisdevice);
-}
-
-/**
- * Callback to add interface plugins to the list of interfaces
- *
- * @param thisplugin Pointer to new plugin
- */
-void cb_interfaces (std::shared_ptr<Plugin> thisplugin)
-{
-    //!TODO Write interfaces stuff
-}
-
-/**
- * Dummy callback for logging plugins
- *
- * @param thisplugin Pointer to new plugin
- */
-void cb_loggers (std::shared_ptr<Plugin> thisplugin)
-{
-    // Nothing to do
-}
 
 /**
  * Unload and reload a crashed plugin
@@ -197,9 +162,8 @@ void reloadPlugin (PluginStateData& state)
     std::string file = state.ppluginreference->getConfigFilename();
 
     // Unload the plugin
-    //state.ppluginreference.reset();
     state.ppluginreference->disablePlugin();
-
+    state.ppluginreference.reset();
     state.reloadsremaining--;
 
     // Reload the plugin
@@ -253,17 +217,11 @@ void processPluginStates ()
                 {
                     g_logger.OMGWTF(pluginstate.ppluginreference->getPluginName(),
                             "Plugin failure is permanent. Disabling plugin");
-                    pluginstate.ppluginreference.reset();
+                    pluginstate.ppluginreference->disablePlugin();
                 }
                 break;
             }
             case UNLOAD:
-            {
-                g_logger.info(pluginstate.ppluginreference->getPluginName(),
-                        "Unload requested. Unloading plugin");
-                pluginstate.ppluginreference.reset();
-                break;
-            }
             case READY:
             case WAITING:
             default:
@@ -275,9 +233,9 @@ void processPluginStates ()
         }
     }
 
-    // Delete all plugins in state CLEANUP
+    // Delete all plugins that are unloaded
     g_plugins.erase(std::remove_if(g_plugins.begin(), g_plugins.end(),
-                    [](PluginStateData p){return NULL == p.ppluginreference;}), g_plugins.end());
+                    [](PluginStateData p){return p.ppluginreference->getStatus() == UNLOAD;}), g_plugins.end());
 
 }
 

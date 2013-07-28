@@ -38,6 +38,7 @@ class Device: public Plugin
 public:
     Device (PluginConfig config, playlist_device_type_t, Hook h);
     virtual ~Device ();
+    void addPluginReference (std::shared_ptr<Plugin> thisplugin);
 
     playlist_device_type_t getType ();
 

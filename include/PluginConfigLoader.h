@@ -38,8 +38,6 @@ class Plugin;
 #define LIBRARY_EXTENSION ".so"
 #endif
 
-typedef void (*PluginLoadCallback)(std::shared_ptr<Plugin>);
-
 /**
  * Plugin configuration parsing error values.
  */
@@ -55,7 +53,7 @@ enum plugin_config_error_t
 };
 
 // Helper function to load plugins
-void loadAllPlugins (std::string path, std::string type, PluginLoadCallback);
+void loadAllPlugins (std::string path, std::string type);
 
 /**
  * Basic plugin configuration loader. Will parse the required configuration

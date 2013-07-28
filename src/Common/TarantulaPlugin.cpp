@@ -25,6 +25,12 @@
 
 #include "TarantulaPlugin.h"
 
+/**
+ * Constructor. Configure some basics common to every plugin.
+ *
+ * @param config Configuration data array
+ * @param h      Link back to global constructs
+ */
 Plugin::Plugin (PluginConfig config, Hook h)
 {
     m_status = STARTING;
@@ -38,11 +44,31 @@ Plugin::~Plugin()
 
 }
 
+/**
+ * Placeholder for callback to add a plugin to a management list
+ *
+ * @param thisplugin Reference to access new plugin
+ */
+void Plugin::addPluginReference (std::shared_ptr<Plugin> thisplugin)
+{
+    // Nothing to do by default
+}
+
+/**
+ * Return the name of the plugin instance
+ *
+ * @return String of plugin instance name
+ */
 std::string Plugin::getPluginName ()
 {
     return m_pluginname;
 }
 
+/**
+ * Return current internal status of the plugin
+ *
+ * @return Status of plugin
+ */
 plugin_status_t Plugin::getStatus ()
 {
     return m_status;
@@ -53,6 +79,9 @@ std::string Plugin::getConfigFilename ()
     return m_configfile;
 }
 
+/**
+ * Shut down the plugin by marking it as ready to unload.
+ */
 void Plugin::disablePlugin ()
 {
     m_status = UNLOAD;

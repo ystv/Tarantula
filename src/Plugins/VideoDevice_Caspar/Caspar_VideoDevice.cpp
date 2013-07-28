@@ -83,7 +83,7 @@ VideoDevice_Caspar::~VideoDevice_Caspar ()
  */
 void VideoDevice_Caspar::poll ()
 {
-    if (m_status != READY && m_status != WAITING)
+    if (m_status == FAILED || m_status == CRASHED)
     {
         m_hook.gs->L->warn(m_pluginname, "Not in ready state for poll()");
         return;

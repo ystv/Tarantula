@@ -22,6 +22,7 @@
 *
 *****************************************************************************/
 
+#include <algorithm>
 
 #include "Device.h"
 #include "PluginConfig.h"
@@ -79,6 +80,19 @@ Device::~Device ()
 }
 
 /**
+ * Add this plugin to the list managing this type
+ *
+ *  @param thisplugin Pointer to new plugin
+ */
+void Device::addPluginReference (std::shared_ptr<Plugin> thisplugin)
+{
+    std::shared_ptr<Device> thisdevice = std::dynamic_pointer_cast<Device>(thisplugin);
+
+    g_devices[thisdevice->getPluginName()] = std::shared_ptr<Device>(thisdevice);
+}
+
+
+/**
  * The type of device we have here
  * @return deviceType This device's type
  */
@@ -106,9 +120,13 @@ void deviceTicks ()
 {
     for (std::pair<std::string, std::shared_ptr<Device>> thisdevice : g_devices)
     {
-        if (thisdevice.second)
+        if (thisdevice.second->getStatus() != UNLOAD)
         {
             thisdevice.second->poll();
+        }
+        else
+        {
+            g_devices.erase(thisdevice.first);
         }
     }
 }

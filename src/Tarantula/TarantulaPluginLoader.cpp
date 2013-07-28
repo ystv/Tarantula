@@ -64,8 +64,7 @@ std::shared_ptr<Plugin> ActivatePlugin (PluginConfig cfg, std::shared_ptr<Plugin
     if (!ppluginf)
     {
         std::stringstream logmsg;
-        logmsg << "Could not open plugin file " << cfg.m_library << " "
-                << dlerror();
+        logmsg << "Could not open plugin file " << cfg.m_library << " " << dlerror();
         g_logger.error("Plugin Loader", logmsg.str());
         return NULL;
     }
@@ -73,8 +72,7 @@ std::shared_ptr<Plugin> ActivatePlugin (PluginConfig cfg, std::shared_ptr<Plugin
     void *ppluginhdl = dlsym(ppluginf, "LoadPlugin");
     if (!ppluginhdl)
     {
-        logmsg
-                << "Could not get Loadplugin function from SO file. Is it a valid plugin?";
+        logmsg << "Could not get Loadplugin function from SO file. Is it a valid plugin?";
         g_logger.error("Plugin Loader", logmsg.str());
         dlclose(ppluginf);
         return NULL;
@@ -83,7 +81,18 @@ std::shared_ptr<Plugin> ActivatePlugin (PluginConfig cfg, std::shared_ptr<Plugin
     LoadPluginFunc plugfunc = (LoadPluginFunc) ppluginhdl;
     Hook h;
     h.gs = NewGS();
-    plugfunc(h, cfg, pref);
+
+    try
+    {
+        plugfunc(h, cfg, pref);
+    }
+    catch (std::exception& ex)
+    {
+        logmsg << "Failed to call startup on plugin " << cfg.m_library << " Error: " << ex.what();
+        g_logger.error("Plugin Loader", logmsg.str());
+        dlclose(ppluginf);
+        return NULL;
+    }
     return pref;
 }
 

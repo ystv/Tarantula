@@ -96,6 +96,16 @@ void TCPConnection::handleIncomingData (
     std::istream is(&m_messagedata);
     std::getline(is, newdata.m_xmldata);
 
+    // Handle connection close request
+    if (!newdata.m_xmldata.substr(0, 4).compare("quit") || !newdata.m_xmldata.substr(0, 4).compare("exit"))
+    {
+        m_socket.shutdown(boost::asio::ip::tcp::socket::shutdown_both);
+
+        m_socket.close();
+
+        return;
+    }
+
     newdata.m_conn = shared_from_this();
 
     m_data_vector->push_back(newdata);

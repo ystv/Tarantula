@@ -29,6 +29,7 @@
 #include <dirent.h> //for reading the directories
 #include <unistd.h>
 #include <algorithm>
+#include <mutex>
 
 #include "TarantulaPlugin.h" //this is the one place in the core where this is included.
 #include "Log_Screen.h"
@@ -40,6 +41,7 @@
 #include "MouseCatcherCommon.h"
 #include "MouseCatcherCore.h"
 #include "Misc.h"
+#include "AsyncJobSystem.h"
 
 using std::cout;
 using std::cerr;
@@ -63,6 +65,12 @@ std::unordered_map<long int, PreProcessorHandler> g_postprocessorlist;
 
 DebugData g_dbg;
 
+// Async thread runner system
+AsyncJobSystem g_async;
+
+// Mutex for access to Tarantula system core
+std::timed_mutex g_core_lock;
+
 // Functions used only in this file
 static void processPluginStates ();
 static void reloadPlugin (PluginStateData& state);
@@ -82,6 +90,9 @@ int main (int argc, char *argv[])
 
     //Add plugin tick handler
     g_tickcallbacks.push_back(processPluginStates);
+
+    // Add async job update handler
+    g_tickcallbacks.push_back(std::bind(&AsyncJobSystem::completeAsyncJobs, &g_async));
 
     //Static register the screen log handler if modules fail
     Hook h;
@@ -119,6 +130,7 @@ int main (int argc, char *argv[])
     MouseCatcherCore::init("config_base/" + g_pbaseconfig->getEventSourcesPath(),
             "config_base/" + g_pbaseconfig->getEventProcessorsPath());
 
+
     // Tick loop with length set by framerate
     while (1)
     {
@@ -126,11 +138,22 @@ int main (int argc, char *argv[])
         clock_gettime(CLOCK_MONOTONIC, &ts);
         timespec begin = ts;
 
+        // Grab core lock
+        if (!g_core_lock.try_lock_for(std::chrono::nanoseconds(
+                static_cast<int>(1000000000 / g_pbaseconfig->getFramerate()))))
+        {
+            g_logger.warn("Tarantula Main", "Unable to grab core mutex lock");
+            continue;
+        }
+
         // Call all registered tick callbacks
         tick();
 
         // Check plugin health
         processPluginStates();
+
+        // Release mutex
+        g_core_lock.unlock();
 
         clock_gettime(CLOCK_MONOTONIC, &ts);
         timespec end = ts;
@@ -147,9 +170,8 @@ int main (int argc, char *argv[])
 
         if (remaining < 0)
         {
-            g_logger.warn("Tarantula Main",
-                    "That tick took "+ ConvertType::floatToString((double) diff / 1000000)
-                            + "ms - Too Long!");
+            g_logger.warn("Tarantula Main", "That tick took "+ ConvertType::floatToString((double) diff / 1000000)
+                    + "ms - Too Long!");
             continue;
         }
         usleep(remaining);
@@ -242,4 +264,5 @@ void processPluginStates ()
                     [](PluginStateData p){return p.ppluginreference->getStatus() == UNLOAD;}), g_plugins.end());
 
 }
+
 

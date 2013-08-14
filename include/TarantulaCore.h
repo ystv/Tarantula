@@ -29,7 +29,7 @@
 #include <string>
 #include <memory>
 #include <unordered_map>
-#include <boost/function.hpp>
+#include <functional>
 
 #include "BaseConfigLoader.h"
 
@@ -40,10 +40,10 @@ struct PluginStateData;
 class PlaylistEntry;
 
 // Define callbacks
-typedef void (*cbBegunPlaying) (std::string, int);
-typedef void (*cbEndPlaying) (std::string, int);
-typedef void (*cbTick) ();
-typedef boost::function<void(PlaylistEntry&)> PreProcessorHandler;
+typedef std::function<void(std::string, int)> cbBegunPlaying;
+typedef std::function<void(std::string, int)> cbEndPlaying;
+typedef std::function<void(void)> cbTick;
+typedef std::function<void(PlaylistEntry&)> PreProcessorHandler;
 
 struct DebugData
 {

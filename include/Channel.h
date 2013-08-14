@@ -27,13 +27,15 @@
 
 #include <string>
 #include <iostream>
+#include <functional>
+
 #include "TarantulaCore.h"
 #include "PlaylistDB.h"
 
 //define callbacks
-typedef void (*cbBegunPlaying) (std::string, int);
-typedef void (*cbEndPlaying) (std::string, int);
-typedef void (*cbTick) ();
+typedef std::function<void(std::string, int)> cbBegunPlaying;
+typedef std::function<void(std::string, int)> cbEndPlaying;
+typedef std::function<void(void)> cbTick;
 //end callbacks
 
 /**

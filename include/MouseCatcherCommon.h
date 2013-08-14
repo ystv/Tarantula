@@ -27,11 +27,11 @@
 #include <vector>
 #include <map>
 #include <memory>
-#include <boost/function.hpp>
+#include <functional>
 
 #include "PlaylistDB.h"
 
-typedef boost::function<void(PlaylistEntry&)> PreProcessorHandler;
+typedef std::function<void(PlaylistEntry&)> PreProcessorHandler;
 
 class MouseCatcherSourcePlugin;
 

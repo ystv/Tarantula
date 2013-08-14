@@ -29,6 +29,8 @@
 #include <vector>
 #include <string>
 #include <exception>
+#include <functional>
+
 #include "PluginConfig.h"
 #include "Channel.h"
 #include "Log.h"
@@ -38,9 +40,9 @@ class Device;
 class Plugin;
 
 // Callbacks
-typedef void (*cbBegunPlaying) (std::string, int);
-typedef void (*cbEndPlaying) (std::string, int);
-typedef void (*cbTick) ();
+typedef std::function<void(std::string, int)> cbBegunPlaying;
+typedef std::function<void(std::string, int)> cbEndPlaying;
+typedef std::function<void(void)> cbTick;
 
 #define TPlugin
 

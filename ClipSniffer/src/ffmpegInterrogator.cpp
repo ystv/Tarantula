@@ -48,11 +48,11 @@ MediaFileInfo interrogate(std::string filename) {
     MediaFileInfo mfi;
     mfi.length = 0;
     mfi.title = filename;
-    AVFormatContext *pFormatCtx;
+    AVFormatContext *pFormatCtx = avformat_alloc_context();
     // Open video file
     const char *fn = filename.c_str();
     if(avformat_open_input(&pFormatCtx,fn, NULL, NULL)!=0) {
-        std::cout << "Error opening file." << fn << std::endl;
+        std::cout << "Error opening file " << fn << std::endl;
         return mfi;
     }
     if(avformat_find_stream_info(pFormatCtx, NULL)<0) {
@@ -61,9 +61,15 @@ MediaFileInfo interrogate(std::string filename) {
     }
     mfi.filename = filename;
     mfi.length = (pFormatCtx->duration*25)/AV_TIME_BASE;
-    for(int i=0;i< (pFormatCtx->metadata->count);++i) {
-        if((std::string)pFormatCtx->metadata->elems[i].key == "title") {
-    mfi.title = pFormatCtx->metadata->elems[i].value;
+
+    if (pFormatCtx->metadata)
+    {
+        for(int i=0;i< (pFormatCtx->metadata->count);++i)
+        {
+            if((std::string)pFormatCtx->metadata->elems[i].key == "title")
+            {
+                mfi.title = pFormatCtx->metadata->elems[i].value;
+            }
         }
     }
     avformat_close_input(&pFormatCtx);

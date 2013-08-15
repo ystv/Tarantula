@@ -1,4 +1,4 @@
-DIRS = src
+DIRS = src 
 
 INCLUDE=./include
 
@@ -6,7 +6,7 @@ include Makefile.inc
 
 .PHONY: all $(DIRS) tests ClipSniffer boost
 
-all : $(DIRS)
+all : $(DIRS) ClipSniffer
 
 $(DIRS) tests: boost
 	$(MAKE) --directory $@

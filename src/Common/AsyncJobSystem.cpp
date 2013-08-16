@@ -68,11 +68,10 @@ std::shared_ptr<AsyncJobData> AsyncJobSystem::newAsyncJob (AsyncJobFunction func
     newjob->m_state = JOB_READY;
 
     // Lock the job queue and add the new job
-    m_jobqueue_mutex.lock();
-
-    m_jobs.insert(newjob);
-
-    m_jobqueue_mutex.unlock();
+    {
+    	std::lock_guard<std::mutex> lock(m_jobqueue_mutex);
+    	m_jobs.insert(newjob);
+    }
 
     // Wake the job runner
     m_async_cv.notify_one();
@@ -87,10 +86,11 @@ std::shared_ptr<AsyncJobData> AsyncJobSystem::newAsyncJob (AsyncJobFunction func
 void AsyncJobSystem::completeAsyncJobs ()
 {
     // Lock the queue or abort if it is locked
-    if (!m_jobqueue_mutex.try_lock())
+	std::lock_guard<std::mutex> lock(m_jobqueue_mutex);
+    /*if (!lock)
     {
         return;
-    }
+    }*/
 
     // Run callbacks and update job states
     for (std::set<std::shared_ptr<AsyncJobData>>::iterator thisjob = m_jobs.begin(); thisjob != m_jobs.end(); )
@@ -135,19 +135,19 @@ void AsyncJobSystem::asyncJobRunner ()
             std::shared_ptr<AsyncJobData> runjob;
 
             // Lock the mutex to allow searching the job list
-            m_jobqueue_mutex.lock();
-
-            // Find a runnable job
-            for (std::shared_ptr<AsyncJobData> thisjob : m_jobs)
             {
-                if (JOB_READY == thisjob->m_state)
-                {
-                    runjob = thisjob;
-                    break;
-                }
-            }
+            	std::lock_guard<std::mutex> lock(m_jobqueue_mutex);
 
-            m_jobqueue_mutex.unlock();
+				// Find a runnable job
+				for (std::shared_ptr<AsyncJobData> thisjob : m_jobs)
+				{
+					if (JOB_READY == thisjob->m_state)
+					{
+						runjob = thisjob;
+						break;
+					}
+				}
+            }
 
             if (runjob)
             {

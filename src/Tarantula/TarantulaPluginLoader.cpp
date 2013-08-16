@@ -103,12 +103,3 @@ std::shared_ptr<Plugin> ActivatePlugin (PluginConfig cfg, std::shared_ptr<Plugin
     }
     return pref;
 }
-
-/**
- * Unload the specified plugin
- * @param filename
- */
-void unLoad (const char* filename)
-{
-    //TODO: Write me.
-}

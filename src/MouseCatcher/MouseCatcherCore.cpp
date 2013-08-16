@@ -91,6 +91,19 @@ namespace MouseCatcherCore
     int processEvent (MouseCatcherEvent event, int lastid, bool ischild,
             EventAction& action)
     {
+        // Cursory check to make sure the given channel is actually real
+        int channelid;
+        try
+        {
+            channelid = Channel::getChannelByName(event.m_channel);
+        }
+        catch (std::exception&)
+        {
+            g_logger.warn("MouseCatcherCore", "Got event for bad channel: " + event.m_channel);
+            action.returnmessage = "Channel " + event.m_channel + " not found";
+            return -1;
+        }
+
         // Process event through EventProcessors, then run this function on new events
         if (0 == g_devices.count(event.m_targetdevice))
         {
@@ -109,7 +122,10 @@ namespace MouseCatcherCore
             }
             else
             {
+                g_logger.warn("MouseCatcherCore", "Got event for bad device: " + event.m_targetdevice);
+
                 // Return failure code
+                action.returnmessage = "Device/Processor " + event.m_targetdevice + " not found!";
                 return -1;
             }
         }
@@ -118,8 +134,7 @@ namespace MouseCatcherCore
             // Check that we got a working event chain
             if ((lastid < 0) && (event.m_eventtype != EVENT_FIXED))
             {
-                g_logger.warn("MouseCatcherCore",
-                        "An invalid event chain was detected");
+                g_logger.warn("MouseCatcherCore", "An invalid event chain was detected");
                 return -1;
             }
         }
@@ -127,20 +142,8 @@ namespace MouseCatcherCore
         // Create and add a playlist event for the parent
         PlaylistEntry playlistevent;
         convertToPlaylistEvent(&event, lastid, &playlistevent);
-        int eventid;
 
-        try
-        {
-        	eventid = g_channels[Channel::getChannelByName(event.m_channel)]->
-        			createEvent(&playlistevent);
-        }
-        catch (std::exception&)
-        {
-        	g_logger.warn("MouseCatcherCore", "Got event for bad channel: " +
-        			event.m_channel);
-        	action.returnmessage = "Channel " + event.m_channel + " not found";
-        	return -1;
-        }
+        int eventid = g_channels[channelid]->createEvent(&playlistevent);
 
         // Loop over and handle children
         for (MouseCatcherEvent thischild : event.m_childevents)
@@ -364,7 +367,7 @@ namespace MouseCatcherCore
 
         for (std::pair<std::string, std::shared_ptr<MouseCatcherProcessorPlugin>> thisprocessor : g_mcprocessors)
         {
-            if (UNLOAD == thisprocessor.second->getStatus())
+            if (UNLOAD != thisprocessor.second->getStatus())
             {
                 processors[thisprocessor.first] = thisprocessor.second->getProcessorInformation();
             }

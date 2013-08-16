@@ -25,10 +25,14 @@
 *****************************************************************************/
 
 #include <sstream>
+#include <mutex>
+#include <functional>
 
 #include "pugixml.hpp"
 #include "EventProcessor_Fill.h"
 #include "PluginConfig.h"
+#include "Misc.h"
+#include "MouseCatcherCore.h"
 
 /*****************************************************************************
  * FillDB Implementation
@@ -143,27 +147,6 @@ void FillDB::addPlay(int idnumber, int time)
 }
 
 /**
- * Mark a set of played files into the database
- *
- * @param playdata Vector of file IDs and times
- */
-void FillDB::addPlayData(std::vector<std::pair<int, int>>& playdata)
-{
-    oneTimeExec("BEGIN TRANSACTION;");
-    for (std::pair<int, int> thisdata : playdata)
-    {
-        m_paddplay_query->rmParams();
-
-        m_paddplay_query->addParam(1, thisdata.first);
-        m_paddplay_query->addParam(2, thisdata.second);
-
-        m_paddplay_query->bindParams();
-        sqlite3_step(m_paddplay_query->getStmt());
-    }
-    oneTimeExec("END TRANSACTION;");
-}
-
-/**
  * Add a file to the database.
  *
  * @param filename Name as known by VideoDevice
@@ -221,6 +204,22 @@ void FillDB::syncDatabase (std::string databasefile)
 	oneTimeExec("END TRANSACTION");
 	oneTimeExec("DETACH disk");
 
+}
+
+/**
+ * Start a transaction which other operations may be wrapped in
+ */
+void FillDB::beginTransaction ()
+{
+    oneTimeExec("BEGIN TRANSACTION;");
+}
+
+/**
+ * Complete an active transaction
+ */
+void FillDB::endTransaction ()
+{
+    oneTimeExec("END TRANSACTION;");
 }
 
 /**
@@ -298,6 +297,11 @@ EventProcessor_Fill::EventProcessor_Fill(PluginConfig config, Hook h) :
     // Create database connection
     m_pdb = std::shared_ptr<FillDB>(new FillDB(m_dbfile, m_weightpoints, m_fileweight));
 
+    m_placeholderid = 0;
+
+    // Populate information array
+    m_processorinfo.data["duration"] = "int";
+
     m_status = READY;
 
 }
@@ -314,8 +318,7 @@ void EventProcessor_Fill::readConfig (PluginConfig config)
     m_dbfile = config.m_plugindata_xml.child_value("DBFile");
     if (m_dbfile.empty())
     {
-    	m_hook.gs->L->error(config.m_instance, "No database file set in config."
-    			" Aborting.");
+    	m_hook.gs->L->error(config.m_instance, "No database file set in config. Aborting.");
     	m_status = FAILED;
     	return;
     }
@@ -323,9 +326,15 @@ void EventProcessor_Fill::readConfig (PluginConfig config)
     m_fileweight = config.m_plugindata_xml.child("FileWeight").text().as_int(-1);
     if (-1 == m_fileweight)
     {
-    	m_hook.gs->L->warn(config.m_instance, "FileWeight factor not set, "
-    			"assuming 0");
+    	m_hook.gs->L->warn(config.m_instance, "FileWeight factor not set, assuming 0");
     	m_fileweight = 0;
+    }
+
+    m_jobpriority = config.m_plugindata_xml.child("JobPriority").text().as_int(-1);
+    if (-1 == m_jobpriority)
+    {
+        m_hook.gs->L->warn(config.m_instance, "JobPriority factor not set, assuming 5");
+        m_jobpriority = 5;
     }
 
     // Parse the time-based weighting data
@@ -363,16 +372,14 @@ void EventProcessor_Fill::readConfig (PluginConfig config)
     m_continuitymin = continuitynode.child("MinimumTime").text().as_int(-1);
 	if (-1 == m_continuitymin)
 	{
-		m_hook.gs->L->warn(config.m_instance, "ContinuityFill MinimumTime not "
-				"set, assuming 5 seconds");
+		m_hook.gs->L->warn(config.m_instance, "ContinuityFill MinimumTime not set, assuming 5 seconds");
 		m_fileweight = 0;
 	}
 
 	m_continuityfill.m_action = continuitynode.child("EventAction").text().as_int(-1);
 	if (-1 == m_continuityfill.m_action)
 	{
-		m_hook.gs->L->warn(config.m_instance, "ContinuityFill EventAction not "
-				"set, assuming 0");
+		m_hook.gs->L->warn(config.m_instance, "ContinuityFill EventAction not set, assuming 0");
 		m_continuityfill.m_action = 0;
 	}
 
@@ -391,8 +398,7 @@ void EventProcessor_Fill::readConfig (PluginConfig config)
 	}
 	else
 	{
-		m_hook.gs->L->warn(config.m_instance, "ContinuityFill EventType not "
-				"set, assuming fixed");
+		m_hook.gs->L->warn(config.m_instance, "ContinuityFill EventType not set, assuming fixed");
 		m_continuityfill.m_eventtype = EVENT_FIXED;
 	}
 
@@ -404,26 +410,101 @@ void EventProcessor_Fill::readConfig (PluginConfig config)
 }
 
 /**
- * Generates a series of events based on configuration file, to fill a chunk
- * of time in the schedule. Uses the Duration field of the originalEvent but
- * devices to operate on and the types to form are based on config file.
+ * Set up an async job to fill the schedule automatically by generating events.
+ * Will return a placeholder event with an ID marker, to be populated when the
+ * async job completes in populatePlaceholderEvent().
  *
  * @param originalEvent  Event handle to use a base and duration
- * @param resultingEvent A number of idents/trailers, followed by a CG event
+ * @param resultingEvent Placeholder event to be populated with generated children
  */
 void EventProcessor_Fill::handleEvent(MouseCatcherEvent originalEvent,
         MouseCatcherEvent& resultingEvent)
 {
-    int duration = originalEvent.m_duration;
+    // Sort out durations
+    if (originalEvent.m_extradata.count("duration") > 0)
+    {
+        try
+        {
+            originalEvent.m_duration = ConvertType::stringToInt(originalEvent.m_extradata["duration"]);
+        }
+        catch (std::exception &ex)
+        {
+            m_hook.gs->L->warn(m_pluginname, "Bad duration of " + originalEvent.m_extradata["duration"] +
+                    " selecting 10 instead");
+            originalEvent.m_duration = 10;
+        }
+    }
+    else
+    {
+        m_hook.gs->L->warn(m_pluginname, "No duration given, selecting 10 instead");
+        originalEvent.m_duration = 10;
+    }
+
+    originalEvent.m_extradata.clear();
+
+    // Copy the input event onto the output placeholder
+    resultingEvent = originalEvent;
+
+    // Add a placeholder ID to identify this event later
+    resultingEvent.m_extradata["placeholderID"] = ConvertType::intToString(m_placeholderid);
+
+    // Create a new async job to actually run the processor
+    std::shared_ptr<MouseCatcherEvent> pfilledevent = std::make_shared<MouseCatcherEvent>(resultingEvent);
+
+    m_hook.gs->Async->newAsyncJob(
+            std::bind(&EventProcessor_Fill::generateFilledEvents, pfilledevent, m_pdb, m_structuredata, m_filler,
+                    m_continuityfill, m_continuitymin, std::placeholders::_1, std::placeholders::_2),
+            std::bind(&EventProcessor_Fill::populatePlaceholderEvent, this, pfilledevent, m_placeholderid,
+                    std::placeholders::_1),
+            pfilledevent, m_jobpriority, false);
+}
+
+/**
+ * Add a new file to the database
+ *
+ * @param filename Name of the file to the device it belongs to
+ * @param device   Name of the device that can play the file
+ * @param type     To match types in the config file
+ * @param duration Length of the new file
+ * @param weight   Hard weight to apply to file (to prevent scheduling Checkmate!)
+ */
+void EventProcessor_Fill::addFile (std::string filename, std::string device, std::string type,
+        int duration, int weight)
+{
+    m_pdb->addFile(filename, device, type, duration, weight);
+}
+
+/**
+ * Generates a series of events based on configuration file, to fill a chunk
+ * of time in the schedule. Uses the Duration field of the original event but
+ * devices to operate on and the types to form are based on config file.
+ *
+ * Designed to run as an async job so takes copies of all the class members it needs
+ * to save on a long core lock
+ *
+ * @param event          Pointer to an event which will be filled with generated data
+ * @param db             Pointer to m_pdb
+ * @param structuredata  m_structuredata from the calling class
+ * @param filler         m_filler from the calling class
+ * @param continuityfill m_continuityfill from the calling class
+ * @param continuitymin  m_continuitymin from the calling class
+ * @param data           Unused pointer to async data struct
+ * @param core_lock      Reference to core locking mutex
+ */
+void EventProcessor_Fill::generateFilledEvents (std::shared_ptr<MouseCatcherEvent> event, std::shared_ptr<FillDB> db,
+        std::vector<std::pair<std::string, std::string>> structuredata, bool filler, MouseCatcherEvent continuityfill,
+        int continuitymin, std::shared_ptr<void> data, std::timed_mutex &core_lock)
+{
+    int duration = event->m_duration;
 
     // Knock off a few seconds for minimum continuity time
-    duration = duration - m_continuitymin;
+    duration = duration - continuitymin;
 
     // Assemble a template event to populate with filename
     MouseCatcherEvent templateevent;
     templateevent.m_action = 1;
-    templateevent.m_channel = originalEvent.m_channel;
-    templateevent.m_triggertime = originalEvent.m_triggertime;
+    templateevent.m_channel = event->m_channel;
+    templateevent.m_triggertime = event->m_triggertime;
     templateevent.m_eventtype = EVENT_FIXED;
 
     // Temporary storage for played file data
@@ -436,9 +517,9 @@ void EventProcessor_Fill::handleEvent(MouseCatcherEvent originalEvent,
     int id;
 
     // Loop over each type in m_structuredata and generate an event
-    for (std::pair<std::string, std::string> thistype : m_structuredata)
+    for (std::pair<std::string, std::string> thistype : structuredata)
     {
-        id = m_pdb->getBestFile(filename, originalEvent.m_triggertime,
+        id = db->getBestFile(filename, event->m_triggertime,
                 duration, thistype.second, thistype.first, resultduration, pastids);
 
         if (id > 0)
@@ -448,7 +529,7 @@ void EventProcessor_Fill::handleEvent(MouseCatcherEvent originalEvent,
             templateevent.m_duration = resultduration;
             templateevent.m_targetdevice = thistype.second;
 
-            resultingEvent.m_childevents.push_back(templateevent);
+            event->m_childevents.push_back(templateevent);
 
             // Mark the play
             playdata.push_back(std::make_pair(id, templateevent.m_triggertime));
@@ -467,22 +548,22 @@ void EventProcessor_Fill::handleEvent(MouseCatcherEvent originalEvent,
     }
 
     // Now fill the remaining time with whatever type was tagged as filler
-    if (m_filler)
+    if (filler)
     {
         while (duration > 0)
         {
-            id = m_pdb->getBestFile(filename, originalEvent.m_triggertime,
-            		duration, m_structuredata.front().second,
-            		m_structuredata.front().first, resultduration, pastids);
+            id = db->getBestFile(filename, event->m_triggertime,
+                    duration, structuredata.front().second,
+                    structuredata.front().first, resultduration, pastids);
 
             if (id > 0)
             {
                 // Add an event for this file
                 templateevent.m_extradata["m_filename"] = filename;
                 templateevent.m_duration = resultduration;
-                templateevent.m_targetdevice = m_structuredata.front().second;
+                templateevent.m_targetdevice = structuredata.front().second;
 
-                resultingEvent.m_childevents.push_back(templateevent);
+                event->m_childevents.push_back(templateevent);
 
                 // Mark the play
                 playdata.push_back(std::make_pair(id, templateevent.m_triggertime));
@@ -502,18 +583,81 @@ void EventProcessor_Fill::handleEvent(MouseCatcherEvent originalEvent,
         }
     }
 
-    m_pdb->addPlayData(playdata);
+    // This writes to the database, so we should hold the core lock
+    core_lock.lock();
+    db->beginTransaction();
+    for (std::pair<int, int> thisplay : playdata)
+    {
+        db->addPlay(thisplay.first, thisplay.second);
+    }
+    db->endTransaction();
+    core_lock.unlock();
 
     // Generate the continuity event for the rest (+5 seconds)
-    resultingEvent.m_childevents.push_back(m_continuityfill);
-    resultingEvent.m_childevents.back().m_duration = m_continuitymin + duration;
+    event->m_childevents.push_back(continuityfill);
+    event->m_childevents.back().m_duration = continuitymin + duration;
+}
+
+/**
+ * Adds child events generated by async job to the playlist,
+ * attached to the appropriate parent.
+ *
+ * @param event          Pointer to top level event containing children to add
+ * @param placeholder_id ID number inside placeholder event to identify it
+ * @param data           Unused data struct
+ */
+void EventProcessor_Fill::populatePlaceholderEvent (std::shared_ptr<MouseCatcherEvent> event,
+        int placeholder_id, std::shared_ptr<void> data)
+{
+    // Find the events in the playlist matching this time
+    int channelid = Channel::getChannelByName(event->m_channel);
+    std::vector<PlaylistEntry> eventlist;
+
+    eventlist = g_channels[channelid]->m_pl.getEvents(event->m_eventtype, event->m_triggertime);
+
+    // Look for the correct data tag
+    int eventid = -1;
+
+    for (PlaylistEntry &ev : eventlist)
+    {
+        if (ev.m_extras.count("placeholderID"))
+        {
+            if (!ev.m_extras["placeholderID"].compare(ConvertType::intToString(m_placeholderid)))
+            {
+                eventid = ev.m_eventid;
+                break;
+            }
+        }
+    }
+
+    // Add each child to the playlist using the normal processEvent() mechanism
+    if (eventid > -1)
+    {
+        EventAction action;
+
+        for (MouseCatcherEvent child : event->m_childevents)
+        {
+            MouseCatcherCore::processEvent(child, eventid, true, action);
+        }
+    }
+    else
+    {
+        m_hook.gs->L->error("populatePlaceholderEvent", "Got a non-existent playlist event. Failing silently.");
+    }
 
 }
 
-void EventProcessor_Fill::addFile (std::string filename, std::string device, std::string type,
-        int duration, int weight)
+/**
+ * Lock the core and sync the database in memory with the one on disk
+ *
+ * @param data Unused
+ */
+void EventProcessor_Fill::periodicDatabaseSync (std::shared_ptr<void> data, std::timed_mutex &core_lock)
 {
-    m_pdb->addFile(filename, device, type, duration, weight);
+    // Lock is not technically needed, but a precaution against future multithreaded async jobs
+    core_lock.lock();
+    m_pdb->syncDatabase(m_dbfile);
+    core_lock.unlock();
 }
 
 extern "C"

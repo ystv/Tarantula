@@ -45,6 +45,7 @@ GlobalStuff* NewGS ()
     pgs->TickCallbacks = &g_tickcallbacks;
     pgs->Devices = &g_devices;
     pgs->dbg = &g_dbg;
+    pgs->Async = &g_async;
     return pgs;
 }
 

@@ -452,17 +452,20 @@ void EventSource_Web::updateEventProcessors (
 
     for (auto thisprocessor: processors)
     {
+        // Replace spaces in the type name with underscores
+        std::string cleanname = thisprocessor.first;
+        std::transform(cleanname.begin(), cleanname.end(), cleanname.begin(),
+                [](char ch)
+                {
+                    return ch == ' ' ? '_' : ch;
+                });
+
     	// Add new entry
 		pugi::xml_node procnode = rootnode.append_child("processor");
 		procnode.append_attribute("name").set_value(thisprocessor.first.c_str());
 
 		pugi::xml_node actionsnode = procnode.append_child("p");
-
-		pugi::xml_node subform = actionsnode.append_child("div");
-		subform.append_attribute("id").set_value(
-				std::string("action-form-" + thisprocessor.first +
-						"-0").c_str());
-		subform.append_attribute("class").set_value("action-form");
+		actionsnode.append_attribute("class").set_value("procs-form");
 
 		// Add the action options
 		for (auto thisoption : thisprocessor.second.data)
@@ -473,7 +476,7 @@ void EventSource_Web::updateEventProcessors (
 			}
 			else if (!thisoption.first.compare("filename"))
 			{
-				pugi::xml_node para = subform.append_child("p");
+				pugi::xml_node para = actionsnode.append_child("p");
 				para.append_attribute("class").set_value("form-line");
 
 				pugi::xml_node label = para.append_child("label");
@@ -488,7 +491,7 @@ void EventSource_Web::updateEventProcessors (
 			}
 			else
 			{
-				pugi::xml_node para = subform.append_child("p");
+				pugi::xml_node para = actionsnode.append_child("p");
 				para.append_attribute("class").set_value("form-line");
 
 				pugi::xml_node label = para.append_child("label");
@@ -736,36 +739,51 @@ void EventSource_Web::generateSchedulePage (std::shared_ptr<WebSource::WaitingRe
         }
         else if (!std::string(rootnode.name()).compare("processordata"))
         {
-            WebSource::typedata thisproc;
-            thisproc.m_isprocessor = true;
+            for (pugi::xml_node processornode : rootnode.children())
+            {
+                WebSource::typedata thisproc;
 
-            thisproc.m_pactionsnippet = std::make_shared<pugi::xml_document>();
-            thisproc.m_pactionsnippet->append_copy(rootnode.first_child());
+                thisproc.m_pdevices = std::make_shared<pugi::xml_document>();
+                thisproc.m_pactionsnippet = std::make_shared<pugi::xml_document>();
+                //thisdev.m_pdevices->append_copy(rootnode.first_child());
+                thisproc.m_isprocessor = true;
+                thisproc.m_pactionsnippet->append_copy(processornode.first_child());
+
+                actionlist[processornode.attribute("name").as_string()] = thisproc;
+            }
         }
     }
 
     // Generate the event type related items
     for (auto devicetype : actionlist)
     {
+        // Replace spaces in the type name with underscores
+        std::string cleanname = devicetype.first;
+        std::transform(cleanname.begin(), cleanname.end(), cleanname.begin(),
+                [](char ch)
+                {
+                    return ch == ' ' ? '_' : ch;
+                });
+
         // Add the Add button
         pugi::xml_node addbutton = pagedocument.select_single_node(
                 "//div[@id='add-event-bounding']").node().append_child("button");
 
         addbutton.append_attribute("class").set_value("button-big margin-bottom addbutton");
-        addbutton.append_attribute("id").set_value(devicetype.first.c_str());
+        addbutton.append_attribute("id").set_value(cleanname.c_str());
         addbutton.text().set(devicetype.first.c_str());
 
         // Add the event type drop-down option
         pugi::xml_node dropdownoption = pagedocument.select_single_node(
                 "//select[@name='type']").node().append_child("option");
-        dropdownoption.append_attribute("value").set_value(devicetype.first.c_str());
+        dropdownoption.append_attribute("value").set_value(cleanname.c_str());
         dropdownoption.text().set(devicetype.first.c_str());
 
         // Generate a sub-form for this type
         pugi::xml_node subform = pagedocument.select_single_node(
                 "//div[@id='add-form']/form").node().append_child("div");
         subform.append_attribute("id").set_value(std::string("add-" +
-                devicetype.first).c_str());
+                cleanname).c_str());
         subform.append_attribute("class").set_value("add-sub formitem");
 
         // Add the Device drop-down

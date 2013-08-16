@@ -314,7 +314,15 @@ void HTTPConnection::handleIncomingData (
 							EventAction newevent;
 							newevent.action = ACTION_ADD;
 							newevent.event.m_channel = m_config.m_channel;
-							newevent.event.m_targetdevice = newdata.child_value("device");
+
+							if (std::string("").compare(newdata.child_value("device")))
+							{
+							    newevent.event.m_targetdevice = newdata.child_value("device");
+							}
+							else
+							{
+							    newevent.event.m_targetdevice = newdata.child_value("type");
+							}
 
 							std::string timedata = newdata.child_value("time");
 							tm starttime = boost::posix_time::to_tm(

@@ -34,6 +34,7 @@
 #include "PluginConfig.h"
 #include "Channel.h"
 #include "Log.h"
+#include "AsyncJobSystem.h"
 
 class Log;
 class Device;
@@ -54,6 +55,8 @@ struct GlobalStuff
     DebugData *dbg;
 
     Log *L; //Global Instance of a logging class.
+
+    AsyncJobSystem *Async;
 
     // Callbacks
     std::vector<cbBegunPlaying> *BegunPlayingCallbacks;

@@ -30,6 +30,7 @@
 
 #include <map>
 #include <set>
+#include <mutex>
 
 #include "MouseCatcherProcessorPlugin.h"
 #include "PluginConfig.h"
@@ -45,11 +46,13 @@ public:
     void addPlay (int idnumber, int time);
     void addFile (std::string filename, std::string device, std::string type,
             int duration, int weight);
-    void addPlayData (std::vector<std::pair<int,int>>& playdata);
     int getBestFile (std::string& filename, int inserttime, int duration,
     		std::string device, std::string type, int& resultduration,
     		std::set<int>& excludeid);
-    void syncDatabase(std::string databasefile);
+    void syncDatabase (std::string databasefile);
+
+    void beginTransaction ();
+    void endTransaction ();
 
 
 private:
@@ -73,13 +76,25 @@ public:
 
     std::shared_ptr<FillDB> m_pdb;
 private:
+    static void generateFilledEvents (std::shared_ptr<MouseCatcherEvent> event, std::shared_ptr<FillDB> db,
+            std::vector<std::pair<std::string, std::string>> structuredata, bool filler,
+            MouseCatcherEvent continuityfill, int continuitymin, std::shared_ptr<void> data,
+            std::timed_mutex &core_lock);
+    void populatePlaceholderEvent (std::shared_ptr<MouseCatcherEvent> event, int placeholder_id,
+            std::shared_ptr<void> data);
+    void periodicDatabaseSync (std::shared_ptr<void> data, std::timed_mutex &core_lock);
+
+    // Data from configuration file
     std::string m_dbfile;
     std::map<int, int> m_weightpoints;
     int m_fileweight;
+    int m_jobpriority;
 
     std::vector<std::pair<std::string, std::string>> m_structuredata; ///< An example could be {"ident", "device1"}
     bool m_filler; ///< Whether to fill remaining time with the last item.
 
     MouseCatcherEvent m_continuityfill; ///< Event to tack on the end to fill remaining time
     int m_continuitymin; ///< Minimum length for continuity fill
+
+    int m_placeholderid; //!< Next ID of a placeholder event
 };

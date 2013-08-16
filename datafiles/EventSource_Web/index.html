@@ -95,8 +95,8 @@ $(document).ready(function() {
 		buttons : {
 			"Create event" : function() {
 		        var eventxml = "<event><type>" + 
-		        $("select[name=type]:visible").val() + "</type>" + 
-		        "<device>" + $("select[name=device]:visible").val() + "</device>" +
+		        $("select[name=type]:visible").children(':selected').text() + "</type>" + 
+		        "<device>" + $("select[name=device]:visible").children(':selected').text() + "</device>" +
 		        "<time>" + $.datepicker.formatDate("yy-mm-dd", 
 		                $("#schedule_datepicker").datepicker('getDate')) + 
 		        " " + $("input[name=time]:visible").val() + "</time>" +
@@ -106,6 +106,10 @@ $(document).ready(function() {
 		                eventxml = eventxml + "<" + $(this).attr("name").split("-")[2] + 
 		                ">" + $(this).val() + "</" +  $(this).attr("name").split("-")[2] + ">";
 		        });
+	            $(".procs-form input:visible").each(function (index) {
+                      eventxml = eventxml + "<" + $(this).attr("name").split("-")[2] + 
+                      ">" + $(this).val() + "</" +  $(this).attr("name").split("-")[2] + ">";
+                });
 		        if ($(".action-filename:visible").length) {
 		                eventxml = eventxml + "<filename duration=\"" + 
 		                $(".action-filename:visible option:selected").attr("tar-length") + 

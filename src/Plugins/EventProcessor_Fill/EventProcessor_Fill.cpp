@@ -33,6 +33,7 @@
 #include "PluginConfig.h"
 #include "Misc.h"
 #include "MouseCatcherCore.h"
+#include "DateConversions.h"
 
 /*****************************************************************************
  * FillDB Implementation
@@ -383,6 +384,14 @@ void EventProcessor_Fill::readConfig (PluginConfig config)
 		m_continuityfill.m_action = 0;
 	}
 
+	m_continuityfill.m_targetdevice = continuitynode.child_value("Device");
+	if (m_continuityfill.m_targetdevice.empty())
+	{
+		m_hook.gs->L->warn(config.m_instance, "ContinuityFill device not set, disabling plugin");
+		m_status = FAILED;
+		return;
+	}
+
 	std::string eventtype = continuitynode.child_value("EventType");
 	if (!eventtype.compare("Fixed"))
 	{
@@ -425,20 +434,43 @@ void EventProcessor_Fill::handleEvent(MouseCatcherEvent originalEvent,
     {
         try
         {
-            originalEvent.m_duration = ConvertType::stringToInt(originalEvent.m_extradata["duration"]);
+        	originalEvent.m_duration = 0;
+        	int lastfind = 0;
+        	int i = 0;
+        	int found;
+
+        	do
+        	{
+        		found = originalEvent.m_extradata["duration"].find(':', lastfind);
+        		if (std::string::npos == found)
+        		{
+        			found = originalEvent.m_extradata["duration"].length();
+        		}
+
+        		std::string sub = originalEvent.m_extradata["duration"].substr(lastfind, found - lastfind);
+        		lastfind = found + 1;
+
+        		originalEvent.m_duration = originalEvent.m_duration * 60 +
+        				ConvertType::stringToInt(sub);
+        		i++;
+        	}
+        	while (found != originalEvent.m_extradata["duration"].length() && i < 3);
         }
         catch (std::exception &ex)
         {
             m_hook.gs->L->warn(m_pluginname, "Bad duration of " + originalEvent.m_extradata["duration"] +
-                    " selecting 10 instead");
+                    " selecting 10s instead");
             originalEvent.m_duration = 10;
         }
     }
     else
     {
-        m_hook.gs->L->warn(m_pluginname, "No duration given, selecting 10 instead");
+        m_hook.gs->L->warn(m_pluginname, "No duration given, selecting 10s instead");
         originalEvent.m_duration = 10;
     }
+
+    // Convert duration from seconds to frames
+    originalEvent.m_duration *= g_pbaseconfig->getFramerate();
 
     originalEvent.m_extradata.clear();
 
@@ -584,18 +616,22 @@ void EventProcessor_Fill::generateFilledEvents (std::shared_ptr<MouseCatcherEven
     }
 
     // This writes to the database, so we should hold the core lock
-    core_lock.lock();
-    db->beginTransaction();
-    for (std::pair<int, int> thisplay : playdata)
     {
-        db->addPlay(thisplay.first, thisplay.second);
+    	std::lock_guard<std::timed_mutex> lock(core_lock);
+
+		db->beginTransaction();
+		for (std::pair<int, int> thisplay : playdata)
+		{
+			db->addPlay(thisplay.first, thisplay.second);
+		}
+		db->endTransaction();
     }
-    db->endTransaction();
-    core_lock.unlock();
 
     // Generate the continuity event for the rest (+5 seconds)
+    continuityfill.m_channel = event->m_channel;
+    continuityfill.m_duration = continuitymin + duration;
+    continuityfill.m_triggertime = templateevent.m_triggertime;
     event->m_childevents.push_back(continuityfill);
-    event->m_childevents.back().m_duration = continuitymin + duration;
 }
 
 /**
@@ -610,7 +646,8 @@ void EventProcessor_Fill::populatePlaceholderEvent (std::shared_ptr<MouseCatcher
         int placeholder_id, std::shared_ptr<void> data)
 {
     // Find the events in the playlist matching this time
-    int channelid = Channel::getChannelByName(event->m_channel);
+	int channelid = Channel::getChannelByName(event->m_channel);
+
     std::vector<PlaylistEntry> eventlist;
 
     eventlist = g_channels[channelid]->m_pl.getEvents(event->m_eventtype, event->m_triggertime);
@@ -655,9 +692,8 @@ void EventProcessor_Fill::populatePlaceholderEvent (std::shared_ptr<MouseCatcher
 void EventProcessor_Fill::periodicDatabaseSync (std::shared_ptr<void> data, std::timed_mutex &core_lock)
 {
     // Lock is not technically needed, but a precaution against future multithreaded async jobs
-    core_lock.lock();
+    std::lock_guard<std::timed_mutex> lock(core_lock);
     m_pdb->syncDatabase(m_dbfile);
-    core_lock.unlock();
 }
 
 extern "C"

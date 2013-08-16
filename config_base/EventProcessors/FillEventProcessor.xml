@@ -40,6 +40,7 @@
             <MinimumTime>0</MinimumTime>
             <EventAction>3</EventAction>
             <EventType>Fixed</EventType>
+            <Device>Demo Video Device 1</Device>
             <EventData>
                 <File>Continuity1</File>
             </EventData>

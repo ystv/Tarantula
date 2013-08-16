@@ -59,6 +59,16 @@ namespace MouseCatcherCore
         loadAllPlugins(processorpath, "EventProcessor");
         g_tickcallbacks.push_back(MouseCatcherCore::eventSourcePluginTicks);
         g_tickcallbacks.push_back(MouseCatcherCore::eventQueueTicks);
+
+        //DEBUG
+        MouseCatcherEvent asyncdemoev;
+        asyncdemoev.m_channel = "Default";
+        asyncdemoev.m_duration = 15;
+        asyncdemoev.m_eventtype = EVENT_FIXED;
+        asyncdemoev.m_targetdevice = "Event Filler 1";
+        asyncdemoev.m_triggertime = time(NULL) + 60;
+        EventAction act;
+        processEvent(asyncdemoev, -1, false, act);
     }
 
     /**
@@ -496,9 +506,12 @@ namespace MouseCatcherCore
                 pgeneratedevent->m_postprocessor = g_postprocessorlist[pplaylistevent->m_postprocessorid];
             }
 
-            // Get an action name
-            pgeneratedevent->m_action_name = g_devices[pgeneratedevent->m_targetdevice]->m_actionlist->
-                    at(pgeneratedevent->m_action)->name;
+            // Get an action name if not an EP
+            if (pgeneratedevent->m_action > -1)
+            {
+            	pgeneratedevent->m_action_name = g_devices[pgeneratedevent->m_targetdevice]->m_actionlist->
+            			at(pgeneratedevent->m_action)->name;
+            }
 
             // Recursively grab child events
             std::vector<PlaylistEntry> eventchildren =

@@ -40,7 +40,7 @@ Log_Screen::~Log_Screen ()
 std::string Log_Screen::gettime ()
 {
 	long timenow = time(NULL);
-	struct tm * timeinfo = gmtime(&timenow);
+	struct tm * timeinfo = localtime(&timenow);
 	char buffer[25];
 	strftime(buffer, 25, "%Y-%m-%d %H:%M:%S", timeinfo);
 

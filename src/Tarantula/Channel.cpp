@@ -155,6 +155,10 @@ void Channel::runEvent (PlaylistEntry& event)
     {
         g_logger.warn("Channel Runner",
                 "Device " + event.m_device + " not found for event ID " + ConvertType::intToString(event.m_eventid));
+
+        // Mark event as processed
+        m_pl.processEvent(event.m_eventid);
+
         return;
     }
 

@@ -59,16 +59,6 @@ namespace MouseCatcherCore
         loadAllPlugins(processorpath, "EventProcessor");
         g_tickcallbacks.push_back(MouseCatcherCore::eventSourcePluginTicks);
         g_tickcallbacks.push_back(MouseCatcherCore::eventQueueTicks);
-
-        //DEBUG
-        MouseCatcherEvent asyncdemoev;
-        asyncdemoev.m_channel = "Default";
-        asyncdemoev.m_duration = 15;
-        asyncdemoev.m_eventtype = EVENT_FIXED;
-        asyncdemoev.m_targetdevice = "Event Filler 1";
-        asyncdemoev.m_triggertime = time(NULL) + 60;
-        EventAction act;
-        processEvent(asyncdemoev, -1, false, act);
     }
 
     /**
@@ -506,11 +496,30 @@ namespace MouseCatcherCore
                 pgeneratedevent->m_postprocessor = g_postprocessorlist[pplaylistevent->m_postprocessorid];
             }
 
+            // Check the device/processor is real and remains active
+            if ((0 == g_devices.count(pgeneratedevent->m_targetdevice)) &&
+                    (0 == g_mcprocessors.count(pgeneratedevent->m_targetdevice)))
+            {
+                g_logger.warn("convertToMCEvent", "Got event for non-existent or unloaded device or processor: " +
+                        pgeneratedevent->m_targetdevice);
+                throw std::exception();
+            }
+
             // Get an action name if not an EP
             if (pgeneratedevent->m_action > -1)
             {
-            	pgeneratedevent->m_action_name = g_devices[pgeneratedevent->m_targetdevice]->m_actionlist->
-            			at(pgeneratedevent->m_action)->name;
+                try
+                {
+                    pgeneratedevent->m_action_name = g_devices[pgeneratedevent->m_targetdevice]->m_actionlist->
+                            at(pgeneratedevent->m_action)->name;
+                }
+                catch (std::exception &ex)
+                {
+                    g_logger.warn("convertToMCEvent", "Unable to locate action with index " +
+                            ConvertType::intToString(pgeneratedevent->m_action) + " on device " +
+                            pgeneratedevent->m_targetdevice);
+                }
+
             }
 
             // Recursively grab child events

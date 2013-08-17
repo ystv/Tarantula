@@ -50,21 +50,26 @@ PlaylistDB::PlaylistDB () :
         MemDB()
 {
     // Do the initial database setup
-    oneTimeExec("CREATE TABLE events (type INT, trigger INT64, device TEXT, devicetype INT, action, duration INT, parent INT, processed INT, lastupdate INT64, callback INT64)");
+    oneTimeExec("CREATE TABLE events (type INT, trigger INT64, device TEXT, devicetype INT, action, duration INT, "
+            "parent INT, processed INT, lastupdate INT64, callback INT64)");
     oneTimeExec("CREATE TABLE extradata (eventid INT, key TEXT, value TEXT, processed INT)");
 
     // Queries used by other functions
     m_addevent_query = prepare("INSERT INTO events VALUES (?,?,?,?,?,?,?,0, strftime('%s', 'now'),?)");
     m_getevent_query = prepare("SELECT RowID,* FROM events WHERE type = ? AND trigger = ? AND processed = 0");
-    m_getchildevents_query = prepare("SELECT RowID,* FROM events WHERE parent = ? AND processed = 0");
+    m_getchildevents_query = prepare("SELECT RowID,* FROM events WHERE parent = ? AND processed = 0 "
+            "ORDER BY trigger ASC");
     m_removeevent_query = prepare("DELETE FROM events WHERE rowid = ?; DELETE FROM extradata WHERE eventid = ?");
-    m_processevent_query = prepare("UPDATE events SET processed = 1, lastupdate = strftime('%s', 'now') WHERE rowid = ?");
+    m_processevent_query = prepare("UPDATE events SET processed = 1, lastupdate = strftime('%s', 'now') WHERE "
+            "rowid = ?");
     m_addextras_query = prepare("INSERT INTO extradata VALUES (?,?,?,?)");
     m_getextras_query = prepare("SELECT key,value FROM extradata WHERE eventid = ?");
 
     // Queries used by EventSource interface
-    m_geteventlist_query = prepare("SELECT RowID, events.* FROM events WHERE trigger > ? AND trigger < ? AND parent = 0");
-    m_updateevent_query = prepare("UPDATE events SET type = ?, trigger = ?, filename = ?, device = ?, devicetype = ?, duration = ?, lastupdate = strftime('%s', 'now')");
+    m_geteventlist_query = prepare("SELECT RowID, events.* FROM events WHERE trigger > ? AND trigger < ? AND "
+            "parent = 0 ORDER BY trigger ASC");
+    m_updateevent_query = prepare("UPDATE events SET type = ?, trigger = ?, filename = ?, device = ?, devicetype = ?, "
+            "duration = ?, lastupdate = strftime('%s', 'now')");
 }
 
 /**

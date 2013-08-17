@@ -67,9 +67,10 @@ private:
  */
 class EventProcessor_Fill : public MouseCatcherProcessorPlugin {
 public:
-    EventProcessor_Fill(PluginConfig config, Hook h);
-    void readConfig(PluginConfig config);
-    void handleEvent(MouseCatcherEvent originalEvent,
+    EventProcessor_Fill (PluginConfig config, Hook h);
+    ~EventProcessor_Fill ();
+    void readConfig (PluginConfig config);
+    void handleEvent (MouseCatcherEvent originalEvent,
             MouseCatcherEvent& resultingEvent);
     void addFile (std::string filename, std::string device, std::string type,
             int duration, int weight);
@@ -78,7 +79,7 @@ public:
 private:
     static void generateFilledEvents (std::shared_ptr<MouseCatcherEvent> event, std::shared_ptr<FillDB> db,
             std::vector<std::pair<std::string, std::string>> structuredata, bool filler,
-            MouseCatcherEvent continuityfill, int continuitymin, std::shared_ptr<void> data,
+            MouseCatcherEvent continuityfill, int continuitymin, float framerate, std::shared_ptr<void> data,
             std::timed_mutex &core_lock);
     void populatePlaceholderEvent (std::shared_ptr<MouseCatcherEvent> event, int placeholder_id,
             std::shared_ptr<void> data);
@@ -89,6 +90,8 @@ private:
     std::map<int, int> m_weightpoints;
     int m_fileweight;
     int m_jobpriority;
+    int m_cyclesbeforesync;
+
 
     std::vector<std::pair<std::string, std::string>> m_structuredata; ///< An example could be {"ident", "device1"}
     bool m_filler; ///< Whether to fill remaining time with the last item.
@@ -97,4 +100,5 @@ private:
     int m_continuitymin; ///< Minimum length for continuity fill
 
     int m_placeholderid; //!< Next ID of a placeholder event
+    int m_cyclesremaining; //!< How many events to generate before syncing the database to disk
 };

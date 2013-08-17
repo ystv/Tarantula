@@ -62,7 +62,7 @@ FillDB::FillDB (std::string databasefile, std::map<int, int>& weightpoints,
 	if (!databasefile.empty())
 	{
 		// Load from existing
-		oneTimeExec("ATTACH " + databasefile + " AS disk");
+		oneTimeExec("ATTACH \"" + databasefile + "\" AS disk");
 
 		oneTimeExec("BEGIN TRANSACTION");
 
@@ -228,7 +228,7 @@ void FillDB::endTransaction ()
  *
  * @param filename		 Name of the file found
  * @param inserttime     The time at which the file will be inserted
- * @param duration       Maximum acceptable duration of file.
+ * @param duration       Maximum acceptable duration of file (frames).
  * @param device         Device to find a file for
  * @param type           Type of file to find (ident, trailer, etc)
  * @param resultduration Duration of returned file
@@ -283,7 +283,7 @@ int FillDB::getBestFile(std::string& filename, int inserttime, int duration,
  * Default constructor. Reads XML configuration data and sets up database
  * connection.
  */
-EventProcessor_Fill::EventProcessor_Fill(PluginConfig config, Hook h) :
+EventProcessor_Fill::EventProcessor_Fill (PluginConfig config, Hook h) :
 		MouseCatcherProcessorPlugin(config, h)
 {
     // Process configuration file
@@ -305,6 +305,14 @@ EventProcessor_Fill::EventProcessor_Fill(PluginConfig config, Hook h) :
 
     m_status = READY;
 
+}
+
+/**
+ * Destructor. Syncs the database in memory to disk
+ */
+EventProcessor_Fill::~EventProcessor_Fill ()
+{
+    m_pdb->syncDatabase(m_dbfile);
 }
 
 /**
@@ -337,6 +345,14 @@ void EventProcessor_Fill::readConfig (PluginConfig config)
         m_hook.gs->L->warn(config.m_instance, "JobPriority factor not set, assuming 5");
         m_jobpriority = 5;
     }
+
+    m_cyclesbeforesync = config.m_plugindata_xml.child("CyclesBeforeSync").text().as_int(-1);
+    if (-1 == m_cyclesbeforesync)
+    {
+        m_hook.gs->L->warn(config.m_instance, "CyclesBeforeSync factor not set, assuming 2");
+        m_cyclesbeforesync = 2;
+    }
+    m_cyclesremaining = m_cyclesbeforesync;
 
     // Parse the time-based weighting data
     for (pugi::xml_node weightpoint :
@@ -485,10 +501,25 @@ void EventProcessor_Fill::handleEvent(MouseCatcherEvent originalEvent,
 
     m_hook.gs->Async->newAsyncJob(
             std::bind(&EventProcessor_Fill::generateFilledEvents, pfilledevent, m_pdb, m_structuredata, m_filler,
-                    m_continuityfill, m_continuitymin, std::placeholders::_1, std::placeholders::_2),
+                    m_continuityfill, m_continuitymin, g_pbaseconfig->getFramerate(),
+                    std::placeholders::_1, std::placeholders::_2),
             std::bind(&EventProcessor_Fill::populatePlaceholderEvent, this, pfilledevent, m_placeholderid,
                     std::placeholders::_1),
             pfilledevent, m_jobpriority, false);
+
+    // Prepare to update the database if needed
+    if (m_cyclesremaining < 1)
+    {
+        m_cyclesremaining = m_cyclesbeforesync;
+        m_hook.gs->Async->newAsyncJob(
+                std::bind(&EventProcessor_Fill::periodicDatabaseSync, this, std::placeholders::_1,
+                        std::placeholders::_2), NULL,
+                        NULL, m_jobpriority + 50, false);
+    }
+    else
+    {
+        m_cyclesremaining--;
+    }
 }
 
 /**
@@ -520,21 +551,30 @@ void EventProcessor_Fill::addFile (std::string filename, std::string device, std
  * @param filler         m_filler from the calling class
  * @param continuityfill m_continuityfill from the calling class
  * @param continuitymin  m_continuitymin from the calling class
+ * @param framerate      System frame rate
  * @param data           Unused pointer to async data struct
  * @param core_lock      Reference to core locking mutex
  */
 void EventProcessor_Fill::generateFilledEvents (std::shared_ptr<MouseCatcherEvent> event, std::shared_ptr<FillDB> db,
         std::vector<std::pair<std::string, std::string>> structuredata, bool filler, MouseCatcherEvent continuityfill,
-        int continuitymin, std::shared_ptr<void> data, std::timed_mutex &core_lock)
+        int continuitymin, float framerate, std::shared_ptr<void> data, std::timed_mutex &core_lock)
 {
     int duration = event->m_duration;
 
     // Knock off a few seconds for minimum continuity time
-    duration = duration - continuitymin;
+    if (duration > continuitymin)
+    {
+        duration = duration - continuitymin;
+    }
+    else
+    {
+        // Just a continuity fill
+        duration = 0;
+    }
 
     // Assemble a template event to populate with filename
     MouseCatcherEvent templateevent;
-    templateevent.m_action = 1;
+    templateevent.m_action = 0;
     templateevent.m_channel = event->m_channel;
     templateevent.m_triggertime = event->m_triggertime;
     templateevent.m_eventtype = EVENT_FIXED;
@@ -567,7 +607,7 @@ void EventProcessor_Fill::generateFilledEvents (std::shared_ptr<MouseCatcherEven
             playdata.push_back(std::make_pair(id, templateevent.m_triggertime));
 
             // Update template triggertime
-            templateevent.m_triggertime += resultduration;
+            templateevent.m_triggertime += static_cast<int>(resultduration / framerate);
 
             // Reduce remaining duration
             duration -= resultduration;
@@ -601,7 +641,7 @@ void EventProcessor_Fill::generateFilledEvents (std::shared_ptr<MouseCatcherEven
                 playdata.push_back(std::make_pair(id, templateevent.m_triggertime));
 
                 // Update template triggertime
-                templateevent.m_triggertime += resultduration;
+                templateevent.m_triggertime += resultduration / framerate;
 
                 // Reduce remaining duration
                 duration -= resultduration;

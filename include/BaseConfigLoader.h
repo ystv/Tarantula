@@ -48,7 +48,12 @@ public:
     BaseConfigLoader ();
     BaseConfigLoader (std::string filename);
     void LoadConfig (std::string filename);
+
     float getFramerate ();
+
+    int getPluginReloadTime (int reloadsremain);
+    int getPluginReloadCount ();
+
     std::string getSystemName ();
     std::string getDevicesPath ();
     std::string getInterfacesPath ();
@@ -57,7 +62,6 @@ public:
     std::string getEventProcessorsPath ();
 
     int getMCDeletedEventCount ();
-    int getPluginReloadCount ();
 
     std::vector<ChannelDetails> getLoadedChannels ();
 
@@ -72,7 +76,8 @@ private:
     std::vector<ChannelDetails> m_loadedchannels;
 
     int m_mcdeletedvents;
-    int m_pluginreloadcount;
+
+    std::vector<int> m_pluginreloadpoints;
 
     void setDefaults (); //needs to be called in different places depending on constructor
 

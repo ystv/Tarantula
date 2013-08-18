@@ -123,6 +123,7 @@ struct PluginStateData
 {
     std::shared_ptr<Plugin> ppluginreference;
     int reloadsremaining;
+    int reloadtimer;
     std::string type;
 };
 

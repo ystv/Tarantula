@@ -146,19 +146,25 @@ void BaseConfigLoader::LoadConfig (std::string filename)
                     "No Framerate in config file. Using 25 FPS");
             m_framerate = 25;
         }
+    }
 
-        m_pluginreloadcount = systemnode.child("PluginReloadCount").text().as_int(-1);
-        if (-1 == m_pluginreloadcount)
+    // Grab the Plugins node and work out what the reload times are
+    pugi::xml_node pluginsnode = m_configdata.document_element().child("Plugins");
+    if (pluginsnode.empty())
+    {
+        g_logger.error("Base Config Loader", "No Plugins node in config file");
+        throw std::exception();
+    }
+    else
+    {
+        for (auto it : pluginsnode.child("ReloadTimes").children())
         {
-            g_logger.warn("Base Config Loader",
-                    "No PluginReloadCount in config file. Using 2");
-            m_pluginreloadcount = 2;
+            m_pluginreloadpoints.push_back(it.text().as_int(10));
         }
     }
 
     // Grab the Channels node and load channels
-    pugi::xml_node channelsnode = m_configdata.document_element().child(
-            "Channels");
+    pugi::xml_node channelsnode = m_configdata.document_element().child("Channels");
     if (channelsnode.empty())
     {
         g_logger.error("Base Config Loader", "No Channels node in config file");
@@ -189,6 +195,36 @@ void BaseConfigLoader::LoadConfig (std::string filename)
 float BaseConfigLoader::getFramerate ()
 {
     return m_framerate;
+}
+
+/**
+ * Return the reload time for a certain reload index
+ *
+ * @param reloadsremain Number of reloads plugin has left
+ * @return              Time in frames before plugin restart, or zero if no reloads left
+ */
+int BaseConfigLoader::getPluginReloadTime (int reloadsremain)
+{
+    unsigned int index = m_pluginreloadpoints.size() - reloadsremain;
+
+    if (index < m_pluginreloadpoints.size())
+    {
+        return m_pluginreloadpoints[index];
+    }
+    else
+    {
+        return 0;
+    }
+}
+
+/**
+ * Get the number of times to reload a crashed plugin before unloading it
+ *
+ * @return Number of times to reload
+ */
+int BaseConfigLoader::getPluginReloadCount (void)
+{
+    return m_pluginreloadpoints.size();
 }
 
 std::string BaseConfigLoader::getSystemName ()
@@ -236,12 +272,3 @@ int BaseConfigLoader::getMCDeletedEventCount (void)
     return m_mcdeletedvents;
 }
 
-/**
- * Get the number of times to reload a crashed plugin before unloading it
- *
- * @return Number of times to reload
- */
-int BaseConfigLoader::getPluginReloadCount (void)
-{
-    return m_pluginreloadcount;
-}

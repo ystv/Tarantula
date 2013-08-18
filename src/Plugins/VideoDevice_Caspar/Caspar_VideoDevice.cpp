@@ -148,12 +148,18 @@ void VideoDevice_Caspar::getFiles ()
         return;
     }
 
+    // Get a list of current filenames in a vector
+    std::shared_ptr<std::vector<std::string>> transformed_files = std::make_shared<std::vector<std::string>>();
+
+    std::transform(m_files.begin(), m_files.end(), std::back_inserter(*transformed_files),
+            [] (const std::pair<std::string, VideoFile> &item) { return item.first; });
+
     // Schedule async update job
     std::shared_ptr<std::map<std::string, VideoFile>> pnewfiles = std::make_shared<std::map<std::string, VideoFile>>();
     std::shared_ptr<std::vector<std::string>> pdeletedfiles = std::make_shared<std::vector<std::string>>();
     m_hook.gs->Async->newAsyncJob(
             std::bind(&VideoDevice_Caspar::fileUpdateJob, this, pnewfiles, pdeletedfiles, std::placeholders::_1,
-                    std::placeholders::_2),
+                    std::placeholders::_2, m_hostname, m_port, transformed_files),
             std::bind(&VideoDevice_Caspar::fileUpdateComplete, this, pnewfiles, pdeletedfiles, std::placeholders::_1),
             NULL, 10, false);
 }
@@ -244,20 +250,24 @@ void VideoDevice_Caspar::stop ()
 /**
  * Asynchronous task to kickoff a new CG connection and update the file list
  *
- * @param newfiles      Pointer to a map of new media files
- * @param deletedfiles  Pointer to a vector of deleted file names
- * @param data          Unused.
- * @param core_lock     Unused.
+ * @param newfiles          Pointer to a map of new media files
+ * @param deletedfiles      Pointer to a vector of deleted file names
+ * @param data              Unused.
+ * @param core_lock         Mutex to lock exclusive access to Tarantula core.
+ * @param hostname          CasparCG server hostname
+ * @param port              CasparCG server port
+ * @param transformed_files File list in vector form
  */
 void VideoDevice_Caspar::fileUpdateJob (std::shared_ptr<std::map<std::string, VideoFile>> newfiles,
         std::shared_ptr<std::vector<std::string>> deletedfiles, std::shared_ptr<void> data,
-        std::timed_mutex &core_lock)
+        std::timed_mutex &core_lock, std::string hostname, std::string port,
+        std::shared_ptr<std::vector<std::string>> transformed_files)
 {
     // Start a new connection to the server
     std::shared_ptr<CasparConnection> pccon;
     try
     {
-        pccon = std::make_shared<CasparConnection>(m_hostname, m_port, 10);
+        pccon = std::make_shared<CasparConnection>(hostname, port, 10);
     }
     catch (...)
     {
@@ -266,7 +276,7 @@ void VideoDevice_Caspar::fileUpdateJob (std::shared_ptr<std::map<std::string, Vi
 
     // Send the query
     CasparCommand query(CASPAR_COMMAND_CLS, boost::bind(&VideoDevice_Caspar::cb_updatefiles, this, _1, pccon,
-            newfiles, deletedfiles));
+            newfiles, deletedfiles, transformed_files));
     pccon->sendCommand(query);
 
     pccon->run();
@@ -282,6 +292,11 @@ void VideoDevice_Caspar::fileUpdateJob (std::shared_ptr<std::map<std::string, Vi
 void VideoDevice_Caspar::fileUpdateComplete(std::shared_ptr<std::map<std::string, VideoFile>> newfiles,
         std::shared_ptr<std::vector<std::string>> deletedfiles, std::shared_ptr<void> data)
 {
+    if ((READY != m_status && WAITING != m_status) || !m_hook.gs)
+    {
+        return;
+    }
+
     for (std::string thisfile : *deletedfiles)
     {
         m_files.erase(thisfile);
@@ -338,34 +353,31 @@ void VideoDevice_Caspar::batchFileLengths (std::vector<std::string>& medialist, 
 /**
  * Callback to handle files update
  *
- * @param resp          Vector filled with lines from CasparCG
- * @param pccon         Pointer to new CG connection
- * @param newfiles      Pointer to a map of new media files
- * @param deletedfiles  Pointer to a vector of deleted file names
+ * @param resp              Vector filled with lines from CasparCG
+ * @param pccon             Pointer to new CG connection
+ * @param newfiles          Pointer to a map of new media files
+ * @param deletedfiles      Pointer to a vector of deleted file names
+ * @param transformed_files Current file list in vector form
  */
 void VideoDevice_Caspar::cb_updatefiles (std::vector<std::string>& resp, std::shared_ptr<CasparConnection> pccon,
         std::shared_ptr<std::map<std::string, VideoFile>> newfiles,
-                std::shared_ptr<std::vector<std::string>> deletedfiles)
+                std::shared_ptr<std::vector<std::string>> deletedfiles,
+                std::shared_ptr<std::vector<std::string>> transformed_files)
 {
     std::vector<std::string> medialist;
 
     // Call the processor
     CasparQueryResponseProcessor::getMediaList(resp, medialist);
 
-    // Copy names from m_files to temporary vector
-    std::vector<std::string> currentfilelist;
-    std::transform(this->m_files.begin(), this->m_files.end(), std::back_inserter(currentfilelist),
-            [] (const std::pair<std::string, VideoFile> &item) { return item.first; });
-
     // Identify the files to remove from the main
     std::sort(medialist.begin(), medialist.end());
 
     std::vector<std::string> newmedialist;
 
-    std::set_difference(medialist.begin(), medialist.end(), currentfilelist.begin(), currentfilelist.end(),
+    std::set_difference(medialist.begin(), medialist.end(), transformed_files->begin(), transformed_files->end(),
             std::inserter(newmedialist, newmedialist.begin()));
 
-    std::set_difference(currentfilelist.begin(), currentfilelist.end(), medialist.begin(), medialist.end(),
+    std::set_difference(transformed_files->begin(), transformed_files->end(), medialist.begin(), medialist.end(),
             std::inserter(*deletedfiles, deletedfiles->begin()));
 
     // Get lengths for all the new files if needed

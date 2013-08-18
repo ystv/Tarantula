@@ -73,7 +73,7 @@ std::timed_mutex g_core_lock;
 
 // Functions used only in this file
 static void processPluginStates ();
-static void reloadPlugin (PluginStateData& state);
+static void unloadPlugin (PluginStateData& state, bool attemptreload = false);
 
 int main (int argc, char *argv[])
 {
@@ -182,21 +182,26 @@ int main (int argc, char *argv[])
 
 /**
  * Unload and reload a crashed plugin
+ *
+ * @param state         Reference to plugin state variable
+ * @param attemptreload Should the reload timer be set if available?
  */
-void reloadPlugin (PluginStateData& state)
+void unloadPlugin (PluginStateData& state, bool attemptreload /* = false */)
 {
-    std::string file = state.ppluginreference->getConfigFilename();
+    // Set the reload timer if enabled
+    if (attemptreload && state.reloadsremaining > 0)
+    {
+        state.reloadtimer = g_pbaseconfig->getPluginReloadTime(state.reloadsremaining);
+        state.reloadsremaining--;
+    }
+    else
+    {
+        g_logger.error(state.ppluginreference->getPluginName(), "Plugin will be shut down");
+        state.reloadtimer = 0;
+    }
 
     // Unload the plugin
     state.ppluginreference->disablePlugin();
-    state.ppluginreference.reset();
-    state.reloadsremaining--;
-
-    // Reload the plugin
-    PluginConfigLoader plugin_config;
-    plugin_config.loadConfig(file, state.type);
-    ActivatePlugin(plugin_config.getConfig(), state.ppluginreference);
-
 }
 
 /**
@@ -207,6 +212,43 @@ void processPluginStates ()
     // Process the state machine on all plugins
     for (PluginStateData& pluginstate : g_plugins)
     {
+        // If plugin is waiting on reload, handle the counter
+        if (pluginstate.reloadtimer > 0)
+        {
+            // Plugin has unloaded and is waiting for reload timer to expire
+            --pluginstate.reloadtimer;
+
+            if (0 == pluginstate.reloadtimer)
+            {
+                g_logger.info(pluginstate.ppluginreference->getPluginName(),
+                        "Reloading plugin after earlier failure");
+                std::string file = pluginstate.ppluginreference->getConfigFilename();
+
+                pluginstate.ppluginreference.reset();
+
+                // Reload the plugin
+                PluginConfigLoader plugin_config;
+                plugin_config.loadConfig(file, pluginstate.type);
+                ActivatePlugin(plugin_config.getConfig(), pluginstate.ppluginreference);
+
+                // Set the reload timer to the reload timeout * -1. If we get that many frames without another crash,
+                // reloadsremaining will reset
+                pluginstate.reloadtimer = g_pbaseconfig->getPluginReloadTime(pluginstate.reloadsremaining + 1) * -1;
+            }
+        }
+        else if (pluginstate.reloadtimer < 0)
+        {
+            ++pluginstate.reloadtimer;
+
+            if (0 == pluginstate.reloadtimer)
+            {
+                // Its been long enough without a crash, reset reload
+                pluginstate.reloadsremaining = g_pbaseconfig->getPluginReloadCount();
+                g_logger.info(pluginstate.ppluginreference->getPluginName(), "Plugin stabilised after reload");
+            }
+        }
+
+        // Check and handle plugin state
         switch (pluginstate.ppluginreference->getStatus())
         {
             case STARTING:
@@ -217,34 +259,18 @@ void processPluginStates ()
             }
             case FAILED:
             {
-                if (pluginstate.reloadsremaining > 0)
-                {
-                    g_logger.info(pluginstate.ppluginreference->getPluginName(),
-                            "Reloading plugin after startup failure");
-                    reloadPlugin(pluginstate);
-                }
-                else
-                {
-                    g_logger.OMGWTF(pluginstate.ppluginreference->getPluginName(),
-                            "Plugin startup failure is permanent. Unloading plugin");
-                    pluginstate.ppluginreference->disablePlugin();
-                }
+                g_logger.error(pluginstate.ppluginreference->getPluginName(),
+                        "Unloading plugin after startup failure " +
+                        ConvertType::intToString(pluginstate.reloadsremaining) + " reloads remaining");
+                unloadPlugin(pluginstate, true);
                 break;
             }
             case CRASHED:
             {
-                if (pluginstate.reloadsremaining > 0)
-                {
-                    g_logger.info(pluginstate.ppluginreference->getPluginName(),
-                            "Reloading plugin after earlier failure");
-                    reloadPlugin(pluginstate);
-                }
-                else
-                {
-                    g_logger.OMGWTF(pluginstate.ppluginreference->getPluginName(),
-                            "Plugin failure is permanent. Disabling plugin");
-                    pluginstate.ppluginreference->disablePlugin();
-                }
+                g_logger.error(pluginstate.ppluginreference->getPluginName(),
+                        "Unloading plugin due to crash. " + ConvertType::intToString(pluginstate.reloadsremaining) +
+                        " reloads remaining");
+                unloadPlugin(pluginstate, true);
                 break;
             }
             case UNLOAD:
@@ -255,13 +281,15 @@ void processPluginStates ()
                 // Nothing to do here
                 break;
             }
-
         }
     }
 
     // Delete all plugins that are unloaded
     g_plugins.erase(std::remove_if(g_plugins.begin(), g_plugins.end(),
-                    [](PluginStateData p){return p.ppluginreference->getStatus() == UNLOAD;}), g_plugins.end());
+                    [](PluginStateData p)
+                    {
+                        return p.ppluginreference->getStatus() == UNLOAD && p.reloadtimer == 0;
+                    }), g_plugins.end());
 
 }
 

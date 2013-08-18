@@ -10,8 +10,15 @@
 	<System>
 		<Name>Test Tarantula System</Name>
 		<Framerate>25</Framerate>
-		<PluginReloadCount>3</PluginReloadCount>
 	</System>
+	<Plugins>
+	    <!-- How many times to reload a crashed plugin, and how long to wait before doing so -->
+	    <ReloadTimes>
+	        <ReloadAfter units="frames">250</ReloadAfter>
+	        <ReloadAfter units="frames">1500</ReloadAfter>
+	        <ReloadAfter units="frames">15000</ReloadAfter>
+	    </ReloadTimes>
+	</Plugins>
 	<Channels>
 		<Channel>
 			<Name>Default</Name>

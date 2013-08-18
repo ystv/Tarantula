@@ -38,10 +38,9 @@
 void CasparQueryResponseProcessor::getMediaList (std::vector<std::string>& response,
         std::vector<std::string>& medialist)
 {
-
-    // Parse the response (skipping first two lines: return code and message)
-    for (std::vector<std::string>::iterator it = response.begin() + 2;
-            it != response.end(); it++)
+    // Parse the response (skipping first line: return code and message and last line (blank)
+    for (std::vector<std::string>::iterator it = response.begin() + 1;
+            it != response.end() - 1; it++)
     {
         // Find out where media name ends
         int nameend = (*it).find("\"", 1);
@@ -129,9 +128,10 @@ int CasparQueryResponseProcessor::readLayerStatus (std::vector<std::string>& res
  * by INFO X-Y
  *
  * @param response Data received from CasparCG
+ * @param layer    Layer to read from (-1 implies only one layer present)
  * @return		   Number of frames in file
  */
-int CasparQueryResponseProcessor::readFileFrames(std::vector<std::string>& response)
+int CasparQueryResponseProcessor::readFileFrames(std::vector<std::string>& response, int layer /* = -1 */)
 {
 	std::stringstream ss;
 
@@ -152,8 +152,17 @@ int CasparQueryResponseProcessor::readFileFrames(std::vector<std::string>& respo
 		pugi::xml_node producer;
 		try
 		{
-			producer = xmldoc.select_single_node(
-					"//layer/background/producer/destination/producer[type=\"ffmpeg-producer\"]").node();
+		    if (-1 == layer)
+		    {
+		        producer = xmldoc.select_single_node(
+		                "//layer/background/producer/destination/producer[type=\"ffmpeg-producer\"]").node();
+		    }
+		    else
+		    {
+		        std::string query = "//layer[index=\"" + ConvertType::intToString(layer) + "\"]" +
+                        "/background/producer/destination/producer[type=\"ffmpeg-producer\"]";
+                producer = xmldoc.select_single_node(query.c_str()).node();
+		    }
 		} catch (...)
 		{
 			// Not playing, so exit

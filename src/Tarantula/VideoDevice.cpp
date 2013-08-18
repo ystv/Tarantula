@@ -48,6 +48,18 @@ VideoDevice::VideoDevice (PluginConfig config, Hook h) :
         Device(config, EVENTDEVICE_VIDEODEVICE, h)
 {
     m_actionlist = &video_device_action_list;
+
+    try
+    {
+        m_mediaupdatecycles = ConvertType::stringToInt(config.m_plugindata_map.at("MediaUpdateCycles"));
+    }
+    catch (std::exception& ex)
+    {
+        h.gs->L->warn(m_pluginname, "MediaUpdateCycles not set, assumming 10");
+        m_mediaupdatecycles = 10;
+    }
+    m_mediaupdateremaining = 10;
+
 }
 
 /**
@@ -156,7 +168,7 @@ VideoDeviceStatus VideoDevice::getStatus ()
 
 /**
  * Check if we are scheduled to pull a new status
- * Also drops back number of frames remaining so we can call EndPlaying
+ * Also checks if we are due to update device files (after a number of status pulls)
  */
 void VideoDevice::poll ()
 {
@@ -174,6 +186,17 @@ void VideoDevice::poll ()
 
         // Come up with a poll time a few seconds in the future
         m_polltime = time(NULL) + pollperiod;
+
+        // Handle counter for periodic file list update
+        if (0 == m_mediaupdateremaining)
+        {
+            getFiles();
+            m_mediaupdateremaining = m_mediaupdatecycles;
+        }
+        else
+        {
+            --m_mediaupdateremaining;
+        }
     }
 }
 

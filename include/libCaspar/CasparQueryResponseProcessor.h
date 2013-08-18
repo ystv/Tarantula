@@ -41,7 +41,7 @@ public:
             std::vector<std::string>& templatelist);
     static int readLayerStatus (std::vector<std::string>& response,
             std::string& filename);
-    static int readFileFrames(std::vector<std::string>& response);
+    static int readFileFrames(std::vector<std::string>& response, int layer = -1);
 
 };
 

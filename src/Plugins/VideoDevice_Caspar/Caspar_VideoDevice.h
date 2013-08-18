@@ -72,8 +72,19 @@ private:
     std::string m_hostname;
     std::string m_port;
 
-    void cb_updatefiles (std::vector<std::string>& resp);
-    void cb_updatelength (VideoFile filedata, std::vector<std::string>& resp);
+    void fileUpdateJob (std::shared_ptr<std::map<std::string, VideoFile>> newfiles,
+            std::shared_ptr<std::vector<std::string>> deletedfiles, std::shared_ptr<void> data,
+            std::timed_mutex &core_lock);
+    void fileUpdateComplete (std::shared_ptr<std::map<std::string, VideoFile>> newfiles,
+            std::shared_ptr<std::vector<std::string>> deletedfiles, std::shared_ptr<void> data);
+    void batchFileLengths (std::vector<std::string>& medialist, std::shared_ptr<CasparConnection> pccon,
+            std::shared_ptr<std::map<std::string, VideoFile>> newfiles);
+
+    void cb_updatefiles (std::vector<std::string>& resp, std::shared_ptr<CasparConnection> pccon,
+            std::shared_ptr<std::map<std::string, VideoFile>> newfiles,
+            std::shared_ptr<std::vector<std::string>> deletedfiles);
+    void cb_updatelength (std::vector<std::string>& medialist, std::vector<std::string>& resp,
+            std::shared_ptr<CasparConnection> pccon, std::shared_ptr<std::map<std::string, VideoFile>> newfiles);
     void cb_info (std::vector<std::string>& resp);
 };
 

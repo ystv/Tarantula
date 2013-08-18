@@ -131,4 +131,9 @@ protected:
     std::string m_xpname;
     unsigned int m_xpport;
     VideoDeviceStatus m_videostatus;
+
+private:
+    unsigned int m_mediaupdatecycles; //!< How many times to run updateHardwareStatus() before also doing getFiles()
+    unsigned int m_mediaupdateremaining; //!< How many calls to updateHardwareStatus() remaining before a getFiles()
+
 };

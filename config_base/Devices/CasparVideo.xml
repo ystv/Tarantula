@@ -5,11 +5,12 @@
 	    <Type>Device</Type>
 	    <Library>VideoDevice_Caspar</Library>
 	    <Instance>Main Video Server</Instance>
-	    <Enabled>false</Enabled>
+	    <Enabled>true</Enabled>
 	</PluginLoad>
 	<PluginData mode="simple">
 	    <Type>Video</Type>
 	    <PollPeriod units="seconds">5</PollPeriod>
+	    <MediaUpdateCycles>10</MediaUpdateCycles>
 	    <Host>127.0.0.1</Host>
 	    <Port>5250</Port>
 	    <ConnectTimeout>10</ConnectTimeout>

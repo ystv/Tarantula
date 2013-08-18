@@ -148,9 +148,14 @@ void VideoDevice_Caspar::getFiles ()
         return;
     }
 
-    CasparCommand query(CASPAR_COMMAND_CLS, boost::bind(&VideoDevice_Caspar::cb_updatefiles, this, _1));
-    m_pcaspcon->sendCommand(query);
-
+    // Schedule async update job
+    std::shared_ptr<std::map<std::string, VideoFile>> pnewfiles = std::make_shared<std::map<std::string, VideoFile>>();
+    std::shared_ptr<std::vector<std::string>> pdeletedfiles = std::make_shared<std::vector<std::string>>();
+    m_hook.gs->Async->newAsyncJob(
+            std::bind(&VideoDevice_Caspar::fileUpdateJob, this, pnewfiles, pdeletedfiles, std::placeholders::_1,
+                    std::placeholders::_2),
+            std::bind(&VideoDevice_Caspar::fileUpdateComplete, this, pnewfiles, pdeletedfiles, std::placeholders::_1),
+            NULL, 10, false);
 }
 
 /**
@@ -237,49 +242,190 @@ void VideoDevice_Caspar::stop ()
 }
 
 /**
+ * Asynchronous task to kickoff a new CG connection and update the file list
+ *
+ * @param newfiles      Pointer to a map of new media files
+ * @param deletedfiles  Pointer to a vector of deleted file names
+ * @param data          Unused.
+ * @param core_lock     Unused.
+ */
+void VideoDevice_Caspar::fileUpdateJob (std::shared_ptr<std::map<std::string, VideoFile>> newfiles,
+        std::shared_ptr<std::vector<std::string>> deletedfiles, std::shared_ptr<void> data,
+        std::timed_mutex &core_lock)
+{
+    // Start a new connection to the server
+    std::shared_ptr<CasparConnection> pccon;
+    try
+    {
+        pccon = std::make_shared<CasparConnection>(m_hostname, m_port, 10);
+    }
+    catch (...)
+    {
+        return;
+    }
+
+    // Send the query
+    CasparCommand query(CASPAR_COMMAND_CLS, boost::bind(&VideoDevice_Caspar::cb_updatefiles, this, _1, pccon,
+            newfiles, deletedfiles));
+    pccon->sendCommand(query);
+
+    pccon->run();
+}
+
+/**
+ * File update job completion callback - updates the file list with results from the update
+ *
+ * @param newfiles     Map of new files to be inserted into the map
+ * @param deletedfiles Names of deleted files to be removed
+ * @param data         Unused.
+ */
+void VideoDevice_Caspar::fileUpdateComplete(std::shared_ptr<std::map<std::string, VideoFile>> newfiles,
+        std::shared_ptr<std::vector<std::string>> deletedfiles, std::shared_ptr<void> data)
+{
+    for (std::string thisfile : *deletedfiles)
+    {
+        m_files.erase(thisfile);
+    }
+
+    for (std::pair<std::string, VideoFile> thisfile : *newfiles)
+    {
+        m_files[thisfile.first] = thisfile.second;
+    }
+
+    m_hook.gs->L->info("Caspar File Update", "Got " + ConvertType::intToString(newfiles->size()) + " additions and " +
+            ConvertType::intToString(deletedfiles->size()) + " deletions.");
+}
+
+/**
+ * Batch updating the list of file lengths to grab 10 at a time
+ *
+ * @param medialist List of files from a cb_updatefiles call
+ * @param pccon     CasparCG connection to run this async
+ */
+void VideoDevice_Caspar::batchFileLengths (std::vector<std::string>& medialist, std::shared_ptr<CasparConnection> pccon,
+        std::shared_ptr<std::map<std::string, VideoFile>> newfiles)
+{
+    std::vector<std::string>::iterator iter = medialist.end();
+
+    iter--;
+
+    for (int i = 0; i < 10; i++)
+    {
+        CasparCommand durationquery(CASPAR_COMMAND_LOADBG);
+        durationquery.addParam("1");
+        durationquery.addParam(ConvertType::intToString(i + 10));
+        durationquery.addParam(*iter);
+        pccon->sendCommand(durationquery);
+
+        if (iter != medialist.begin())
+        {
+            --iter;
+        }
+        else
+        {
+            break;
+        }
+    }
+
+    CasparCommand infoquery(CASPAR_COMMAND_INFO_EXPANDED, std::bind(&VideoDevice_Caspar::cb_updatelength,
+            this, medialist, std::placeholders::_1, pccon, newfiles));
+    infoquery.addParam("1");
+    pccon->sendCommand(infoquery);
+
+
+}
+
+/**
  * Callback to handle files update
  *
- * @param resp Vector filled with lines from CasparCG
+ * @param resp          Vector filled with lines from CasparCG
+ * @param pccon         Pointer to new CG connection
+ * @param newfiles      Pointer to a map of new media files
+ * @param deletedfiles  Pointer to a vector of deleted file names
  */
-void VideoDevice_Caspar::cb_updatefiles (std::vector<std::string>& resp)
+void VideoDevice_Caspar::cb_updatefiles (std::vector<std::string>& resp, std::shared_ptr<CasparConnection> pccon,
+        std::shared_ptr<std::map<std::string, VideoFile>> newfiles,
+                std::shared_ptr<std::vector<std::string>> deletedfiles)
 {
     std::vector<std::string> medialist;
 
-    //Call the processor
+    // Call the processor
     CasparQueryResponseProcessor::getMediaList(resp, medialist);
 
-    //Iterate over media list getting lengths and adding to files list
-    for (std::string item : medialist)
+    // Copy names from m_files to temporary vector
+    std::vector<std::string> currentfilelist;
+    std::transform(this->m_files.begin(), this->m_files.end(), std::back_inserter(currentfilelist),
+            [] (const std::pair<std::string, VideoFile> &item) { return item.first; });
+
+    // Identify the files to remove from the main
+    std::sort(medialist.begin(), medialist.end());
+
+    std::vector<std::string> newmedialist;
+
+    std::set_difference(medialist.begin(), medialist.end(), currentfilelist.begin(), currentfilelist.end(),
+            std::inserter(newmedialist, newmedialist.begin()));
+
+    std::set_difference(currentfilelist.begin(), currentfilelist.end(), medialist.begin(), medialist.end(),
+            std::inserter(*deletedfiles, deletedfiles->begin()));
+
+    // Get lengths for all the new files if needed
+
+    if (newmedialist.size() > 0)
     {
-        VideoFile thisfile;
-        thisfile.m_filename = item;
-        thisfile.m_title = item;
-
-        // To grab duration from CasparCG we have to load the file and pull info
-        CasparCommand durationquery(CASPAR_COMMAND_LOADBG);
-        durationquery.addParam("1");
-        durationquery.addParam("5");
-        durationquery.addParam(item);
-        m_pcaspcon->sendCommand(durationquery);
-
-        CasparCommand infoquery(CASPAR_COMMAND_INFO, boost::bind(&VideoDevice_Caspar::cb_updatelength, this, thisfile, _1));
-        infoquery.addParam("1");
-        infoquery.addParam("5");
-        m_pcaspcon->sendCommand(infoquery);
+        batchFileLengths(newmedialist, pccon, newfiles);
     }
-
 }
 
 /**
  * Callback for file length in frames, will push file back in to list
  *
- * @param filedata Rest of file data to go in list
- * @param resp     Lines of data from CasparCG
+ * @param filedata      Rest of file data to go in list
+ * @param resp          Lines of data from CasparCG
+ * @param pccon         Pointer to CG connection
+ * @param newfiles      Pointer to a map of new media files
  */
-void VideoDevice_Caspar::cb_updatelength (VideoFile filedata, std::vector<std::string>& resp)
+void VideoDevice_Caspar::cb_updatelength (std::vector<std::string>& medialist, std::vector<std::string>& resp,
+        std::shared_ptr<CasparConnection> pccon, std::shared_ptr<std::map<std::string, VideoFile>> newfiles)
 {
-    filedata.m_duration = CasparQueryResponseProcessor::readFileFrames(resp);
-    m_files[filedata.m_filename] = filedata;
+    std::vector<std::string>::iterator iter = medialist.end();
+
+    iter--;
+
+    for (int i = 0; i < 10; i++)
+    {
+        VideoFile filedata;
+        filedata.m_filename = *iter;
+        filedata.m_title = *iter;
+        filedata.m_duration = CasparQueryResponseProcessor::readFileFrames(resp, i + 10);
+        newfiles->insert(std::make_pair(filedata.m_filename, filedata));
+
+        if (iter != medialist.begin())
+        {
+            --iter;
+        }
+        else
+        {
+            break;
+        }
+    }
+
+    medialist.erase(iter, medialist.end());
+
+    if (medialist.size() > 0)
+    {
+        batchFileLengths(medialist, pccon, newfiles);
+    }
+    else
+    {
+
+        for (int i = 0; i < 10; ++i)
+        {
+            CasparCommand clearquery(CASPAR_COMMAND_CLEAR);
+            clearquery.addParam("1");
+            clearquery.addParam(ConvertType::intToString(i + 10));
+            pccon->sendCommand(clearquery);
+        }
+    }
 }
 
 /**

@@ -10,5 +10,6 @@
     <PluginData mode="simple">
         <Type>Video</Type>
         <PollPeriod units="seconds">5</PollPeriod>
+        <MediaUpdateCycles>10</MediaUpdateCycles>
     </PluginData>
 </TarantulaPlugin>

@@ -103,6 +103,12 @@ std::string CasparCommand::form ()
         }
 
         m_commandquery.erase(found, 1);
+
+        if (it->find(' ', 0) != std::string::npos && it->substr(0, 1).compare("\""))
+        {
+            it->insert(0, "\"");
+            it->insert(it->size(), "\"");
+        }
         m_commandquery.insert(found, (*it));
         found += (*it).length();
     }
@@ -113,6 +119,15 @@ std::string CasparCommand::form ()
     {
         m_commandquery.erase(found, 1);
         found = m_commandquery.find("?", found + 1);
+    }
+
+    // Escape any backslashes
+    found = m_commandquery.find("\\", 0);
+    while (found != static_cast<int>(std::string::npos))
+    {
+        m_commandquery.erase(found, 1);
+        m_commandquery.insert(found, "\\\\");
+        found = m_commandquery.find("\\", found + 2);
     }
 
     return m_commandquery;

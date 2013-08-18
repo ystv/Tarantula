@@ -25,6 +25,7 @@
 
 #include <sstream>
 
+#include "boost/algorithm/string/case_conv.hpp"
 #include "pugixml.hpp"
 #include "libCaspar/CasparQueryResponseProcessor.h"
 #include "Misc.h"
@@ -48,7 +49,15 @@ void CasparQueryResponseProcessor::getMediaList (std::vector<std::string>& respo
         // Extract character 1 (0 is ") up to next double quote as media name
         std::string medianame = (*it).substr(1, nameend - 1);
 
-        medialist.push_back(medianame);
+        // Check if we got an alpha channel
+        std::string alphabit = medianame.substr(medianame.size() - 2, 2);
+        boost::algorithm::to_lower(alphabit);
+
+        if (alphabit.compare("_a"))
+        {
+            // Not an alpha channel for an existing list item, add to the list
+            medialist.push_back(medianame);
+        }
     }
 }
 
@@ -89,7 +98,11 @@ int CasparQueryResponseProcessor::readLayerStatus (std::vector<std::string>& res
         std::string& filename)
 {
     std::stringstream ss;
-    ss << response[2];
+
+    for (unsigned int i = 1; i < response.size(); i++)
+    {
+        ss << response[i];
+    }
 
     // Some defaults
     int framesremaining = -1;
@@ -98,14 +111,22 @@ int CasparQueryResponseProcessor::readLayerStatus (std::vector<std::string>& res
     pugi::xml_document xmldoc;
     pugi::xml_parse_result parseresult = xmldoc.load(ss);
 
-    if (pugi::status_ok == parseresult)
+    if (pugi::status_ok == parseresult.status)
     {
         // Get the producer
         pugi::xml_node producer;
         try
         {
             producer = xmldoc.select_single_node(
-            		"//channel/stage/layers/layer/foreground/producer[type=\"ffmpeg-producer\"]").node();
+            		"//layer/foreground/producer[type=\"ffmpeg-producer\"]").node();
+
+            // No node found
+            if (!producer)
+            {
+                // Try again with split fill/key
+                producer = xmldoc.select_single_node(
+                        "//layer/foreground/producer[type=\"separated-producer\"]").node();
+            }
         } catch (...)
         {
             // Not playing, so exit
@@ -156,12 +177,31 @@ int CasparQueryResponseProcessor::readFileFrames(std::vector<std::string>& respo
 		    {
 		        producer = xmldoc.select_single_node(
 		                "//layer/background/producer/destination/producer[type=\"ffmpeg-producer\"]").node();
+
+		        // Check node was found
+	            if (!producer)
+	            {
+	                // Try again with split fill/key
+	                producer = xmldoc.select_single_node(
+	                        "//layer/background/producer/destination/producer[type=\"separated-producer\"]/fill/"
+	                        "producer[type=\"ffmpeg-producer\"]").node();
+	            }
 		    }
 		    else
 		    {
 		        std::string query = "//layer[index=\"" + ConvertType::intToString(layer) + "\"]" +
                         "/background/producer/destination/producer[type=\"ffmpeg-producer\"]";
                 producer = xmldoc.select_single_node(query.c_str()).node();
+
+                // Check node was found
+                if (!producer)
+                {
+                    // Try again with split fill/key
+                    query = "//layer[index=\"" + ConvertType::intToString(layer) + "\"]" +
+                            "/background/producer/destination/producer[type=\"separated-producer\"]/fill/"
+                            "producer[type=\"ffmpeg-producer\"]";
+                    producer = xmldoc.select_single_node(query.c_str()).node();
+                }
 		    }
 		} catch (...)
 		{

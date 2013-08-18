@@ -21,7 +21,7 @@
 *   Version     : 1.0
 *****************************************************************************/
 
-#define CASPARHOST "127.0.0.1"
+#define CASPARHOST "192.168.11.41"
 #define CASPARPORT "5250"
 
 #include <libCaspar/libCaspar.h>
@@ -143,11 +143,12 @@ int main(int argc,char *argv[]) {
     caspCon->run();
 
     cout << endl << "Now testing CasparQueryResponseProcessor::readLayerStatus." <<endl;
-    CasparCommand statuscom(CASPAR_COMMAND_INFO_EXPANDED, &dolayerstatus);
+    CasparCommand statuscom(CASPAR_COMMAND_INFO, &dolayerstatus);
     statuscom.addParam("1");
-
+    statuscom.addParam("1");
     caspCon->sendCommand(statuscom);
     caspCon->run();
+
     cout << endl << "Now testing CasparFlashCommand. " << endl;
     CasparFlashCommand flashcom(1);
     flashcom.setLayer(2);
@@ -163,13 +164,18 @@ int main(int argc,char *argv[]) {
 
 void runrandomvideo (std::vector<std::string>& response)
 {
-    srand(static_cast<unsigned>(time(0)));
-    int vid = rand() % (response.size()-2);
-    cout << "Chosen vid is no. " << vid <<endl;
-    std::string line = response[vid+2];
+    CasparCommand cc(CASPAR_COMMAND_CLEAR_PRODUCER);
+    cc.addParam("1");
+    caspCon->sendCommand(cc);
 
-    line = line.substr(0,line.find(' ')-1);
-    line.erase(0,1);
+    std::vector<std::string> medialist;
+    CasparQueryResponseProcessor::getMediaList(response, medialist);
+
+    srand(static_cast<unsigned>(time(NULL)));
+    int vid = rand() % (medialist.size());
+    cout << "Chosen vid is no. " << vid <<endl;
+    std::string line = medialist[vid];
+
     CasparVideoCommand ccf1(1);
     ccf1.setLayer(1);
     ccf1.setTransition(CASPAR_TRANSITION_CUT,0);

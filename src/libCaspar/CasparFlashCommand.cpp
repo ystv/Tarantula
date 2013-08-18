@@ -136,7 +136,7 @@ void CasparFlashCommand::formatAndAddTemplateData ()
     }
 
     // Add as a parameter
-    addParam("\\\"" + xmldata + "\\\"");
+    addParam("\"" + xmldata + "\"");
 }
 
 /**

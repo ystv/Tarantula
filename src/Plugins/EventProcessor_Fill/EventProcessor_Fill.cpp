@@ -625,13 +625,13 @@ void EventProcessor_Fill::generateFilledEvents (std::shared_ptr<MouseCatcherEven
         while (duration > 0)
         {
             id = db->getBestFile(filename, event->m_triggertime,
-                    duration, structuredata.front().second,
-                    structuredata.front().first, resultduration, pastids);
+                    duration, structuredata.back().second,
+                    structuredata.back().first, resultduration, pastids);
 
             if (id > 0)
             {
                 // Add an event for this file
-                templateevent.m_extradata["m_filename"] = filename;
+                templateevent.m_extradata["filename"] = filename;
                 templateevent.m_duration = resultduration;
                 templateevent.m_targetdevice = structuredata.front().second;
 
@@ -641,7 +641,7 @@ void EventProcessor_Fill::generateFilledEvents (std::shared_ptr<MouseCatcherEven
                 playdata.push_back(std::make_pair(id, templateevent.m_triggertime));
 
                 // Update template triggertime
-                templateevent.m_triggertime += resultduration / framerate;
+                templateevent.m_triggertime += static_cast<int>(resultduration / framerate);
 
                 // Reduce remaining duration
                 duration -= resultduration;

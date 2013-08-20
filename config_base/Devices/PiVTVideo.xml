@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TarantulaPlugin>
+    <PluginLoad>
+	    <Name>PiVT Video Server</Name>
+	    <Type>Device</Type>
+	    <Library>VideoDevice_PiVT</Library>
+	    <Instance>PiVT Video Server</Instance>
+	    <Enabled>false</Enabled>
+	</PluginLoad>
+	<PluginData mode="simple">
+	    <Type>Video</Type>
+	    <PollPeriod units="seconds">5</PollPeriod>
+	    <MediaUpdateCycles>10</MediaUpdateCycles>
+	    <Host>127.0.0.1</Host>
+	    <Port>9815</Port>
+	    <ConnectTimeout>10</ConnectTimeout>
+	</PluginData>
+</TarantulaPlugin>

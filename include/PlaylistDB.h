@@ -116,6 +116,8 @@ public:
     playlist_device_type_t m_devicetype;
     int m_action;
 
+    std::string m_description; //!< Description for benefity of user. Inherits from parent if not set
+
     int m_duration; //<! Duration of event measured in seconds
     int m_parent;
     std::map<std::string, std::string> m_extras;

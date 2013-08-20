@@ -51,11 +51,11 @@ PlaylistDB::PlaylistDB () :
 {
     // Do the initial database setup
     oneTimeExec("CREATE TABLE events (type INT, trigger INT64, device TEXT, devicetype INT, action, duration INT, "
-            "parent INT, processed INT, lastupdate INT64, callback TEXT)");
+            "parent INT, processed INT, lastupdate INT64, callback TEXT, description TEXT)");
     oneTimeExec("CREATE TABLE extradata (eventid INT, key TEXT, value TEXT, processed INT)");
 
     // Queries used by other functions
-    m_addevent_query = prepare("INSERT INTO events VALUES (?,?,?,?,?,?,?,0, strftime('%s', 'now'),?)");
+    m_addevent_query = prepare("INSERT INTO events VALUES (?,?,?,?,?,?,?,0, strftime('%s', 'now'),?,?)");
     m_getevent_query = prepare("SELECT RowID,* FROM events WHERE type = ? AND trigger = ? AND processed = 0");
     m_getchildevents_query = prepare("SELECT RowID,* FROM events WHERE parent = ? AND processed = 0 "
             "ORDER BY trigger ASC");
@@ -69,7 +69,7 @@ PlaylistDB::PlaylistDB () :
     m_geteventlist_query = prepare("SELECT RowID, events.* FROM events WHERE trigger > ? AND trigger < ? AND "
             "parent = 0 ORDER BY trigger ASC");
     m_updateevent_query = prepare("UPDATE events SET type = ?, trigger = ?, filename = ?, device = ?, devicetype = ?, "
-            "duration = ?, lastupdate = strftime('%s', 'now')");
+            "duration = ?, lastupdate = strftime('%s', 'now'), callback = ?, description = ?");
 }
 
 /**
@@ -89,6 +89,7 @@ int PlaylistDB::addEvent (PlaylistEntry *pobj)
     m_addevent_query->addParam(6, DBParam(pobj->m_duration));
     m_addevent_query->addParam(7, DBParam(pobj->m_parent));
     m_addevent_query->addParam(8, DBParam(pobj->m_preprocessor));
+    m_addevent_query->addParam(9, DBParam(pobj->m_description));
 
     m_addevent_query->bindParams();
     int eventid = -1;
@@ -134,6 +135,8 @@ void PlaylistDB::populateEvent (sqlite3_stmt *pstmt, PlaylistEntry *pple)
     pple->m_parent = sqlite3_column_int(pstmt, 7);
     pple->m_preprocessor =
             std::string(reinterpret_cast<const char*>(sqlite3_column_text (pstmt, 10)));
+    pple->m_description =
+            std::string(reinterpret_cast<const char*>(sqlite3_column_text (pstmt, 11)));
 }
 
 /**

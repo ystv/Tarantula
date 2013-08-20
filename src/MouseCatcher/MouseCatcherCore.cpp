@@ -148,6 +148,12 @@ namespace MouseCatcherCore
         // Loop over and handle children
         for (MouseCatcherEvent thischild : event.m_childevents)
         {
+            // Inherit parent descriptions
+            if (thischild.m_description.empty())
+            {
+                thischild.m_description = event.m_description;
+            }
+
             processEvent(thischild, eventid, true, action);
         }
 
@@ -490,6 +496,7 @@ namespace MouseCatcherCore
             pgeneratedevent->m_extradata = pplaylistevent->m_extras;
             pgeneratedevent->m_eventid = pplaylistevent->m_eventid;
             pgeneratedevent->m_preprocessor = pplaylistevent->m_preprocessor;
+            pgeneratedevent->m_description = pplaylistevent->m_description;
 
             // Check the device/processor is real and remains active
             if ((0 == g_devices.count(pgeneratedevent->m_targetdevice)) &&
@@ -524,8 +531,8 @@ namespace MouseCatcherCore
             for (PlaylistEntry thischild : eventchildren)
             {
                 MouseCatcherEvent tempchild;
-                MouseCatcherCore::convertToMCEvent(&thischild, pchannel, &tempchild,
-                        plog);
+                MouseCatcherCore::convertToMCEvent(&thischild, pchannel, &tempchild, plog);
+
                 pgeneratedevent->m_childevents.push_back(tempchild);
             }
         }
@@ -553,8 +560,7 @@ namespace MouseCatcherCore
     {
         if (1 == g_devices.count(pmcevent->m_targetdevice))
         {
-            pplaylistevent->m_devicetype =
-                    g_devices[pmcevent->m_targetdevice]->getType();
+            pplaylistevent->m_devicetype = g_devices[pmcevent->m_targetdevice]->getType();
         }
         else
         {
@@ -565,8 +571,7 @@ namespace MouseCatcherCore
             else
             {
                 g_logger.warn("convertToPlaylistEvent",
-                        "Unable to convert as device " + pmcevent->m_targetdevice
-                                + " does not exist.");
+                        "Unable to convert as device " + pmcevent->m_targetdevice + " does not exist.");
                 return false;
             }
         }
@@ -577,6 +582,7 @@ namespace MouseCatcherCore
         pplaylistevent->m_action = pmcevent->m_action;
         pplaylistevent->m_extras = pmcevent->m_extradata;
         pplaylistevent->m_preprocessor = pmcevent->m_preprocessor;
+        pplaylistevent->m_description = pmcevent->m_description;
 
         if (parentid > -1)
         {

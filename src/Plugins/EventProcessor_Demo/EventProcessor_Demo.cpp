@@ -75,6 +75,7 @@ void EventProcessor_Demo::handleEvent (MouseCatcherEvent originalEvent,
     childevent.m_targetdevice = "Demo Crosspoint 1";
     childevent.m_triggertime = originalEvent.m_triggertime;
     childevent.m_preprocessor = "EventProcessor_Demo::demoPreProcessor";
+    childevent.m_description = "Demonstration child event from EP";
     resultingEvent.m_childevents.push_back(childevent);
 
 }

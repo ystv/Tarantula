@@ -606,6 +606,7 @@ void EventSource_Web::generateScheduleSegment(MouseCatcherEvent& targetevent,
 
     // Fill table contents for parent event
     rowgenerate(datatable, "Channel", targetevent.m_channel);
+    rowgenerate(datatable, "Description", targetevent.m_description);
     rowgenerate(datatable, "Device", targetevent.m_targetdevice);
 
     // Get the name of the action
@@ -639,6 +640,8 @@ void EventSource_Web::generateScheduleSegment(MouseCatcherEvent& targetevent,
 
     rowgenerate(datatable, "Type", eventtype);
     rowgenerate(datatable, "EventID", ConvertType::intToString(targetevent.m_eventid));
+
+    rowgenerate(datatable, "PreProcessor", targetevent.m_preprocessor);
 
     // Generate the additional data table
     datadiv.append_child("h4").text().set("Additional Data");
@@ -797,6 +800,17 @@ void EventSource_Web::generateSchedulePage (std::shared_ptr<WebSource::WaitingRe
             label.text().set("Device");
             para.append_copy(devicetype.second.m_pdevices->document_element());
         }
+
+        // Add the description field
+        para = subform.append_child("p");
+        para.append_attribute("class").set_value("form-line");
+
+        label = para.append_child("label");
+        label.append_attribute("for").set_value("time");
+        label.text().set("Description");
+        pugi::xml_node descinput = para.append_child("input");
+        descinput.append_attribute("class").set_value("form-input");
+        descinput.append_attribute("name").set_value("description");
 
         // Add the time field
         para = subform.append_child("p");

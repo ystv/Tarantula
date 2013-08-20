@@ -201,6 +201,8 @@ bool EventSource_XML_Network::parseEvent (const pugi::xml_node xmlnode,
     outputevent.m_action = xmlnode.child("action").text().as_int();
     outputevent.m_channel = xmlnode.child_value("channel");
     outputevent.m_duration = xmlnode.child("duration").text().as_int(1);
+    outputevent.m_description = xmlnode.child_value("description");
+    outputevent.m_preprocessor = xmlnode.child_value("preprocessor");
 
     std::string type = xmlnode.child_value("type");
     for (auto et : playlist_event_type_vector)
@@ -483,6 +485,7 @@ void converteventtoxml (pugi::xml_node& parent,
     addchildwithvalue(eventdata, "type",
             playlist_event_type_vector.at(event.m_eventtype));
     addchildwithvalue(eventdata, "targetdevice", event.m_targetdevice);
+    addchildwithvalue(eventdata, "description", event.m_description);
     eventdata.append_child("eventid").text().set(event.m_eventid);
 
     struct tm * timeinfo = localtime(&event.m_triggertime);
@@ -498,6 +501,8 @@ void converteventtoxml (pugi::xml_node& parent,
     durationunits.set_value("seconds");
 
     duration.text().set(event.m_duration);
+
+    addchildwithvalue(eventdata, "preprocessor", event.m_preprocessor);
 
     pugi::xml_node actiondata = eventdata.append_child("actiondata");
     for (auto data : event.m_extradata)

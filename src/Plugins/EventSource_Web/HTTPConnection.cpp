@@ -331,6 +331,8 @@ void HTTPConnection::handleIncomingData (
 
 							newevent.event.m_action = newdata.child("action").text().as_int();
 
+							newevent.event.m_description = newdata.child_value("description");
+
 							newevent.event.m_eventtype = EVENT_FIXED;
 
 							newevent.event.m_duration = newdata.child("extradata").

@@ -85,6 +85,7 @@ void EventSource_Demo::tick (std::vector<EventAction> *peventqueue)
         mev.m_eventtype = EVENT_FIXED;
         mev.m_triggertime = time(NULL) + 15;
         mev.m_duration = 0;
+        mev.m_description = "Test generated event";
 
         EventAction action;
 

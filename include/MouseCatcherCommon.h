@@ -65,6 +65,8 @@ public:
     std::string m_action_name;
     int m_eventid;
 
+    std::string m_description; //!< Description for benefit of user and use in CG events. Inherits if not set.
+
     //! If set to zero duration is handled separately (ie video files or crosspoints with no duration). In seconds
     int m_duration;
     std::map<std::string, std::string> m_extradata;

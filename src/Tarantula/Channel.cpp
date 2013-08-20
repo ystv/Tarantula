@@ -165,7 +165,14 @@ void Channel::runEvent (PlaylistEntry& event)
     // Run the callback function
     if (!event.m_preprocessor.empty())
     {
-        g_preprocessorlist[event.m_preprocessor](event);
+        if (g_preprocessorlist.count(event.m_preprocessor) > 0)
+        {
+            g_preprocessorlist[event.m_preprocessor](event);
+        }
+        else
+        {
+            g_logger.warn("Channel Runner", "Ignoring invalid PreProcessor " + event.m_preprocessor);
+        }
     }
 
     switch (event.m_devicetype)

@@ -40,8 +40,7 @@ class EventProcessor_Demo: public MouseCatcherProcessorPlugin
 public:
     EventProcessor_Demo (PluginConfig config, Hook h);
     virtual ~EventProcessor_Demo ();
-    virtual void handleEvent (MouseCatcherEvent originalEvent,
-            MouseCatcherEvent& resultingEvent);
+    virtual void handleEvent (MouseCatcherEvent originalEvent, MouseCatcherEvent& resultingEvent);
 
     static void demoPreProcessor (PlaylistEntry& event);
 };

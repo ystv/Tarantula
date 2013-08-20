@@ -46,6 +46,7 @@ EventProcessor_Demo::EventProcessor_Demo (PluginConfig config, Hook h) :
 
 EventProcessor_Demo::~EventProcessor_Demo ()
 {
+    g_preprocessorlist.erase("EventProcessor_Demo::demoPreProcessor");
 }
 
 /**

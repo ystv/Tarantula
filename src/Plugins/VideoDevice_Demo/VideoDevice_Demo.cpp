@@ -23,7 +23,7 @@
 *****************************************************************************/
 
 
-#include "Demo_VideoDevice.h"
+#include "VideoDevice_Demo.h"
 #include "Misc.h"
 #include "PluginConfig.h"
 

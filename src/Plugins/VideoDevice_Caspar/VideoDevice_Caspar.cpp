@@ -24,7 +24,7 @@
 *****************************************************************************/
 
 
-#include "Caspar_VideoDevice.h"
+#include "VideoDevice_Caspar.h"
 #include "Misc.h"
 #include "PluginConfig.h"
 #include <unistd.h>

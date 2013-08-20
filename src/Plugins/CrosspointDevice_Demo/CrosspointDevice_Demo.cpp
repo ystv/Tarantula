@@ -27,17 +27,17 @@
 #include <CrosspointDevice.h>
 #include <sstream>
 
-class demoXpoint: public CrosspointDevice
+class CrosspointDevice_Demo: public CrosspointDevice
 {
 public:
-    demoXpoint (PluginConfig config, Hook h) :
+    CrosspointDevice_Demo (PluginConfig config, Hook h) :
             CrosspointDevice(config, h)
     {
         // Don't need to do anything specific here - parent callback will handle making use of config and hook.
         m_status = READY;
     }
 
-    ~demoXpoint ()
+    ~CrosspointDevice_Demo ()
     {
 
     }
@@ -76,7 +76,7 @@ extern "C"
     void LoadPlugin (Hook h, PluginConfig config, std::shared_ptr<Plugin>& pluginref)
     {
         //must declare as pointer to avoid object being deleted once function call is complete!
-        std::shared_ptr<demoXpoint> plugtemp = std::make_shared<demoXpoint>(config, h);
+        std::shared_ptr<CrosspointDevice_Demo> plugtemp = std::make_shared<CrosspointDevice_Demo>(config, h);
         pluginref = std::dynamic_pointer_cast<Plugin>(plugtemp);
     }
 }

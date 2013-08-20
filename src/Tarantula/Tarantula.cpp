@@ -61,7 +61,7 @@ std::map<std::string, std::shared_ptr<MouseCatcherProcessorPlugin>> g_mcprocesso
 std::shared_ptr<BaseConfigLoader> g_pbaseconfig;
 
 //! Callback functions to run immediately before an event
-std::unordered_map<long int, PreProcessorHandler> g_postprocessorlist;
+std::unordered_map<std::string, PreProcessorHandler> g_preprocessorlist;
 
 DebugData g_dbg;
 

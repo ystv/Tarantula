@@ -61,7 +61,7 @@ extern std::shared_ptr<BaseConfigLoader> g_pbaseconfig;
 
 extern std::map<std::string, std::shared_ptr<Device>> g_devices;
 extern std::vector<PluginStateData> g_plugins;
-extern std::unordered_map<long int, PreProcessorHandler> g_postprocessorlist;
+extern std::unordered_map<std::string, PreProcessorHandler> g_preprocessorlist;
 
 extern AsyncJobSystem g_async;
 extern std::timed_mutex g_core_lock;

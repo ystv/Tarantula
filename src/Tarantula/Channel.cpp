@@ -163,10 +163,9 @@ void Channel::runEvent (PlaylistEntry& event)
     }
 
     // Run the callback function
-    if (event.m_postprocessorid != -1)
+    if (!event.m_preprocessor.empty())
     {
-        g_postprocessorlist[event.m_postprocessorid](event);
-        g_postprocessorlist.erase(event.m_postprocessorid);
+        g_preprocessorlist[event.m_preprocessor](event);
     }
 
     switch (event.m_devicetype)

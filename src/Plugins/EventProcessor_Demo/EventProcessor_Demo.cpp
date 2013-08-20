@@ -37,9 +37,11 @@
 EventProcessor_Demo::EventProcessor_Demo (PluginConfig config, Hook h) :
         MouseCatcherProcessorPlugin(config, h)
 {
+    // Register the preprocessor
+    g_preprocessorlist.emplace("EventProcessor_Demo::demoPreProcessor", &EventProcessor_Demo::demoPreProcessor);
+
     // In this case no data is needed as this is a demo.
     m_status = READY;
-
 }
 
 EventProcessor_Demo::~EventProcessor_Demo ()
@@ -71,8 +73,19 @@ void EventProcessor_Demo::handleEvent (MouseCatcherEvent originalEvent,
     childevent.m_extradata["input"] = "Inform";
     childevent.m_targetdevice = "Demo Crosspoint 1";
     childevent.m_triggertime = originalEvent.m_triggertime;
+    childevent.m_preprocessor = "EventProcessor_Demo::demoPreProcessor";
     resultingEvent.m_childevents.push_back(childevent);
 
+}
+
+/**
+ * Demo function to test PreProcessor functionality
+ *
+ * @param event Reference to playlist event that called the processor
+ */
+void EventProcessor_Demo::demoPreProcessor (PlaylistEntry &event)
+{
+    g_logger.info("Demo PreProcessor", "Demo PreProcessor is running");
 }
 
 extern "C"

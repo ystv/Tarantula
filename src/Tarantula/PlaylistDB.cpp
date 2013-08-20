@@ -51,7 +51,7 @@ PlaylistDB::PlaylistDB () :
 {
     // Do the initial database setup
     oneTimeExec("CREATE TABLE events (type INT, trigger INT64, device TEXT, devicetype INT, action, duration INT, "
-            "parent INT, processed INT, lastupdate INT64, callback INT64)");
+            "parent INT, processed INT, lastupdate INT64, callback TEXT)");
     oneTimeExec("CREATE TABLE extradata (eventid INT, key TEXT, value TEXT, processed INT)");
 
     // Queries used by other functions
@@ -88,7 +88,7 @@ int PlaylistDB::addEvent (PlaylistEntry *pobj)
     m_addevent_query->addParam(5, DBParam(pobj->m_action));
     m_addevent_query->addParam(6, DBParam(pobj->m_duration));
     m_addevent_query->addParam(7, DBParam(pobj->m_parent));
-    m_addevent_query->addParam(8, DBParam(pobj->m_postprocessorid));
+    m_addevent_query->addParam(8, DBParam(pobj->m_preprocessor));
 
     m_addevent_query->bindParams();
     int eventid = -1;
@@ -125,14 +125,15 @@ void PlaylistDB::populateEvent (sqlite3_stmt *pstmt, PlaylistEntry *pple)
     pple->m_eventtype = static_cast<playlist_event_type_t>(sqlite3_column_int(
             pstmt, 1));
     pple->m_trigger = sqlite3_column_int(pstmt, 2);
-    pple->m_device = std::string(
-            reinterpret_cast<const char*>(sqlite3_column_text (pstmt, 3)));
+    pple->m_device =
+            std::string(reinterpret_cast<const char*>(sqlite3_column_text (pstmt, 3)));
     pple->m_devicetype = static_cast<playlist_device_type_t>(sqlite3_column_int(
             pstmt, 4));
     pple->m_action = sqlite3_column_int(pstmt, 5);
     pple->m_duration = sqlite3_column_int(pstmt, 6);
     pple->m_parent = sqlite3_column_int(pstmt, 7);
-    pple->m_postprocessorid = sqlite3_column_int(pstmt, 10);
+    pple->m_preprocessor =
+            std::string(reinterpret_cast<const char*>(sqlite3_column_text (pstmt, 10)));
 }
 
 /**

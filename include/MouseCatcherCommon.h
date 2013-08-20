@@ -69,7 +69,7 @@ public:
     int m_duration;
     std::map<std::string, std::string> m_extradata;
     std::vector<MouseCatcherEvent> m_childevents;
-    PreProcessorHandler m_postprocessor;
+    std::string m_preprocessor;
 
 };
 

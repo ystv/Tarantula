@@ -110,16 +110,16 @@ class PlaylistEntry
 public:
     int m_eventid;
     playlist_event_type_t m_eventtype;
-    //! May be either a unix timestamp or a manual event something (see #42)
-    int m_trigger;
+
+    int m_trigger; //! May be either a unix timestamp or a manual event something (see #3)
     std::string m_device;
     playlist_device_type_t m_devicetype;
     int m_action;
-    //! Duration measured in seconds
-    int m_duration;
+
+    int m_duration; //<! Duration of event measured in seconds
     int m_parent;
     std::map<std::string, std::string> m_extras;
-    long int m_postprocessorid;
+    std::string m_preprocessor;
     PlaylistEntry ();
 };
 

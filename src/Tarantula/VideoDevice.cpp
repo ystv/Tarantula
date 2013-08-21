@@ -58,7 +58,7 @@ VideoDevice::VideoDevice (PluginConfig config, Hook h) :
         h.gs->L->warn(m_pluginname, "MediaUpdateCycles not set, assumming 10");
         m_mediaupdatecycles = 10;
     }
-    m_mediaupdateremaining = 10;
+    m_mediaupdateremaining = 0;
 
 }
 

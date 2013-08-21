@@ -30,6 +30,7 @@
 #include <boost/asio.hpp>
 #include <string>
 #include <queue>
+#include <chrono>
 
 #define E_NO_RESPONSE -1
 #define E_COMMAND_NOT_UNDERSTOOD 400
@@ -58,7 +59,7 @@ public:
 
     std::string receiveLine ();
     bool tick ();
-    void run ();
+    void run (int timeout = 1000);
     void sendCommand (CasparCommand cmd);
 
     bool m_errorflag;      //! Connection error
@@ -83,4 +84,5 @@ private:
     void processData (std::istream& is);
     void sendQueuedCommand ();
 
+    void runTimeout ();
 };

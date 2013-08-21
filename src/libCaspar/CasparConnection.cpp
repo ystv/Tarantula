@@ -117,9 +117,27 @@ bool CasparConnection::tick ()
     }
 }
 
-void CasparConnection::run ()
+/**
+ * Timeout handler for run()
+ */
+void CasparConnection::runTimeout ()
 {
+    m_io_service.stop();
+}
+
+/**
+ * Keep running the io_service until we run out of work or timeout
+ * @param timeout Time in milliseconds to run for. Defaults to 1000
+ */
+void CasparConnection::run (int timeout /* = 1000 */)
+{
+    boost::asio::deadline_timer tmr(m_io_service);
+    tmr.expires_from_now(boost::posix_time::milliseconds(timeout));
+
+    tmr.async_wait(boost::bind(&CasparConnection::runTimeout, this));
+
     m_io_service.run();
+
     m_io_service.reset();
 }
 

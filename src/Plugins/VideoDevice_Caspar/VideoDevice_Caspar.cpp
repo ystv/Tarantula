@@ -70,8 +70,6 @@ VideoDevice_Caspar::VideoDevice_Caspar (PluginConfig config, Hook h) :
 
 
     m_status = WAITING;
-
-    getFiles();
 }
 
 VideoDevice_Caspar::~VideoDevice_Caspar ()
@@ -101,7 +99,6 @@ void VideoDevice_Caspar::poll ()
         m_hook.gs->L->error(m_pluginname, "CasparCG command error");
         m_pcaspcon->m_badcommandflag = false;
     }
-
 
     VideoDevice::poll();
 }
@@ -157,10 +154,15 @@ void VideoDevice_Caspar::getFiles ()
     // Schedule async update job
     std::shared_ptr<std::map<std::string, VideoFile>> pnewfiles = std::make_shared<std::map<std::string, VideoFile>>();
     std::shared_ptr<std::vector<std::string>> pdeletedfiles = std::make_shared<std::vector<std::string>>();
+
+    std::shared_ptr<VideoDevice_Caspar> pthisdev =
+            std::dynamic_pointer_cast<VideoDevice_Caspar>(m_hook.gs->Devices->at(m_pluginname));
+
     m_hook.gs->Async->newAsyncJob(
-            std::bind(&VideoDevice_Caspar::fileUpdateJob, this, pnewfiles, pdeletedfiles, std::placeholders::_1,
-                    std::placeholders::_2, m_hostname, m_port, transformed_files),
-            std::bind(&VideoDevice_Caspar::fileUpdateComplete, this, pnewfiles, pdeletedfiles, std::placeholders::_1),
+            std::bind(&VideoDevice_Caspar::fileUpdateJob, pthisdev, pnewfiles, pdeletedfiles,
+                    std::placeholders::_1, std::placeholders::_2, m_hostname, m_port, transformed_files),
+            std::bind(&VideoDevice_Caspar::fileUpdateComplete, pthisdev, pnewfiles, pdeletedfiles,
+                    std::placeholders::_1),
             NULL, 10, false);
 }
 
@@ -250,6 +252,7 @@ void VideoDevice_Caspar::stop ()
 /**
  * Asynchronous task to kickoff a new CG connection and update the file list
  *
+ * @param thisdev           Pointer to the calling class, shared_ptr variant of this keyword
  * @param newfiles          Pointer to a map of new media files
  * @param deletedfiles      Pointer to a vector of deleted file names
  * @param data              Unused.
@@ -258,7 +261,8 @@ void VideoDevice_Caspar::stop ()
  * @param port              CasparCG server port
  * @param transformed_files File list in vector form
  */
-void VideoDevice_Caspar::fileUpdateJob (std::shared_ptr<std::map<std::string, VideoFile>> newfiles,
+void VideoDevice_Caspar::fileUpdateJob (std::shared_ptr<VideoDevice_Caspar> thisdev,
+        std::shared_ptr<std::map<std::string, VideoFile>> newfiles,
         std::shared_ptr<std::vector<std::string>> deletedfiles, std::shared_ptr<void> data,
         std::timed_mutex &core_lock, std::string hostname, std::string port,
         std::shared_ptr<std::vector<std::string>> transformed_files)
@@ -275,49 +279,53 @@ void VideoDevice_Caspar::fileUpdateJob (std::shared_ptr<std::map<std::string, Vi
     }
 
     // Send the query
-    CasparCommand query(CASPAR_COMMAND_CLS, boost::bind(&VideoDevice_Caspar::cb_updatefiles, this, _1, pccon,
+    CasparCommand query(CASPAR_COMMAND_CLS, boost::bind(&VideoDevice_Caspar::cb_updatefiles, thisdev, _1, pccon,
             newfiles, deletedfiles, transformed_files));
     pccon->sendCommand(query);
 
-    pccon->run();
+    pccon->run(5000);
 }
 
 /**
  * File update job completion callback - updates the file list with results from the update
  *
+ * @param thisdev           Pointer to the calling class, shared_ptr variant of this keyword
  * @param newfiles     Map of new files to be inserted into the map
  * @param deletedfiles Names of deleted files to be removed
  * @param data         Unused.
  */
-void VideoDevice_Caspar::fileUpdateComplete(std::shared_ptr<std::map<std::string, VideoFile>> newfiles,
-        std::shared_ptr<std::vector<std::string>> deletedfiles, std::shared_ptr<void> data)
+void VideoDevice_Caspar::fileUpdateComplete(std::shared_ptr<VideoDevice_Caspar> thisdev,
+        std::shared_ptr<std::map<std::string, VideoFile>> newfiles,
+  std::shared_ptr<std::vector<std::string>> deletedfiles, std::shared_ptr<void> data)
 {
-    if ((READY != m_status && WAITING != m_status) || !m_hook.gs)
+    if (READY != thisdev->m_status && WAITING != thisdev->m_status)
     {
         return;
     }
 
     for (std::string thisfile : *deletedfiles)
     {
-        m_files.erase(thisfile);
+        thisdev->m_files.erase(thisfile);
     }
 
     for (std::pair<std::string, VideoFile> thisfile : *newfiles)
     {
-        m_files[thisfile.first] = thisfile.second;
+        thisdev->m_files[thisfile.first] = thisfile.second;
     }
 
-    m_hook.gs->L->info("Caspar File Update", "Got " + ConvertType::intToString(newfiles->size()) + " additions and " +
-            ConvertType::intToString(deletedfiles->size()) + " deletions.");
+    thisdev->m_hook.gs->L->info("Caspar File Update", "Got " + ConvertType::intToString(newfiles->size()) +
+            " additions and " + ConvertType::intToString(deletedfiles->size()) + " deletions.");
 }
 
 /**
  * Batch updating the list of file lengths to grab 10 at a time
  *
+ * @param thisdev           Pointer to the calling class, shared_ptr variant of this keyword
  * @param medialist List of files from a cb_updatefiles call
  * @param pccon     CasparCG connection to run this async
  */
-void VideoDevice_Caspar::batchFileLengths (std::vector<std::string>& medialist, std::shared_ptr<CasparConnection> pccon,
+void VideoDevice_Caspar::batchFileLengths (std::shared_ptr<VideoDevice_Caspar> thisdev,
+        std::vector<std::string>& medialist, std::shared_ptr<CasparConnection> pccon,
         std::shared_ptr<std::map<std::string, VideoFile>> newfiles)
 {
     std::vector<std::string>::iterator iter = medialist.end();
@@ -343,7 +351,7 @@ void VideoDevice_Caspar::batchFileLengths (std::vector<std::string>& medialist, 
     }
 
     CasparCommand infoquery(CASPAR_COMMAND_INFO_EXPANDED, std::bind(&VideoDevice_Caspar::cb_updatelength,
-            this, medialist, std::placeholders::_1, pccon, newfiles));
+            thisdev, medialist, std::placeholders::_1, pccon, newfiles));
     infoquery.addParam("1");
     pccon->sendCommand(infoquery);
 
@@ -353,13 +361,15 @@ void VideoDevice_Caspar::batchFileLengths (std::vector<std::string>& medialist, 
 /**
  * Callback to handle files update
  *
+ * @param thisdev           Pointer to the calling class, shared_ptr variant of this keyword
  * @param resp              Vector filled with lines from CasparCG
  * @param pccon             Pointer to new CG connection
  * @param newfiles          Pointer to a map of new media files
  * @param deletedfiles      Pointer to a vector of deleted file names
  * @param transformed_files Current file list in vector form
  */
-void VideoDevice_Caspar::cb_updatefiles (std::vector<std::string>& resp, std::shared_ptr<CasparConnection> pccon,
+void VideoDevice_Caspar::cb_updatefiles (std::shared_ptr<VideoDevice_Caspar> thisdev,
+        std::vector<std::string>& resp, std::shared_ptr<CasparConnection> pccon,
         std::shared_ptr<std::map<std::string, VideoFile>> newfiles,
                 std::shared_ptr<std::vector<std::string>> deletedfiles,
                 std::shared_ptr<std::vector<std::string>> transformed_files)
@@ -384,19 +394,21 @@ void VideoDevice_Caspar::cb_updatefiles (std::vector<std::string>& resp, std::sh
 
     if (newmedialist.size() > 0)
     {
-        batchFileLengths(newmedialist, pccon, newfiles);
+        batchFileLengths(thisdev, newmedialist, pccon, newfiles);
     }
 }
 
 /**
  * Callback for file length in frames, will push file back in to list
  *
+ * @param thisdev           Pointer to the calling class, shared_ptr variant of this keyword
  * @param filedata      Rest of file data to go in list
  * @param resp          Lines of data from CasparCG
  * @param pccon         Pointer to CG connection
  * @param newfiles      Pointer to a map of new media files
  */
-void VideoDevice_Caspar::cb_updatelength (std::vector<std::string>& medialist, std::vector<std::string>& resp,
+void VideoDevice_Caspar::cb_updatelength (std::shared_ptr<VideoDevice_Caspar> thisdev,
+        std::vector<std::string>& medialist, std::vector<std::string>& resp,
         std::shared_ptr<CasparConnection> pccon, std::shared_ptr<std::map<std::string, VideoFile>> newfiles)
 {
     std::vector<std::string>::iterator iter = medialist.end();
@@ -425,7 +437,7 @@ void VideoDevice_Caspar::cb_updatelength (std::vector<std::string>& medialist, s
 
     if (medialist.size() > 0)
     {
-        batchFileLengths(medialist, pccon, newfiles);
+        batchFileLengths(thisdev, medialist, pccon, newfiles);
     }
     else
     {

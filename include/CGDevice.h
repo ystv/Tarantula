@@ -43,7 +43,7 @@ struct CGLayer
  */
 const ActionInformation CGACTION_ADD = { 0, "Add", "Adds a new CG event", { {
         "graphicname", "string" }, { "hostlayer", "int" }, { "templatedata",
-        "string" } } };
+        "map" } } };
 const ActionInformation CGACTION_PLAY = { 1, "Play",
         "Plays template on by one step", { { "hostlayer", "int" } } };
 const ActionInformation CGACTION_UPDATE = { 2, "Update",

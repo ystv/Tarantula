@@ -92,7 +92,6 @@ private:
     int m_jobpriority;
     int m_cyclesbeforesync;
 
-
     std::vector<std::pair<std::string, std::string>> m_structuredata; ///< An example could be {"ident", "device1"}
     bool m_filler; ///< Whether to fill remaining time with the last item.
 

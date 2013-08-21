@@ -740,7 +740,6 @@ extern "C"
 {
     void LoadPlugin (Hook h, PluginConfig config, std::shared_ptr<Plugin>& pluginref)
     {
-        //must declare as pointer to avoid object being deleted once function call is complete!
         std::shared_ptr<EventProcessor_Fill> plugtemp = std::make_shared<EventProcessor_Fill>(config, h);
         pluginref = std::dynamic_pointer_cast<Plugin>(plugtemp);
     }

@@ -72,21 +72,28 @@ private:
     std::string m_hostname;
     std::string m_port;
 
-    void fileUpdateJob (std::shared_ptr<std::map<std::string, VideoFile>> newfiles,
+    void cb_info (std::vector<std::string>& resp);
+
+    // Static functions for async files update job
+    static void fileUpdateJob (std::shared_ptr<VideoDevice_Caspar> thisdev,
+            std::shared_ptr<std::map<std::string, VideoFile>> newfiles,
             std::shared_ptr<std::vector<std::string>> deletedfiles, std::shared_ptr<void> data,
             std::timed_mutex &core_lock, std::string hostname, std::string port,
             std::shared_ptr<std::vector<std::string>> transformed_files);
-    void fileUpdateComplete (std::shared_ptr<std::map<std::string, VideoFile>> newfiles,
+    static void fileUpdateComplete (std::shared_ptr<VideoDevice_Caspar> thisdev,
+            std::shared_ptr<std::map<std::string, VideoFile>> newfiles,
             std::shared_ptr<std::vector<std::string>> deletedfiles, std::shared_ptr<void> data);
-    void batchFileLengths (std::vector<std::string>& medialist, std::shared_ptr<CasparConnection> pccon,
+    static void batchFileLengths (std::shared_ptr<VideoDevice_Caspar> thisdev,
+            std::vector<std::string>& medialist, std::shared_ptr<CasparConnection> pccon,
             std::shared_ptr<std::map<std::string, VideoFile>> newfiles);
 
-    void cb_updatefiles (std::vector<std::string>& resp, std::shared_ptr<CasparConnection> pccon,
+    static void cb_updatefiles (std::shared_ptr<VideoDevice_Caspar> thisdev,
+            std::vector<std::string>& resp, std::shared_ptr<CasparConnection> pccon,
             std::shared_ptr<std::map<std::string, VideoFile>> newfiles,
             std::shared_ptr<std::vector<std::string>> deletedfiles,
             std::shared_ptr<std::vector<std::string>> transformed_files);
-    void cb_updatelength (std::vector<std::string>& medialist, std::vector<std::string>& resp,
+    static void cb_updatelength (std::shared_ptr<VideoDevice_Caspar> thisdev,
+            std::vector<std::string>& medialist, std::vector<std::string>& resp,
             std::shared_ptr<CasparConnection> pccon, std::shared_ptr<std::map<std::string, VideoFile>> newfiles);
-    void cb_info (std::vector<std::string>& resp);
 };
 

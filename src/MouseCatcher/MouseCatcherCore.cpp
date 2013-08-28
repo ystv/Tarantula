@@ -561,6 +561,27 @@ namespace MouseCatcherCore
         if (1 == g_devices.count(pmcevent->m_targetdevice))
         {
             pplaylistevent->m_devicetype = g_devices[pmcevent->m_targetdevice]->getType();
+
+            if (-1 == pmcevent->m_action)
+            {
+                // Lookup the action ID from the list
+                for (const ActionInformation *thisaction : *(g_devices[pmcevent->m_targetdevice]->m_actionlist))
+                {
+                    if (!thisaction->name.compare(pmcevent->m_action_name))
+                    {
+                        pmcevent->m_action = thisaction->actionid;
+                        break;
+                    }
+                }
+
+                // Check we got an ID number
+                if (-1 == pmcevent->m_action)
+                {
+                    g_logger.warn("convertToPlaylistEvent", "Unable to convert as action " + pmcevent->m_action_name +
+                            " does not exist on device " + pmcevent->m_targetdevice);
+                    return false;
+                }
+            }
         }
         else
         {

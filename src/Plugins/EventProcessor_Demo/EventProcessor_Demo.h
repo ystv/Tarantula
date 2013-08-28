@@ -42,6 +42,6 @@ public:
     virtual ~EventProcessor_Demo ();
     virtual void handleEvent (MouseCatcherEvent originalEvent, MouseCatcherEvent& resultingEvent);
 
-    static void demoPreProcessor (PlaylistEntry& event);
+    static void demoPreProcessor (PlaylistEntry& event, Channel *pchannel);
 };
 

@@ -167,7 +167,7 @@ void Channel::runEvent (PlaylistEntry& event)
     {
         if (g_preprocessorlist.count(event.m_preprocessor) > 0)
         {
-            g_preprocessorlist[event.m_preprocessor](event);
+            g_preprocessorlist[event.m_preprocessor](event, this);
         }
         else
         {

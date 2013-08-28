@@ -181,8 +181,18 @@ void VideoDevice_PiVT::poll ()
 
     if (m_socket.is_open() || WAITING == m_status)
     {
-        m_io_service.poll();
-        m_io_service.reset();
+        try
+        {
+            m_io_service.poll();
+            m_io_service.reset();
+        }
+        catch (std::exception &ex)
+        {
+            m_status = FAILED;
+            m_hook.gs->L->error(m_pluginname, std::string("Error in network subsystem. Message was: ") +
+                    std::string(ex.what()));
+        }
+
 
         if (WAITING == m_status)
         {

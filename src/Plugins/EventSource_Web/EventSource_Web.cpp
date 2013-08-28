@@ -474,21 +474,6 @@ void EventSource_Web::updateEventProcessors (
 			{
 				//!TODO Write the handler for key-value maps
 			}
-			else if (!thisoption.first.compare("filename"))
-			{
-				pugi::xml_node para = actionsnode.append_child("p");
-				para.append_attribute("class").set_value("form-line");
-
-				pugi::xml_node label = para.append_child("label");
-				label.text().set(thisoption.first.c_str());
-				label.append_attribute("for").set_value(
-						std::string("action-0-" + thisoption.first).c_str());
-
-				pugi::xml_node item = para.append_child("select");
-				item.append_attribute("name").set_value(
-						std::string("actionfile-0").c_str());
-				item.append_attribute("class").set_value("action-filename");
-			}
 			else
 			{
 				pugi::xml_node para = actionsnode.append_child("p");

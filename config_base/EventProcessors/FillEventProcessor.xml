@@ -6,7 +6,7 @@
         <Library>EventProcessor_Fill</Library>
         <Instance>Event Filler 1</Instance>
         <Description>Generates a series of events to fill a period or time, using a semi-random algorithm</Description>
-        <Enabled>false</Enabled>
+        <Enabled>true</Enabled>
     </PluginLoad>
     <PluginData>
         <DBFile>datafiles/EventProcessor_Fill/filedata.db</DBFile>
@@ -38,14 +38,11 @@
             </StructureItem>
         </StructureData>
         <EnableFill>true</EnableFill>
-        <ContinuityFill>
-            <MinimumTime units="frames">125</MinimumTime>
-            <EventAction>3</EventAction>
-            <EventType>Fixed</EventType>
-            <Device>Demo Video Device 1</Device>
-            <EventData>
-                <File>Continuity1</File>
-            </EventData>
+        <ContinuityFill> <!--  Describes a CG event to pad out unfilled time -->
+            <MinimumTime units="frames">25</MinimumTime> <!--  Minimum length of CG event -->
+            <Device>Main Video Server Graphics</Device>
+            <GraphicName>continuity_graphic</GraphicName>
+            <PreProcessor>EventProcessor_Fill::populateCGNowNext</PreProcessor>
         </ContinuityFill>
     </PluginData>
 </TarantulaPlugin>

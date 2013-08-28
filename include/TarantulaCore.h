@@ -38,6 +38,7 @@
 // Forward declarations to save on #includes
 class Log;
 class Device;
+class Channel;
 struct PluginStateData;
 class PlaylistEntry;
 
@@ -45,7 +46,7 @@ class PlaylistEntry;
 typedef std::function<void(std::string, int)> cbBegunPlaying;
 typedef std::function<void(std::string, int)> cbEndPlaying;
 typedef std::function<void(void)> cbTick;
-typedef std::function<void(PlaylistEntry&)> PreProcessorHandler;
+typedef std::function<void(PlaylistEntry&, Channel*)> PreProcessorHandler;
 
 struct DebugData
 {

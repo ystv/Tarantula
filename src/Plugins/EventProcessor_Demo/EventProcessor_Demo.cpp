@@ -83,9 +83,10 @@ void EventProcessor_Demo::handleEvent (MouseCatcherEvent originalEvent,
 /**
  * Demo function to test PreProcessor functionality
  *
- * @param event Reference to playlist event that called the processor
+ * @param event    Reference to playlist event that called the processor
+ * @param pchannel Pointer to channel calling the function
  */
-void EventProcessor_Demo::demoPreProcessor (PlaylistEntry &event)
+void EventProcessor_Demo::demoPreProcessor (PlaylistEntry &event, Channel *pchannel)
 {
     g_logger.info("Demo PreProcessor", "Demo PreProcessor is running");
 }

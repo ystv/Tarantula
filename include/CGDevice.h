@@ -51,9 +51,12 @@ const ActionInformation CGACTION_UPDATE = { 2, "Update",
                 { "hostlayer", "int" }, { "templatedata", "string" } } };
 const ActionInformation CGACTION_REMOVE = { 3, "Remove",
         "Stop template and clear layer", { { "hostlayer", "int" } } };
+const ActionInformation CGACTION_PARENT = { 4, "Parent",
+        "Do nothing - act as a placeholder for child event nesting", { } };
+
 
 const std::vector<const ActionInformation*> CG_device_action_list = {
-        &CGACTION_ADD, &CGACTION_PLAY, &CGACTION_UPDATE, &CGACTION_REMOVE };
+        &CGACTION_ADD, &CGACTION_PLAY, &CGACTION_UPDATE, &CGACTION_REMOVE, &CGACTION_PARENT };
 
 /**
  * Base class for a CG device

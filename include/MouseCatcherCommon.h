@@ -31,7 +31,9 @@
 
 #include "PlaylistDB.h"
 
-typedef std::function<void(PlaylistEntry&)> PreProcessorHandler;
+class Channel;
+
+typedef std::function<void(PlaylistEntry&, Channel*)> PreProcessorHandler;
 
 class MouseCatcherSourcePlugin;
 
@@ -61,7 +63,7 @@ public:
     playlist_event_type_t m_eventtype;
     //! Only for fixed and offset events, relative is relative to last event delivered
     long int m_triggertime;
-    int m_action;
+    int m_action = -1;
     std::string m_action_name;
     int m_eventid;
 

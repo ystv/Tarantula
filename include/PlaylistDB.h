@@ -138,6 +138,8 @@ public:
     std::vector<PlaylistEntry> getEvents (playlist_event_type_t type,
             time_t trigger);
     std::vector<PlaylistEntry> getChildEvents (int parentid);
+    int getParentEventID (int eventID);
+    bool getEventDetails (int eventID, PlaylistEntry &foundevent);
     std::vector<PlaylistEntry> getEventList (time_t starttime, int length);
     void processEvent (int eventID);
     void removeEvent (int eventID);
@@ -148,6 +150,8 @@ private:
     DBQuery* m_addevent_query;
     DBQuery* m_getevent_query;
     DBQuery* m_getchildevents_query;
+    DBQuery* m_getparentevent_query;
+    DBQuery* m_geteventdetails_query;
     DBQuery* m_removeevent_query;
     DBQuery* m_processevent_query;
     DBQuery* m_addextras_query;

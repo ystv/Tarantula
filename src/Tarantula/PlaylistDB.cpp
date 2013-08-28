@@ -53,12 +53,16 @@ PlaylistDB::PlaylistDB () :
     oneTimeExec("CREATE TABLE events (type INT, trigger INT64, device TEXT, devicetype INT, action, duration INT, "
             "parent INT, processed INT, lastupdate INT64, callback TEXT, description TEXT)");
     oneTimeExec("CREATE TABLE extradata (eventid INT, key TEXT, value TEXT, processed INT)");
+    oneTimeExec("CREATE INDEX trigger_index ON events (trigger)");
 
     // Queries used by other functions
     m_addevent_query = prepare("INSERT INTO events VALUES (?,?,?,?,?,?,?,0, strftime('%s', 'now'),?,?)");
     m_getevent_query = prepare("SELECT RowID,* FROM events WHERE type = ? AND trigger = ? AND processed = 0");
     m_getchildevents_query = prepare("SELECT RowID,* FROM events WHERE parent = ? AND processed = 0 "
             "ORDER BY trigger ASC");
+    m_getparentevent_query = prepare("SELECT ev.RowID FROM events AS ev "
+            "LEFT JOIN events as cev ON ev.RowID = cev.parent WHERE cev.RowID = ?");
+    m_geteventdetails_query = prepare("SELECT RowID, * FROM events WHERE RowID = ?");
     m_removeevent_query = prepare("DELETE FROM events WHERE rowid = ?; DELETE FROM extradata WHERE eventid = ?");
     m_processevent_query = prepare("UPDATE events SET processed = 1, lastupdate = strftime('%s', 'now') WHERE "
             "rowid = ?");
@@ -66,7 +70,7 @@ PlaylistDB::PlaylistDB () :
     m_getextras_query = prepare("SELECT key,value FROM extradata WHERE eventid = ?");
 
     // Queries used by EventSource interface
-    m_geteventlist_query = prepare("SELECT RowID, events.* FROM events WHERE trigger > ? AND trigger < ? AND "
+    m_geteventlist_query = prepare("SELECT RowID, events.* FROM events WHERE trigger >= ? AND trigger < ? AND "
             "parent = 0 ORDER BY trigger ASC");
     m_updateevent_query = prepare("UPDATE events SET type = ?, trigger = ?, filename = ?, device = ?, devicetype = ?, "
             "duration = ?, lastupdate = strftime('%s', 'now'), callback = ?, description = ?");
@@ -241,6 +245,55 @@ std::vector<PlaylistEntry> PlaylistDB::getChildEvents (int parentid)
         eventlist.push_back(ple);
     }
     return eventlist;
+}
+
+/**
+ * Look up the parent event from a child's ID
+ *
+ * @param eventID    ID of child event for which to find parent
+ * @return           Parent event ID or -1 if none found
+ */
+int PlaylistDB::getParentEventID (int eventID)
+{
+    m_getparentevent_query->rmParams();
+    m_getparentevent_query->addParam(1, DBParam(eventID));
+    m_getparentevent_query->bindParams();
+    sqlite3_stmt *stmt = m_getparentevent_query->getStmt();
+
+    if (SQLITE_ROW == sqlite3_step(stmt))
+    {
+        return sqlite3_column_int(stmt, 0);
+    }
+    else
+    {
+        return -1;
+    }
+}
+
+/**
+ * Get the details on an event by ID
+ *
+ * @param eventID    ID of event to grab details for
+ * @param foundevent Event to populate with details
+ * @return           True if an event was found
+ */
+bool PlaylistDB::getEventDetails (int eventID, PlaylistEntry &foundevent)
+{
+    m_geteventdetails_query->rmParams();
+    m_geteventdetails_query->addParam(1, DBParam(eventID));
+    m_geteventdetails_query->bindParams();
+    sqlite3_stmt *stmt = m_geteventdetails_query->getStmt();
+
+    if (SQLITE_ROW == sqlite3_step(stmt))
+    {
+        populateEvent(stmt, &foundevent);
+        getExtraData(&foundevent);
+        return true;
+    }
+    else
+    {
+        return false;
+    }
 }
 
 /**

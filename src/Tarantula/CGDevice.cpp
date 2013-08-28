@@ -66,11 +66,11 @@ void parseExtraData (PlaylistEntry& event, std::string *pgraphicname,
 
     for (std::pair<std::string, std::string> thiselement : event.m_extras)
     {
-        if (!thiselement.first.compare("graphicname"))
+        if (!thiselement.first.compare("graphicname") && pgraphicname)
         {
             *pgraphicname = thiselement.second;
         }
-        else if (!thiselement.first.compare("hostlayer"))
+        else if (!thiselement.first.compare("hostlayer") && playernumber)
         {
             try
             {
@@ -81,7 +81,7 @@ void parseExtraData (PlaylistEntry& event, std::string *pgraphicname,
                 throw std::exception();
             }
         }
-        else
+        else if (pdata)
         {
             pdata->operator [](thiselement.first) = thiselement.second;
         }
@@ -153,6 +153,10 @@ void CGDevice::runDeviceEvent (std::shared_ptr<Device> device, PlaylistEntry& ev
         {
             g_logger.error(event.m_device, "Unable to remove in event " + event.m_eventid);
         }
+    }
+    else if (CGACTION_PARENT == event.m_action)
+    {
+        // No action to take - just a placeholder
     }
     else
     {

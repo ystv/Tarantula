@@ -61,7 +61,7 @@ public:
 
 private:
     std::shared_ptr<boost::asio::io_service> m_io_service;
-    boost::asio::ip::tcp::acceptor m_acceptor;
+    std::shared_ptr<boost::asio::ip::tcp::acceptor> m_acceptor;
 
     // Webserver handlers
     void startAccept ();

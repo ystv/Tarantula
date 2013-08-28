@@ -38,7 +38,6 @@
 EventSource_Web::EventSource_Web (PluginConfig config, Hook h) :
         MouseCatcherSourcePlugin(config, h),
         m_io_service(new boost::asio::io_service),
-        m_acceptor(*m_io_service, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), 9816)),
         m_pevents(std::make_shared<std::set<MouseCatcherEvent, WebSource::MCE_compare>>()),
         m_sharedata(std::make_shared<WebSource::ShareData>())
 {
@@ -68,8 +67,7 @@ EventSource_Web::EventSource_Web (PluginConfig config, Hook h) :
 
 	try
 	{
-		m_config.m_pollperiod =
-				ConvertType::stringToInt(config.m_plugindata_map.at("PollPeriod"));
+		m_config.m_pollperiod = ConvertType::stringToInt(config.m_plugindata_map.at("PollPeriod"));
 	}
 	catch (std::exception &)
 	{
@@ -82,8 +80,7 @@ EventSource_Web::EventSource_Web (PluginConfig config, Hook h) :
 
 	try
 	{
-		m_config.m_port =
-				ConvertType::stringToInt(config.m_plugindata_map.at("Port"));
+		m_config.m_port = ConvertType::stringToInt(config.m_plugindata_map.at("Port"));
 	}
 	catch (std::exception &)
 	{
@@ -97,6 +94,8 @@ EventSource_Web::EventSource_Web (PluginConfig config, Hook h) :
     // create a new tcp server
     try
     {
+        m_acceptor = std::make_shared<boost::asio::ip::tcp::acceptor>(
+                *m_io_service, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), m_config.m_port));
         startAccept();
     } catch (std::exception& e)
     {
@@ -128,9 +127,9 @@ void EventSource_Web::startAccept ()
 {
     std::shared_ptr<WebSource::HTTPConnection> new_connection =
     		WebSource::HTTPConnection::create(
-            m_acceptor.get_io_service(), m_pevents, m_sharedata, m_config);
+            m_acceptor->get_io_service(), m_pevents, m_sharedata, m_config);
 
-    m_acceptor.async_accept(new_connection->socket(),
+    m_acceptor->async_accept(new_connection->socket(),
             boost::bind(&EventSource_Web::handleAccept, this,
                     new_connection, boost::asio::placeholders::error));
 

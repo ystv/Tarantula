@@ -123,12 +123,24 @@ void TCPConnection::handleIncomingData (
  * @param h		 Link back to GlobalStuff structures
  */
 EventSource_XML_Network::EventSource_XML_Network (PluginConfig config, Hook h) :
-        MouseCatcherSourcePlugin(config, h), m_io_service(new boost::asio::io_service),
-        m_acceptor(*m_io_service, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), 9815))
+        MouseCatcherSourcePlugin(config, h), m_io_service(new boost::asio::io_service)
 {
+    try
+    {
+        m_port = ConvertType::stringToInt(config.m_plugindata_map.at("Port"));
+    }
+    catch (std::exception &)
+    {
+        h.gs->L->error(m_pluginname, "Port not found. Shutting down");
+        m_status = FAILED;
+        return;
+    }
+
     // create a new tcp server
     try
     {
+        m_acceptor = std::make_shared<boost::asio::ip::tcp::acceptor>(
+                *m_io_service, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), m_port));
         startAccept();
     } catch (std::exception& e)
     {
@@ -160,9 +172,9 @@ EventSource_XML_Network::~EventSource_XML_Network ()
 void EventSource_XML_Network::startAccept ()
 {
     std::shared_ptr<TCPConnection> new_connection = TCPConnection::create(
-            m_acceptor.get_io_service(), &m_incoming);
+            m_acceptor->get_io_service(), &m_incoming);
 
-    m_acceptor.async_accept(new_connection->socket(),
+    m_acceptor->async_accept(new_connection->socket(),
             boost::bind(&EventSource_XML_Network::handleAccept, this,
                     new_connection, boost::asio::placeholders::error));
 

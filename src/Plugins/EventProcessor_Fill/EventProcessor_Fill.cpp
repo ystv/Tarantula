@@ -305,14 +305,18 @@ EventProcessor_Fill::EventProcessor_Fill (PluginConfig config, Hook h) :
 
     m_status = READY;
 
+    // Register the preprocessor
+    g_preprocessorlist.emplace("EventProcessor_Fill::populateCGNowNext", &EventProcessor_Fill::populateCGNowNext);
+
 }
 
 /**
- * Destructor. Syncs the database in memory to disk
+ * Destructor. Syncs the database in memory to disk and erases PP
  */
 EventProcessor_Fill::~EventProcessor_Fill ()
 {
     m_pdb->syncDatabase(m_dbfile);
+    g_preprocessorlist.erase("EventProcessor_Fill::populateCGNowNext");
 }
 
 /**
@@ -393,13 +397,7 @@ void EventProcessor_Fill::readConfig (PluginConfig config)
 		m_fileweight = 0;
 	}
 
-	m_continuityfill.m_action = continuitynode.child("EventAction").text().as_int(-1);
-	if (-1 == m_continuityfill.m_action)
-	{
-		m_hook.gs->L->warn(config.m_instance, "ContinuityFill EventAction not set, assuming 0");
-		m_continuityfill.m_action = 0;
-	}
-
+	// Configure the parent continuity filler event
 	m_continuityfill.m_targetdevice = continuitynode.child_value("Device");
 	if (m_continuityfill.m_targetdevice.empty())
 	{
@@ -408,30 +406,36 @@ void EventProcessor_Fill::readConfig (PluginConfig config)
 		return;
 	}
 
-	std::string eventtype = continuitynode.child_value("EventType");
-	if (!eventtype.compare("Fixed"))
-	{
-		m_continuityfill.m_eventtype = EVENT_FIXED;
-	}
-	else if (!eventtype.compare("Child"))
-	{
-		m_continuityfill.m_eventtype = EVENT_CHILD;
-	}
-	else if (!eventtype.compare("Manual"))
-	{
-		m_continuityfill.m_eventtype = EVENT_MANUAL;
-	}
-	else
-	{
-		m_hook.gs->L->warn(config.m_instance, "ContinuityFill EventType not set, assuming fixed");
-		m_continuityfill.m_eventtype = EVENT_FIXED;
-	}
+	m_continuityfill.m_eventtype = EVENT_FIXED;
 
-	for (pugi::xml_node node : continuitynode.child("EventData").children())
-	{
-		m_continuityfill.m_extradata[node.name()] = node.child_value();
-	}
+	// Create the "Add" event
+	MouseCatcherEvent continuitychild = m_continuityfill;
 
+	continuitychild.m_extradata["graphicname"] = continuitynode.child_value("GraphicName");
+    if (continuitychild.m_extradata["graphicname"].empty())
+    {
+        m_hook.gs->L->warn(config.m_instance, "ContinuityFill graphic name not set, disabling plugin");
+        m_status = FAILED;
+        return;
+    }
+
+    // This is optional, a test is not needed
+    continuitychild.m_preprocessor = continuitynode.child_value("PreProcessor");
+
+    continuitychild.m_action_name = "Add";
+    continuitychild.m_duration = 1;
+    continuitychild.m_extradata["next"] = "ppfill";
+    continuitychild.m_extradata["then"] = "ppfill";
+
+    m_continuityfill.m_childevents.push_back(continuitychild);
+
+    // Configure the "Remove" event
+    continuitychild.m_action_name = "Remove";
+    continuitychild.m_preprocessor = "";
+    continuitychild.m_extradata.clear();
+    m_continuityfill.m_childevents.push_back(continuitychild);
+
+    m_continuityfill.m_action_name = "Parent";
 }
 
 /**
@@ -478,17 +482,17 @@ void EventProcessor_Fill::handleEvent(MouseCatcherEvent originalEvent,
                     " selecting 10s instead");
             originalEvent.m_duration = 10;
         }
+
+        // Convert duration from seconds to frames
+        originalEvent.m_duration *= g_pbaseconfig->getFramerate();
+
+        originalEvent.m_extradata.clear();
     }
-    else
+    else if (originalEvent.m_duration <= 0)
     {
         m_hook.gs->L->warn(m_pluginname, "No duration given, selecting 10s instead");
-        originalEvent.m_duration = 10;
+        originalEvent.m_duration = 10 * g_pbaseconfig->getFramerate();
     }
-
-    // Convert duration from seconds to frames
-    originalEvent.m_duration *= g_pbaseconfig->getFramerate();
-
-    originalEvent.m_extradata.clear();
 
     // Copy the input event onto the output placeholder
     resultingEvent = originalEvent;
@@ -667,10 +671,17 @@ void EventProcessor_Fill::generateFilledEvents (std::shared_ptr<MouseCatcherEven
 		db->endTransaction();
     }
 
-    // Generate the continuity event for the rest (+5 seconds)
+    // Generate the continuity event for the rest
     continuityfill.m_channel = event->m_channel;
-    continuityfill.m_duration = continuitymin + duration;
+    continuityfill.m_duration = static_cast<int>((continuitymin + duration) / framerate);
     continuityfill.m_triggertime = templateevent.m_triggertime;
+
+    continuityfill.m_childevents[0].m_extradata["now"] = event->m_description;
+    continuityfill.m_childevents[0].m_channel = event->m_channel;
+    continuityfill.m_childevents[1].m_channel = event->m_channel;
+    continuityfill.m_childevents[0].m_triggertime = templateevent.m_triggertime;
+    continuityfill.m_childevents[1].m_triggertime = templateevent.m_triggertime +
+            static_cast<int>(duration / framerate);
     event->m_childevents.push_back(continuityfill);
 }
 
@@ -734,6 +745,57 @@ void EventProcessor_Fill::periodicDatabaseSync (std::shared_ptr<void> data, std:
     // Lock is not technically needed, but a precaution against future multithreaded async jobs
     std::lock_guard<std::timed_mutex> lock(core_lock);
     m_pdb->syncDatabase(m_dbfile);
+}
+
+/**
+ * Preprocessor function to fill in a CG graphic from the schedule
+ *
+ * @param event    Reference to playlist event that called the processor
+ * @param pchannel Pointer to calling channel
+ */
+void EventProcessor_Fill::populateCGNowNext (PlaylistEntry &event, Channel *pchannel)
+{
+    // Find the top-level parent event
+    int parentid = event.m_eventid;
+    int lastid;
+
+    do
+    {
+        lastid = parentid;
+        parentid = pchannel->m_pl.getParentEventID(lastid);
+    }
+    while (parentid != -1);
+
+    PlaylistEntry parent;
+    pchannel->m_pl.getEventDetails(lastid, parent);
+
+    // Find the next event after the end of this one
+    std::vector<PlaylistEntry> followlist;
+    followlist = pchannel->m_pl.getEventList(
+            parent.m_trigger + static_cast<int>(parent.m_duration / g_pbaseconfig->getFramerate()), 5);
+
+    if (!followlist.empty())
+    {
+        // Populate "next" from the description of next event if required
+        if (!event.m_extras["next"].compare("ppfill"))
+        {
+            event.m_extras["next"] = followlist[0].m_description;
+        }
+
+        // Do the same for "then" if required
+        if (!event.m_extras["then"].compare("ppfill"))
+        {
+            int trig = followlist[0].m_trigger;
+            int duration = followlist[0].m_duration;
+            followlist = pchannel->m_pl.getEventList(
+                    trig + static_cast<int>(duration / g_pbaseconfig->getFramerate()), 5);
+
+            if (!followlist.empty())
+            {
+                event.m_extras["then"] = followlist[0].m_description;
+            }
+        }
+    }
 }
 
 extern "C"

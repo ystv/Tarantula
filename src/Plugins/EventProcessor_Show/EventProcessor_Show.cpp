@@ -22,7 +22,7 @@
  *
  *****************************************************************************/
 
-#include "EventProcessorShow.h"
+#include "EventProcessor_Show.h"
 #include "MouseCatcherCore.h"
 #include "VideoDevice.h"
 #include "Misc.h"
@@ -67,6 +67,7 @@ EventProcessor_Show::EventProcessor_Show (PluginConfig config, Hook h) :
 
     // Populate information array
     m_processorinfo.data["filename"] = "string";
+    m_processorinfo.data["duration"] = "int";
 
     m_status = READY;
 }
@@ -87,14 +88,10 @@ EventProcessor_Show::~EventProcessor_Show ()
  */
 void EventProcessor_Show::handleEvent (MouseCatcherEvent originalEvent, MouseCatcherEvent& resultingEvent)
 {
-    // Run some checks
-    if (0 == m_hook.gs->Devices->count(m_videodevice) ||
-            0 == g_mcprocessors.count(m_continuitygenerator) ||
-            (m_enableoverlay && 0 == m_hook.gs->Devices->count(m_cgdevice)))
+    // Handle the slightly broken web UI
+    if (originalEvent.m_extradata.count("duration") > 0)
     {
-        m_hook.gs->L->error(m_pluginname, "One of the required devices (" + m_videodevice + ", " + m_cgdevice + ", " +
-                m_continuitygenerator + ") is not available.");
-        return;
+        originalEvent.m_duration = ConvertType::stringToInt(originalEvent.m_extradata["duration"]);
     }
 
     // Set some top-level defaults
@@ -104,6 +101,17 @@ void EventProcessor_Show::handleEvent (MouseCatcherEvent originalEvent, MouseCat
     resultingEvent.m_triggertime = originalEvent.m_triggertime;
     resultingEvent.m_targetdevice = originalEvent.m_targetdevice;
     resultingEvent.m_duration = originalEvent.m_duration + m_continuitylength;
+    resultingEvent.m_action = -1;
+
+    // Run some checks
+    if (0 == m_hook.gs->Devices->count(m_videodevice) ||
+            0 == g_mcprocessors.count(m_continuitygenerator) ||
+            (m_enableoverlay && 0 == m_hook.gs->Devices->count(m_cgdevice)))
+    {
+        m_hook.gs->L->error(m_pluginname, "One of the required devices (" + m_videodevice + ", " + m_cgdevice + ", " +
+                m_continuitygenerator + ") is not available.");
+        return;
+    }
 
     // Template event for rest of children
     MouseCatcherEvent tempevent;
@@ -120,8 +128,10 @@ void EventProcessor_Show::handleEvent (MouseCatcherEvent originalEvent, MouseCat
 
     // Generate the video event
     MouseCatcherEvent videoevent = tempevent;
-    videoevent.m_triggertime = originalEvent.m_triggertime + m_continuitylength;
+    videoevent.m_triggertime = originalEvent.m_triggertime +
+            static_cast<int>(m_continuitylength / g_pbaseconfig->getFramerate());
     videoevent.m_targetdevice = m_videodevice;
+    videoevent.m_action_name = "Play";
 
     if (originalEvent.m_extradata.count("filename") > 0)
     {
@@ -134,27 +144,33 @@ void EventProcessor_Show::handleEvent (MouseCatcherEvent originalEvent, MouseCat
     }
 
     videoevent.m_duration = originalEvent.m_duration;
+    resultingEvent.m_childevents.push_back(videoevent);
 
 
     // Generate a set of CG events for overlays
     if (m_enableoverlay && videoevent.m_duration > m_nownextminimum)
     {
+        int videoseconds = static_cast<int>(videoevent.m_duration / g_pbaseconfig->getFramerate());
         MouseCatcherEvent cgparent = fillevent;
         cgparent.m_targetdevice = m_cgdevice;
+        cgparent.m_action_name = "Parent";
+        cgparent.m_duration = 1;
         cgparent.m_extradata["hostlayer"] = ConvertType::intToString(m_nownextlayer);
 
         int runningtrigtime;
         if (videoevent.m_duration > m_nownextminimum && videoevent.m_duration < (m_nownextperiod * 1.25))
         {
-            runningtrigtime = videoevent.m_triggertime + (videoevent.m_duration / 2);
-
+            runningtrigtime = videoevent.m_triggertime + videoseconds / 2;
         }
         else
         {
-            runningtrigtime = videoevent.m_triggertime + m_nownextperiod;
+            runningtrigtime = videoevent.m_triggertime +
+                    static_cast<int>(m_nownextperiod / g_pbaseconfig->getFramerate());
         }
 
-        while (runningtrigtime < (videoevent.m_triggertime + videoevent.m_duration))
+        cgparent.m_triggertime = runningtrigtime;
+
+        while (runningtrigtime < (videoevent.m_triggertime + videoseconds))
         {
             // Generate progressive CG events
             MouseCatcherEvent cgchild = cgparent;
@@ -165,16 +181,17 @@ void EventProcessor_Show::handleEvent (MouseCatcherEvent originalEvent, MouseCat
             cgchild.m_extradata["next"] = "ppfill"; //Checked if not blank and filled by PP
 
             // Hijack a preprocessor from EP_Fill
-            cgchild.m_preprocessor = "EventProcessor_Fill::populateCGEvent";
+            cgchild.m_preprocessor = "EventProcessor_Fill::populateCGNowNext";
             cgparent.m_childevents.push_back(cgchild);
 
             cgchild.m_action_name = "Remove";
-            cgchild.m_triggertime += m_nownextduration;
+            cgchild.m_triggertime += static_cast<int>(m_nownextduration / g_pbaseconfig->getFramerate());
             cgparent.m_childevents.push_back(cgchild);
 
-            runningtrigtime += m_nownextperiod;
+            runningtrigtime += static_cast<int>(m_nownextperiod / g_pbaseconfig->getFramerate());
         }
 
+        cgparent.m_duration = (runningtrigtime - cgparent.m_triggertime) * 25 - m_nownextperiod + 1;
         resultingEvent.m_childevents.push_back(cgparent);
     }
 

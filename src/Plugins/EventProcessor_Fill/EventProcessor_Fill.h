@@ -75,6 +75,8 @@ public:
     void addFile (std::string filename, std::string device, std::string type,
             int duration, int weight);
 
+    static void populateCGNowNext (PlaylistEntry& event, Channel *pchannel);
+
     std::shared_ptr<FillDB> m_pdb;
 private:
     static void generateFilledEvents (std::shared_ptr<MouseCatcherEvent> event, std::shared_ptr<FillDB> db,

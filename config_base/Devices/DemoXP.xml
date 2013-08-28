@@ -3,7 +3,7 @@
     <PluginLoad>
         <Name>Demo Crosspoint</Name>
         <Type>Device</Type>
-        <Library>demoXpoint</Library>
+        <Library>CrosspointDevice_Demo</Library>
         <Instance>Demo Crosspoint 1</Instance>
         <Enabled>true</Enabled>
     </PluginLoad>

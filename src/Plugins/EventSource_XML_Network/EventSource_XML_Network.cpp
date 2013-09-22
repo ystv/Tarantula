@@ -66,7 +66,14 @@ void TCPConnection::start ()
 {
     std::string message = "Welcome to Tarantula.\r\n";
 
-    boost::asio::write(m_socket, boost::asio::buffer(message));
+    try
+    {
+        boost::asio::write(m_socket, boost::asio::buffer(message));
+    }
+    catch (std::exception &e)
+    {
+
+    }
 
     boost::asio::async_read_until(m_socket, m_messagedata, '\n',
             boost::bind(&TCPConnection::handleIncomingData,
@@ -267,9 +274,16 @@ bool EventSource_XML_Network::processIncoming (XML_Incoming& newdata,
     // Return an error if parsing fails
     if (pugi::status_ok != result.status)
     {
-        boost::asio::write(newdata.m_conn->socket(),
-                boost::asio::buffer("400 BAD COMMAND\r\n"),
-                boost::asio::transfer_all());
+        try
+        {
+            boost::asio::write(newdata.m_conn->socket(),
+                    boost::asio::buffer("400 BAD COMMAND\r\n"),
+                    boost::asio::transfer_all());
+        }
+        catch (std::exception &e)
+        {
+
+        }
         return false;
     }
 
@@ -286,23 +300,44 @@ bool EventSource_XML_Network::processIncoming (XML_Incoming& newdata,
 
     if (action.empty())
     {
-        boost::asio::write(newdata.m_conn->socket(),
-                boost::asio::buffer("400 NO ACTION\r\n"));
+        try
+        {
+            boost::asio::write(newdata.m_conn->socket(),
+                    boost::asio::buffer("400 NO MCEVENT ACTION\r\n"));
+        }
+        catch (std::exception &e)
+        {
+
+        }
         return false;
     }
     else if (!action.compare("Add"))
     {
         if (xml.child("MCEvent").empty())
         {
-            boost::asio::write(newdata.m_conn->socket(),
-                    boost::asio::buffer("400 NO DATA\r\n"));
+            try
+            {
+                boost::asio::write(newdata.m_conn->socket(),
+                        boost::asio::buffer("400 NO DATA\r\n"));
+            }
+            catch (std::exception &e)
+            {
+
+            }
             return false;
         }
 
         if (!parseEvent(xml.child("MCEvent"), newaction.event))
         {
-        	boost::asio::write(newdata.m_conn->socket(),
-        			boost::asio::buffer("400 BAD DATA\r\n"));
+            try
+            {
+                boost::asio::write(newdata.m_conn->socket(),
+                        boost::asio::buffer("400 BAD DATA\r\n"));
+            }
+            catch (std::exception &e)
+            {
+
+            }
         	return false;
         }
 
@@ -312,8 +347,15 @@ bool EventSource_XML_Network::processIncoming (XML_Incoming& newdata,
     {
         if (-1 == xml.child("eventid").text().as_int(-1))
         {
-            boost::asio::write(newdata.m_conn->socket(),
-                    boost::asio::buffer("400 NO DATA\r\n"));
+            try
+            {
+                boost::asio::write(newdata.m_conn->socket(),
+                        boost::asio::buffer("400 NO DATA\r\n"));
+            }
+            catch (std::exception &e)
+            {
+
+            }
             return false;
         }
 
@@ -326,8 +368,15 @@ bool EventSource_XML_Network::processIncoming (XML_Incoming& newdata,
         if ((xml.child("MCEvent").empty())
                 || -1 == xml.child("eventid").text().as_int(-1))
         {
-            boost::asio::write(newdata.m_conn->socket(),
-                    boost::asio::buffer("400 NO DATA\r\n"));
+            try
+            {
+                boost::asio::write(newdata.m_conn->socket(),
+                        boost::asio::buffer("400 NO DATA\r\n"));
+            }
+            catch (std::exception &e)
+            {
+
+            }
             return false;
         }
 
@@ -336,8 +385,15 @@ bool EventSource_XML_Network::processIncoming (XML_Incoming& newdata,
 
         if (!parseEvent(xml.child("MCEvent"), newaction.event))
 		{
-			boost::asio::write(newdata.m_conn->socket(),
-					boost::asio::buffer("400 BAD DATA\r\n"));
+            try
+            {
+                boost::asio::write(newdata.m_conn->socket(),
+                        boost::asio::buffer("400 BAD DATA\r\n"));
+            }
+            catch (std::exception &e)
+            {
+
+            }
 			return false;
 		}
 
@@ -378,8 +434,15 @@ bool EventSource_XML_Network::processIncoming (XML_Incoming& newdata,
     {
         if (xml.child("device").empty())
         {
-            boost::asio::write(newdata.m_conn->socket(),
-                    boost::asio::buffer("400 NO DATA\r\n"));
+            try
+            {
+                boost::asio::write(newdata.m_conn->socket(),
+                        boost::asio::buffer("400 NO DATA\r\n"));
+            }
+            catch (std::exception &e)
+            {
+
+            }
             return false;
         }
 
@@ -390,8 +453,15 @@ bool EventSource_XML_Network::processIncoming (XML_Incoming& newdata,
     {
         if (xml.child("device").empty())
         {
-            boost::asio::write(newdata.m_conn->socket(),
-                    boost::asio::buffer("400 NO DATA\r\n"));
+            try
+            {
+                boost::asio::write(newdata.m_conn->socket(),
+                        boost::asio::buffer("400 NO DATA\r\n"));
+            }
+            catch (std::exception &e)
+            {
+
+            }
             return false;
         }
 
@@ -400,8 +470,15 @@ bool EventSource_XML_Network::processIncoming (XML_Incoming& newdata,
     }
     else
     {
-        boost::asio::write(newdata.m_conn->socket(),
-                boost::asio::buffer("400 BAD ACTION\r\n"));
+        try
+        {
+            boost::asio::write(newdata.m_conn->socket(),
+                    boost::asio::buffer("400 BAD ACTION\r\n"));
+        }
+        catch (std::exception &e)
+        {
+
+        }
         return false;
     }
 
@@ -442,8 +519,15 @@ void EventSource_XML_Network::tick (std::vector<EventAction>* ActionQueue)
             }
             std::shared_ptr<XML_Incoming> plugindata = std::static_pointer_cast
                     < XML_Incoming > (thisaction.additionaldata);
-            boost::asio::write(plugindata->m_conn->socket(),
-                    boost::asio::buffer(responsemessage + "\r\n"));
+            try
+            {
+                boost::asio::write(plugindata->m_conn->socket(),
+                        boost::asio::buffer(responsemessage + "\r\n"));
+            }
+            catch (std::exception &e)
+            {
+
+            }
         }
     }
 
@@ -512,7 +596,7 @@ void converteventtoxml (pugi::xml_node& parent,
     pugi::xml_attribute durationunits = duration.append_attribute("units");
     durationunits.set_value("seconds");
 
-    duration.text().set(event.m_duration);
+    duration.text().set(event.m_duration / g_pbaseconfig->getFramerate());
 
     addchildwithvalue(eventdata, "preprocessor", event.m_preprocessor);
 
@@ -562,8 +646,15 @@ void EventSource_XML_Network::updatePlaylist (
     //Send back resulting XML
     std::shared_ptr<XML_Incoming> plugindata = std::static_pointer_cast
             < XML_Incoming > (additionaldata);
-    boost::asio::write(plugindata->m_conn->socket(),
-            boost::asio::buffer(ss.str()));
+    try
+    {
+        boost::asio::write(plugindata->m_conn->socket(),
+                boost::asio::buffer(ss.str()));
+    }
+    catch (std::exception &e)
+    {
+
+    }
 }
 
 /**
@@ -601,8 +692,15 @@ void EventSource_XML_Network::updateDevices (
     //Send back resulting XML
     std::shared_ptr<XML_Incoming> plugindata = std::static_pointer_cast
             < XML_Incoming > (additionaldata);
-    boost::asio::write(plugindata->m_conn->socket(),
-            boost::asio::buffer(ss.str()));
+    try
+    {
+        boost::asio::write(plugindata->m_conn->socket(),
+                boost::asio::buffer(ss.str()));
+    }
+    catch (std::exception &e)
+    {
+
+    }
 
 }
 
@@ -657,8 +755,15 @@ void EventSource_XML_Network::updateDeviceActions (std::string device,
     //Send back resulting XML
     std::shared_ptr<XML_Incoming> plugindata = std::static_pointer_cast
             < XML_Incoming > (additionaldata);
-    boost::asio::write(plugindata->m_conn->socket(),
-            boost::asio::buffer(ss.str()));
+    try
+    {
+        boost::asio::write(plugindata->m_conn->socket(),
+                boost::asio::buffer(ss.str()));
+    }
+    catch (std::exception &e)
+    {
+
+    }
 }
 
 /**
@@ -709,8 +814,15 @@ void EventSource_XML_Network::updateEventProcessors (
     //Send back resulting XML
     std::shared_ptr<XML_Incoming> plugindata = std::static_pointer_cast
             < XML_Incoming > (additionaldata);
-    boost::asio::write(plugindata->m_conn->socket(),
-            boost::asio::buffer(ss.str()));
+    try
+    {
+        boost::asio::write(plugindata->m_conn->socket(),
+                boost::asio::buffer(ss.str()));
+    }
+    catch (std::exception &e)
+    {
+
+    }
 }
 
 /**
@@ -755,8 +867,15 @@ void EventSource_XML_Network::updateFiles (std::string device,
     //Send back resulting XML
     std::shared_ptr<XML_Incoming> plugindata = std::static_pointer_cast
             < XML_Incoming > (additionaldata);
-    boost::asio::write(plugindata->m_conn->socket(),
-            boost::asio::buffer(ss.str()));
+    try
+    {
+        boost::asio::write(plugindata->m_conn->socket(),
+                boost::asio::buffer(ss.str()));
+    }
+    catch (std::exception &e)
+    {
+
+    }
 
 }
 

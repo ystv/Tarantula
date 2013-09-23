@@ -1,0 +1,2 @@
+Python script to read database tables from a PostgreSQL database and insert them into the SQLite database used by
+Tarantula.

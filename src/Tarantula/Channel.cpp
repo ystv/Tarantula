@@ -38,7 +38,7 @@ int end = 0;
 /**
  * Constructor when a name isn't explicitly specified
  */
-Channel::Channel ()
+Channel::Channel () : m_pl("Unknown")
 {
     m_channame = "Unnamed Channel";
     m_xpport = "YSTV Stream";
@@ -61,7 +61,7 @@ Channel::Channel ()
  * @param xpname The name of the crosspoint for this channel
  * @param xport  The name of this channel's crosspoint port (as in crosspoint device file)
  */
-Channel::Channel (std::string name, std::string xpname, std::string xport)
+Channel::Channel (std::string name, std::string xpname, std::string xport) : m_pl(name)
 {
     m_channame = name;
     m_xpdevicename = xpname;
@@ -100,6 +100,9 @@ void Channel::init ()
         }
     }
 
+    // Attempt to pull events from the offline store
+
+
 }
 
 /**
@@ -114,6 +117,21 @@ void Channel::tick ()
     for (PlaylistEntry thisevent : events)
     {
         runEvent(thisevent);
+    }
+
+    // Sync database
+    if (m_sync_counter > g_pbaseconfig->getDatabaseSyncTime())
+    {
+        m_sync_counter = 0;
+
+        g_async.newAsyncJob(
+                std::bind(&Channel::periodicDatabaseSync, this, std::placeholders::_1,
+                        std::placeholders::_2), NULL,
+                        NULL, 50, false);
+    }
+    else
+    {
+        m_sync_counter++;
     }
 }
 
@@ -204,6 +222,16 @@ int Channel::createEvent (PlaylistEntry *pev)
 {
     int ret = m_pl.addEvent(pev);
     return ret;
+}
+
+/**
+ * Lock the core and sync the database in memory with the one on disk
+ *
+ * @param data Unused
+ */
+void Channel::periodicDatabaseSync (std::shared_ptr<void> data, std::timed_mutex &core_lock)
+{
+    m_pl.writeToDisk(g_pbaseconfig->getOfflineDatabasePath(), m_channame, core_lock);
 }
 
 /**

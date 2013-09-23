@@ -62,17 +62,23 @@ FillDB::FillDB (std::string databasefile, std::map<int, int>& weightpoints,
 	if (!databasefile.empty())
 	{
 		// Load from existing
-		oneTimeExec("ATTACH \"" + databasefile + "\" AS disk");
+	    try
+	    {
+            oneTimeExec("ATTACH \"" + databasefile + "\" AS disk");
 
-		oneTimeExec("BEGIN TRANSACTION");
+            oneTimeExec("BEGIN TRANSACTION");
 
-		oneTimeExec("INSERT INTO items (id, name, device, type, duration, weight) "
-				"SELECT id, name, device, type, duration, weight FROM disk.items");
-		oneTimeExec("INSERT INTO plays (id, itemid, timestamp) "
-				"SELECT id, itemid, timestamp FROM disk.plays");
-		oneTimeExec("DETACH disk");
+            oneTimeExec("INSERT INTO items (id, name, device, type, duration, weight) "
+                    "SELECT id, name, device, type, duration, weight FROM disk.items");
+            oneTimeExec("INSERT INTO plays (id, itemid, timestamp) "
+                    "SELECT id, itemid, timestamp FROM disk.plays");
+            oneTimeExec("DETACH disk");
 
-		oneTimeExec("END TRANSACTION");
+            oneTimeExec("END TRANSACTION");
+	    }
+	    catch (std::exception &ex)
+	    {
+	    }
 	}
 
 	// Index speeds up some lookups

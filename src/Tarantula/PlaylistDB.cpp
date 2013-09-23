@@ -24,6 +24,8 @@
 
 
 #include "PlaylistDB.h"
+#include "TarantulaCore.h"
+#include "Misc.h"
 
 /**
  * Equivalent to a row in the playlist database, containing
@@ -46,7 +48,7 @@ PlaylistEntry::PlaylistEntry ()
  * Generates a database structure and prepares queries for other functions
  *
  */
-PlaylistDB::PlaylistDB () :
+PlaylistDB::PlaylistDB (std::string channel_name) :
         MemDB()
 {
     // Do the initial database setup
@@ -74,6 +76,11 @@ PlaylistDB::PlaylistDB () :
             "parent = 0 ORDER BY trigger ASC");
     m_updateevent_query = prepare("UPDATE events SET type = ?, trigger = ?, filename = ?, device = ?, devicetype = ?, "
             "duration = ?, lastupdate = strftime('%s', 'now'), callback = ?, description = ?");
+
+    // Read in some data
+    m_channame = channel_name;
+    m_last_sync = 0;
+    readFromDisk(g_pbaseconfig->getOfflineDatabasePath(), channel_name);
 }
 
 /**
@@ -329,3 +336,81 @@ void PlaylistDB::removeEvent (int eventID)
     sqlite3_step(m_removeevent_query->getStmt());
 }
 
+/**
+ * Read the playlist from a database on disk
+ *
+ * @param file  File name to read from
+ * @param table Table name stub for this playlist
+ */
+void PlaylistDB::readFromDisk (std::string file, std::string table)
+{
+    // Load from existing
+    try
+    {
+        oneTimeExec("ATTACH \"" + file + "\" AS disk");
+
+        oneTimeExec("CREATE TABLE IF NOT EXISTS disk.[" + table + "] (type INT, trigger INT64, device TEXT, devicetype INT, action, "
+                "duration INT, parent INT, processed INT, lastupdate INT64, callback TEXT, description TEXT)");
+        oneTimeExec("CREATE TABLE IF NOT EXISTS disk.[" + table + "_data] (eventid INT, key TEXT, value TEXT, processed INT)");
+
+        oneTimeExec("BEGIN TRANSACTION");
+
+        oneTimeExec("INSERT INTO events (RowID, type, trigger, device, devicetype, action, duration, parent, processed, lastupdate, "
+                "callback, description) "
+                "SELECT RowID, type, trigger, device, devicetype, action, duration, parent, processed, lastupdate,"
+                "callback, description FROM disk.[" + table + "] WHERE trigger > strftime('%s', 'now') AND processed = 0");
+
+        oneTimeExec("INSERT INTO extradata (eventid, key, value, processed) "
+                "SELECT eventid, key, value, processed FROM disk.[" + table + "_data] WHERE processed = 0");
+
+        oneTimeExec("DETACH disk");
+
+        oneTimeExec("END TRANSACTION");
+    }
+    catch (...)
+    {
+    }
+}
+
+/**
+ * Write changed database events to the disk
+ *
+ * @param file  File name to write to
+ * @param table Table to write events to
+ */
+void PlaylistDB::writeToDisk (std::string file, std::string table, std::timed_mutex &core_lock)
+{
+    try
+    {
+        oneTimeExec("ATTACH \"" + file + "\" AS disk");
+        oneTimeExec("BEGIN TRANSACTION");
+
+        {
+            std::lock_guard<std::timed_mutex> lock(core_lock);
+            // Remove deleted rows
+            oneTimeExec("DELETE FROM disk.[" + table + "] WHERE disk.[" + table + "].RowID NOT IN "
+                    "(SELECT events.RowID FROM events)");
+
+            // Remove updated rows
+            oneTimeExec("DELETE FROM disk.[" + table + "] WHERE disk.[" + table + "].RowID IN "
+                    "(SELECT events.RowID FROM events WHERE lastupdate > " + ConvertType::intToString(m_last_sync) + ")");
+
+            // Update rows
+            oneTimeExec("INSERT INTO disk.[" + table + "] (RowID, type, trigger, device, devicetype, action, duration, parent, "
+                    "processed, lastupdate, callback, description) "
+                    "SELECT RowID, type, trigger, device, devicetype, action, duration, parent, processed, lastupdate,"
+                    "callback, description FROM events WHERE lastupdate > " + ConvertType::intToString(m_last_sync));
+
+            // Erase and sync entire extradata table
+            oneTimeExec("DELETE FROM disk.[" + table + "_data]");
+            oneTimeExec("INSERT INTO disk.[" + table + "_data] (eventid, key, value, processed) "
+                    "SELECT eventid, key, value, processed FROM extradata WHERE processed = 0");
+        }
+
+        oneTimeExec("DETACH disk");
+        oneTimeExec("END TRANSACTION");
+    }
+    catch (...)
+    {
+    }
+}

@@ -28,6 +28,7 @@
 #include <iostream>
 #include <cstdlib>
 #include <map>
+#include <mutex>
 #include "MemDB.h" //parent class
 
 
@@ -132,7 +133,7 @@ public:
 class PlaylistDB: public MemDB
 {
 public:
-    PlaylistDB ();
+    PlaylistDB (std::string channel);
     int addEvent (PlaylistEntry *pobj);
 
     std::vector<PlaylistEntry> getEvents (playlist_event_type_t type,
@@ -144,9 +145,17 @@ public:
     void processEvent (int eventID);
     void removeEvent (int eventID);
 
+    void writeToDisk (std::string file, std::string table, std::timed_mutex &core_lock);
+
 private:
     void populateEvent (sqlite3_stmt *pstmt, PlaylistEntry *pple);
     void getExtraData (PlaylistEntry *pple);
+
+    void readFromDisk (std::string file, std::string table);
+
+    std::string m_channame;
+    time_t m_last_sync;
+
     DBQuery* m_addevent_query;
     DBQuery* m_getevent_query;
     DBQuery* m_getchildevents_query;

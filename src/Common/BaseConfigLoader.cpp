@@ -146,6 +146,21 @@ void BaseConfigLoader::LoadConfig (std::string filename)
                     "No Framerate in config file. Using 25 FPS");
             m_framerate = 25;
         }
+
+        m_offlinedata_path = systemnode.child_value("Database");
+
+        if (m_offlinedata_path.empty())
+        {
+            g_logger.OMGWTF("Base Config Loader", "No Database [path] in config file. This will be a problem");
+            m_offlinedata_path = "temp.db";
+        }
+
+        m_db_synctime = systemnode.child("SyncTicks").text().as_int(-1);
+        if (-1 == m_db_synctime)
+        {
+            g_logger.warn("Base Config Loader", "No SyncTicks in config file. Using 1 minute");
+            m_db_synctime = m_framerate * 60;
+        }
     }
 
     // Grab the Plugins node and work out what the reload times are
@@ -260,6 +275,16 @@ std::string BaseConfigLoader::getEventProcessorsPath ()
 std::vector<ChannelDetails> BaseConfigLoader::getLoadedChannels ()
 {
     return m_loadedchannels;
+}
+
+std::string BaseConfigLoader::getOfflineDatabasePath ()
+{
+    return m_offlinedata_path;
+}
+
+int BaseConfigLoader::getDatabaseSyncTime ()
+{
+    return m_db_synctime;
 }
 
 /**

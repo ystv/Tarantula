@@ -28,6 +28,7 @@
 #include <string>
 #include <iostream>
 #include <functional>
+#include <mutex>
 
 #include "TarantulaCore.h"
 #include "PlaylistDB.h"
@@ -65,6 +66,10 @@ public:
 
 private:
     void runEvent (PlaylistEntry& pevent);
+
+    void periodicDatabaseSync (std::shared_ptr<void> data, std::timed_mutex &core_lock);
+
+    int m_sync_counter;
 };
 
 /*

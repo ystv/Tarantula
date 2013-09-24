@@ -10,6 +10,8 @@
 	<System>
 		<Name>Test Tarantula System</Name>
 		<Framerate>25</Framerate>
+		<Database>datafiles/coredata.db</Database>
+		<SyncTicks>1500</SyncTicks>
 	</System>
 	<Plugins>
 	    <!-- How many times to reload a crashed plugin, and how long to wait before doing so -->

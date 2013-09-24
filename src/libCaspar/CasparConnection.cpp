@@ -332,6 +332,20 @@ void CasparConnection::processData (std::istream& is)
 {
     std::string line;
 
+    // Append the first line to the preceeding
+    if (std::getline(is, line))
+    {
+        // Append if line was incomplete
+        if (m_datalines.back().find("\r") == std::string::npos)
+        {
+            m_datalines.back() += line;
+        }
+        else
+        {
+            m_datalines.push_back(line);
+        }
+    }
+
     while (std::getline(is, line))
     {
         m_datalines.push_back(line);

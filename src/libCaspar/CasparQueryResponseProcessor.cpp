@@ -46,6 +46,12 @@ void CasparQueryResponseProcessor::getMediaList (std::vector<std::string>& respo
         // Find out where media name ends
         int nameend = (*it).find("\"", 1);
 
+        // Maybe the parser failed somewhere...
+        if (nameend < 1)
+        {
+            continue;
+        }
+
         // Extract character 1 (0 is ") up to next double quote as media name
         std::string medianame = (*it).substr(1, nameend - 1);
 

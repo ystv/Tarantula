@@ -2,7 +2,7 @@ include ../../Makefile.inc
 
 INCLUDE := ../../include
 
-NAME = Common-SQLite
+NAME = Optional-SQLite
 
 FILES = sqlite3.c
 

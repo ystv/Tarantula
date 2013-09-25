@@ -7,7 +7,8 @@ FILES = $(shell ls -m *.cpp|sed 's/,//g')
 
 EXTRAS = ../../../build/Tarantula-CallBackTools.o ../../../build/MouseCatcher-MouseCatcherProcessorPlugin.o \
 ../../../build/MouseCatcher-MouseCatcherCore.o ../../../build/Tarantula-PlaylistDB.o \
-../../../build/Tarantula-Channel.o ../../../build/Tarantula-Device.o
+../../../build/Tarantula-Channel.o ../../../build/Tarantula-Device.o \
+../../../build/Optional-MemDB.o ../../../build/Optional-SQLite-sqlite3.o
 
 COMMON = $(shell ls -m ../../../build/Common-*.o|sed 's/,//g')
 

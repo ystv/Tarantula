@@ -4,7 +4,7 @@ include ../../Makefile.inc
 
 INCLUDE := ../../include ../include ../../src/sqlite-amalgamation
 
-COMMON = ../../build/Common-MemDB.o ../../build/Common-SQLite-sqlite3.o ../../build/Common-Log.o
+COMMON = ../../build/Optional-MemDB.o ../../build/Optional-SQLite-sqlite3.o ../../build/Common-Log.o
 
 FILES = $(shell ls -1 *.cpp | awk '{printf "%s " ,$$0}')
 

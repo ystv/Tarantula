@@ -44,7 +44,8 @@ enum AsyncJobState
     JOB_READY,   //!< JOB_READY     Job is ready to run
     JOB_RUNNING, //!< JOB_RUNNING   Job is currently active
     JOB_COMPLETE,//!< JOB_COMPLETE  Job has finished and is awaiting callback
-    JOB_ERASE    //!< JOB_ERASE     Job has run callback and can be erased
+    JOB_ERASE,   //!< JOB_ERASE     Job has run callback and can be erased
+    JOB_FAILED   //!< JOB_FAILED    Job threw an exception that was not handled
 };
 
 /**

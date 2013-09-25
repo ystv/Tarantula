@@ -31,6 +31,7 @@
 #include <exception>
 #include <functional>
 
+#include "ErrorMacro.h"
 #include "PluginConfig.h"
 #include "Channel.h"
 #include "Log.h"

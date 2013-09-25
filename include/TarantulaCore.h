@@ -24,6 +24,7 @@
 
 
 #pragma once
+
 #include <vector>
 #include <map>
 #include <string>
@@ -32,6 +33,7 @@
 #include <functional>
 #include <mutex>
 
+#include "ErrorMacro.h"
 #include "BaseConfigLoader.h"
 #include "AsyncJobSystem.h"
 

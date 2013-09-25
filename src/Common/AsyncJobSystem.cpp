@@ -23,6 +23,8 @@
  *****************************************************************************/
 
 #include "AsyncJobSystem.h"
+#include "TarantulaCore.h"
+#include "Log.h"
 
 extern std::timed_mutex g_core_lock;
 
@@ -113,6 +115,10 @@ void AsyncJobSystem::completeAsyncJobs ()
                 continue;
             }
         }
+        else if (JOB_FAILED == (*thisjob)->m_state)
+        {
+            g_logger.warn("Job Runner" + ERROR_LOC, "A job threw an unhandled exception");
+        }
 
         ++thisjob;
     }
@@ -153,8 +159,16 @@ void AsyncJobSystem::asyncJobRunner ()
             {
                 // Run the job
                 runjob->m_state = JOB_RUNNING;
-                runjob->m_jobfunction(runjob->m_data, g_core_lock);
-                runjob->m_state = JOB_COMPLETE;
+
+                try
+                {
+                    runjob->m_jobfunction(runjob->m_data, g_core_lock);
+                    runjob->m_state = JOB_COMPLETE;
+                }
+                catch (...)
+                {
+                    runjob->m_state = JOB_FAILED;
+                }
             }
         }
         else

@@ -142,12 +142,19 @@ int main (int argc, char *argv[])
         if (!g_core_lock.try_lock_for(std::chrono::nanoseconds(
                 static_cast<int>(1000000000 / g_pbaseconfig->getFramerate()))))
         {
-            g_logger.warn("Tarantula Main", "Unable to grab core mutex lock");
+            g_logger.warn("Tarantula Main" + ERROR_LOC, "Unable to grab core mutex lock");
             continue;
         }
 
         // Call all registered tick callbacks
-        tick();
+        try
+        {
+            tick();
+        }
+        catch (...)
+        {
+            g_logger.warn("Tarantula Main" + ERROR_LOC, "Something went wrong and wasn't handled. This is bad.");
+        }
 
         // Check plugin health
         processPluginStates();
@@ -170,7 +177,7 @@ int main (int argc, char *argv[])
 
         if (remaining < 0)
         {
-            g_logger.warn("Tarantula Main", "That tick took "+ ConvertType::floatToString((double) diff / 1000000)
+            g_logger.warn("Tarantula Main" + ERROR_LOC, "That tick took "+ ConvertType::floatToString((double) diff / 1000000)
                     + "ms - Too Long!");
             continue;
         }

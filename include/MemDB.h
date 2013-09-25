@@ -97,11 +97,12 @@ public:
     MemDB (const char* filename);
     ~MemDB ();
     void dump (const char* filename); // Dumps out the database to an SQLite file
+    void oneTimeExec (std::string sql); // Run a query verbatim without parameters
 protected:
     DBQuery* prepare (std::string sql);
     void remove (std::string sql);
-    void oneTimeExec (std::string sql); // Run a query verbatim without parameters
     int getLastRowID ();
+
 private:
     std::map<std::string, DBQuery> m_queries;
     sqlite3 *m_pdb;

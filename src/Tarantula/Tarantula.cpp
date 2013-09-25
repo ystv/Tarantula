@@ -59,6 +59,7 @@ std::vector<PluginStateData> g_plugins;
 std::vector<std::shared_ptr<MouseCatcherSourcePlugin>> g_mcsources;
 std::map<std::string, std::shared_ptr<MouseCatcherProcessorPlugin>> g_mcprocessors;
 std::shared_ptr<BaseConfigLoader> g_pbaseconfig;
+std::shared_ptr<MemDB> g_pcoredatabase;
 
 //! Callback functions to run immediately before an event
 std::unordered_map<std::string, PreProcessorHandler> g_preprocessorlist;
@@ -106,6 +107,9 @@ int main (int argc, char *argv[])
     loadAllPlugins("config_base/" + g_pbaseconfig->getLogsPath(), "Logger");
     g_logger.info("Tarantula Core",
             "Config loaded. System name is: " + g_pbaseconfig->getSystemName());
+
+    // Load the core database
+    g_pcoredatabase = std::make_shared<MemDB>(g_pbaseconfig->getOfflineDatabasePath().c_str());
 
     // Run all the channel constructors from the config file's details
     std::vector<ChannelDetails> loadedchannels = g_pbaseconfig->getLoadedChannels();

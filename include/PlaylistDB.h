@@ -167,4 +167,7 @@ private:
     DBQuery* m_getextras_query;
     DBQuery* m_geteventlist_query;
     DBQuery* m_updateevent_query;
+    DBQuery* m_getdeletelist_query;
+    DBQuery* m_getupdatelist_query;
+    DBQuery* m_getextradata_query;
 };

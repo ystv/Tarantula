@@ -43,6 +43,7 @@ class Device;
 class Channel;
 struct PluginStateData;
 class PlaylistEntry;
+class MemDB;
 
 // Define callbacks
 typedef std::function<void(std::string, int)> cbBegunPlaying;
@@ -61,6 +62,7 @@ extern std::vector<cbBegunPlaying> g_begunplayingcallbacks;
 extern std::vector<cbEndPlaying> g_endplayingcallbacks;
 extern std::vector<cbTick> g_tickcallbacks;
 extern std::shared_ptr<BaseConfigLoader> g_pbaseconfig;
+extern std::shared_ptr<MemDB> g_pcoredatabase;
 
 extern std::map<std::string, std::shared_ptr<Device>> g_devices;
 extern std::vector<PluginStateData> g_plugins;

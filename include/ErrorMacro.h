@@ -26,6 +26,6 @@
 #pragma once
 
 // Macro to include line and file in error messages
-#define ERROR_LOC std::string(" ()" __FILE__ ":") + std::to_string(__LINE__) + std::string(")")
+#define ERROR_LOC std::string(" (" __FILE__ ":") + std::to_string(__LINE__) + std::string(")")
 
 

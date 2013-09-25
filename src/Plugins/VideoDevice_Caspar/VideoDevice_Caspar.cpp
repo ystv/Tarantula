@@ -283,7 +283,7 @@ void VideoDevice_Caspar::fileUpdateJob (std::shared_ptr<VideoDevice_Caspar> this
             newfiles, deletedfiles, transformed_files));
     pccon->sendCommand(query);
 
-    pccon->run(5000);
+    pccon->run(-1);
 }
 
 /**
@@ -415,7 +415,8 @@ void VideoDevice_Caspar::cb_updatelength (std::shared_ptr<VideoDevice_Caspar> th
 
     iter--;
 
-    for (int i = 0; i < 10; i++)
+    int i;
+    for (i = 0; i < 10; ++i)
     {
         VideoFile filedata;
         filedata.m_filename = *iter;
@@ -429,11 +430,12 @@ void VideoDevice_Caspar::cb_updatelength (std::shared_ptr<VideoDevice_Caspar> th
         }
         else
         {
+            i++;
             break;
         }
     }
 
-    medialist.erase(iter, medialist.end());
+    medialist.erase(medialist.end() - i, medialist.end());
 
     if (medialist.size() > 0)
     {

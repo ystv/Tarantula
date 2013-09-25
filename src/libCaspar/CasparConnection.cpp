@@ -127,14 +127,17 @@ void CasparConnection::runTimeout ()
 
 /**
  * Keep running the io_service until we run out of work or timeout
- * @param timeout Time in milliseconds to run for. Defaults to 1000
+ * @param timeout Time in milliseconds to run for. Defaults to 1000. -1 will run until work runs out
  */
 void CasparConnection::run (int timeout /* = 1000 */)
 {
-    boost::asio::deadline_timer tmr(m_io_service);
-    tmr.expires_from_now(boost::posix_time::milliseconds(timeout));
+    if (timeout > -1)
+    {
+        boost::asio::deadline_timer tmr(m_io_service);
+        tmr.expires_from_now(boost::posix_time::milliseconds(timeout));
 
-    tmr.async_wait(boost::bind(&CasparConnection::runTimeout, this));
+        tmr.async_wait(boost::bind(&CasparConnection::runTimeout, this));
+    }
 
     m_io_service.run();
 

@@ -35,6 +35,7 @@
 #include "libCaspar/libCaspar.h"
 #include "VideoDevice.h"
 #include "PluginConfig.h"
+#include "MemDB.h"
 
 class threadCom
 {
@@ -45,6 +46,24 @@ public:
     pthread_mutex_t *m_pqueuemutex;
     Log *m_plogger;
     plugin_status_t *m_pstatus;
+};
+
+/**
+ * A disk database for persistent file list storage.
+ */
+class CasparFileList : public MemDB
+{
+public:
+    CasparFileList (std::string database, std::string m_table);
+
+    void readFileList (std::map<std::string, VideoFile> &filelist);
+    void updateFileList (std::shared_ptr<std::map<std::string, VideoFile>> newfiles,
+        std::shared_ptr<std::vector<std::string>> deletedfiles, std::timed_mutex &core_lock);
+
+private:
+    DBQuery *m_pgetfilelist_query;
+    DBQuery *m_pinsertfile_query;
+    std::string m_table;
 };
 
 /**
@@ -72,6 +91,9 @@ private:
     std::string m_hostname;
     std::string m_port;
 
+    //! Database file name
+    std::shared_ptr<CasparFileList> m_pfiledb;
+
     void cb_info (std::vector<std::string>& resp);
 
     // Static functions for async files update job
@@ -79,7 +101,8 @@ private:
             std::shared_ptr<std::map<std::string, VideoFile>> newfiles,
             std::shared_ptr<std::vector<std::string>> deletedfiles, std::shared_ptr<void> data,
             std::timed_mutex &core_lock, std::string hostname, std::string port,
-            std::shared_ptr<std::vector<std::string>> transformed_files);
+            std::shared_ptr<std::vector<std::string>> transformed_files,
+            std::shared_ptr<CasparFileList> pfiledb);
     static void fileUpdateComplete (std::shared_ptr<VideoDevice_Caspar> thisdev,
             std::shared_ptr<std::map<std::string, VideoFile>> newfiles,
             std::shared_ptr<std::vector<std::string>> deletedfiles, std::shared_ptr<void> data);

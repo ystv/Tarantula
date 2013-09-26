@@ -28,6 +28,94 @@
 #include "Misc.h"
 #include "PluginConfig.h"
 #include <unistd.h>
+#include <mutex>
+
+/* File list disk database interface */
+
+/**
+ * Open a disk-side database for file listing
+ *
+ * @param database Path to core SQLite database file
+ * @param instance Name of this plugin instance, used to name tables
+ */
+CasparFileList::CasparFileList (std::string database, std::string table) :
+    MemDB(database.c_str())
+{
+    oneTimeExec("CREATE TABLE IF NOT EXISTS [" + table + "_files] (filename TEXT, path TEXT, duration INT64)");
+    m_pgetfilelist_query = prepare("SELECT filename, path, duration FROM [" + table + "_files]");
+    m_pinsertfile_query = prepare("INSERT INTO [" + table + "_files] (filename, path, duration) VALUES (?, ?, ?)");
+    m_table = table;
+}
+
+
+/**
+ * Read the list of files from the database
+ * @param filelist
+ */
+void CasparFileList::readFileList (std::map<std::string, VideoFile>& filelist)
+{
+    m_pgetfilelist_query->rmParams();
+    m_pgetfilelist_query->bindParams();
+
+    sqlite3_stmt *liststmt = m_pgetfilelist_query->getStmt();
+
+    while (SQLITE_ROW == sqlite3_step(liststmt))
+    {
+        VideoFile thisfile;
+        thisfile.m_filename = reinterpret_cast<const char*>(sqlite3_column_text(liststmt, 0));
+        thisfile.m_path = reinterpret_cast<const char*>(sqlite3_column_text(liststmt, 1));
+        thisfile.m_duration = sqlite3_column_int64(liststmt, 2);
+
+        filelist[thisfile.m_filename] = thisfile;
+    }
+}
+
+void CasparFileList::updateFileList (
+        std::shared_ptr<std::map<std::string, VideoFile> > newfiles,
+        std::shared_ptr<std::vector<std::string> > deletedfiles,
+        std::timed_mutex &core_lock)
+{
+    std::string deletedquery;
+    std::string addquery;
+
+    if (deletedfiles->size() > 0)
+    {
+        deletedquery = "DELETE FROM [" + m_table + "_files] "
+                "WHERE filename IN ('" + deletedfiles->at(0) + "'";
+
+        for (unsigned int i = 1; i < deletedfiles->size(); ++i)
+        {
+            deletedquery += ", '" + deletedfiles->at(i) + "'";
+        }
+
+        deletedquery += ");";
+    }
+
+    // Grab the lock for this bit as this function is async
+    std::lock_guard<std::timed_mutex> lock(core_lock);
+
+    oneTimeExec("BEGIN TRANSACTION;");
+
+    if (!deletedquery.empty())
+    {
+        oneTimeExec(deletedquery);
+    }
+
+    if (newfiles->size() > 0)
+    {
+        for (auto thisfile : *newfiles)
+        {
+            m_pinsertfile_query->rmParams();
+            m_pinsertfile_query->addParam(1, DBParam(thisfile.first));
+            m_pinsertfile_query->addParam(2, DBParam(thisfile.second.m_path));
+            m_pinsertfile_query->addParam(3, DBParam(static_cast<long long>(thisfile.second.m_duration)));
+            m_pinsertfile_query->bindParams();
+            sqlite3_step(m_pinsertfile_query->getStmt());
+        }
+    }
+
+    oneTimeExec("END TRANSACTION;");
+}
 
 /**
  * Create a CasparCG Video Plugin
@@ -49,7 +137,7 @@ VideoDevice_Caspar::VideoDevice_Caspar (PluginConfig config, Hook h) :
     }
     catch (std::exception& ex)
     {
-        m_hook.gs->L->error(m_pluginname, "Configuration data invalid or not supplied");
+        m_hook.gs->L->error(m_pluginname + ERROR_LOC, "Configuration data invalid or not supplied");
         m_status = FAILED;
         return;
     }
@@ -68,6 +156,10 @@ VideoDevice_Caspar::VideoDevice_Caspar (PluginConfig config, Hook h) :
         return;
     }
 
+    CasparFileList listb("test", "test");
+    m_pfiledb = std::shared_ptr<CasparFileList>(new CasparFileList(g_pbaseconfig->getOfflineDatabasePath(), m_pluginname));
+
+    m_pfiledb->readFileList(m_files);
 
     m_status = WAITING;
 }
@@ -160,7 +252,8 @@ void VideoDevice_Caspar::getFiles ()
 
     m_hook.gs->Async->newAsyncJob(
             std::bind(&VideoDevice_Caspar::fileUpdateJob, pthisdev, pnewfiles, pdeletedfiles,
-                    std::placeholders::_1, std::placeholders::_2, m_hostname, m_port, transformed_files),
+                    std::placeholders::_1, std::placeholders::_2, m_hostname, m_port, transformed_files,
+                    m_pfiledb),
             std::bind(&VideoDevice_Caspar::fileUpdateComplete, pthisdev, pnewfiles, pdeletedfiles,
                     std::placeholders::_1),
             NULL, 10, false);
@@ -265,7 +358,8 @@ void VideoDevice_Caspar::fileUpdateJob (std::shared_ptr<VideoDevice_Caspar> this
         std::shared_ptr<std::map<std::string, VideoFile>> newfiles,
         std::shared_ptr<std::vector<std::string>> deletedfiles, std::shared_ptr<void> data,
         std::timed_mutex &core_lock, std::string hostname, std::string port,
-        std::shared_ptr<std::vector<std::string>> transformed_files)
+        std::shared_ptr<std::vector<std::string>> transformed_files,
+        std::shared_ptr<CasparFileList> pfiledb)
 {
     // Start a new connection to the server
     std::shared_ptr<CasparConnection> pccon;
@@ -284,6 +378,11 @@ void VideoDevice_Caspar::fileUpdateJob (std::shared_ptr<VideoDevice_Caspar> this
     pccon->sendCommand(query);
 
     pccon->run(-1);
+
+    if (newfiles->size() > 0 || deletedfiles->size() > 0)
+    {
+        pfiledb->updateFileList(newfiles, deletedfiles, core_lock);
+    }
 }
 
 /**
@@ -478,6 +577,7 @@ void VideoDevice_Caspar::cb_info (std::vector<std::string>& resp)
         }
     }
 }
+
 
 extern "C"
 {

@@ -39,10 +39,11 @@
         </StructureData>
         <EnableFill>true</EnableFill>
         <ContinuityFill> <!--  Describes a CG event to pad out unfilled time -->
-            <MinimumTime units="frames">25</MinimumTime> <!--  Minimum length of CG event -->
+            <MinimumTime units="frames">125</MinimumTime> <!--  Minimum length of CG event -->
             <Device>Main Video Server Graphics</Device>
-            <GraphicName>continuity_graphic</GraphicName>
+            <GraphicName>phone</GraphicName>
             <PreProcessor>EventProcessor_Fill::populateCGNowNext</PreProcessor>
+            <HostLayer>1</HostLayer>
         </ContinuityFill>
     </PluginData>
 </TarantulaPlugin>

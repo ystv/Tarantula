@@ -125,8 +125,11 @@ std::string CasparCommand::form ()
     found = m_commandquery.find("\\", 0);
     while (found != static_cast<int>(std::string::npos))
     {
-        m_commandquery.erase(found, 1);
-        m_commandquery.insert(found, "\\\\");
+        if (m_commandquery.substr(found, 2).compare("\\\""))
+        {
+            m_commandquery.erase(found, 1);
+            m_commandquery.insert(found, "\\\\");
+        }
         found = m_commandquery.find("\\", found + 2);
     }
 

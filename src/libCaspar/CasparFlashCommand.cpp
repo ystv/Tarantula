@@ -102,7 +102,7 @@ void CasparFlashCommand::clearData ()
 void CasparFlashCommand::formatAndAddTemplateData ()
 {
     pugi::xml_document datadocument;
-    pugi::xml_node rootnode = datadocument.append_child("document");
+    pugi::xml_node rootnode = datadocument.append_child("templateData");
 
     for (std::pair<std::string, std::string> currentdata : m_templatedata)
     {
@@ -122,17 +122,17 @@ void CasparFlashCommand::formatAndAddTemplateData ()
 
     // Pull out the generated XML as a string
     std::stringstream ss;
-    rootnode.print(ss, "", pugi::format_raw);
+    rootnode.print(ss, "", pugi::format_raw, pugi::encoding_utf8);
 
     std::string xmldata = ss.str();
 
     // Replace all the quotes with \"
     int found = -2;
-    found = xmldata.find("\"", found + 2);
+    found = xmldata.find('"', found + 2);
     while (found != static_cast<int>(std::string::npos))
     {
         xmldata.insert(found, "\\");
-        found = xmldata.find("\"", found + 2);
+        found = xmldata.find('"', found + 2);
     }
 
     // Add as a parameter

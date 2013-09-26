@@ -412,6 +412,14 @@ void EventProcessor_Fill::readConfig (PluginConfig config)
 		return;
 	}
 
+	m_continuityfill.m_extradata["hostlayer"] = continuitynode.child_value("HostLayer");
+    if (m_continuityfill.m_extradata["hostlayer"].empty())
+    {
+        m_hook.gs->L->warn(config.m_instance, "ContinuityFill HostLayer not set, selecting 0");
+        m_continuityfill.m_extradata["hostlayer"] = "0";
+        return;
+    }
+
 	m_continuityfill.m_eventtype = EVENT_FIXED;
 
 	// Create the "Add" event

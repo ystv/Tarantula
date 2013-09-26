@@ -21,7 +21,7 @@
 *   Version     : 1.0
 *****************************************************************************/
 
-#define CASPARHOST "192.168.11.41"
+#define CASPARHOST "192.168.1.74"
 #define CASPARPORT "5250"
 
 #include <libCaspar/libCaspar.h>
@@ -121,7 +121,7 @@ int main(int argc,char *argv[]) {
     caspCon = make_shared<CasparConnection>(CASPARHOST, CASPARPORT, 1000);
     std::vector<std::string> resp;
     caspCon->sendCommand(CasparCommand(CASPAR_COMMAND_CLS, &runrandomvideo));
-    caspCon->run();
+    caspCon->run(5000);
 
     if (caspCon->m_errorflag)
     {
@@ -134,29 +134,30 @@ int main(int argc,char *argv[]) {
     CasparCommand query(CASPAR_COMMAND_CLS, &domedialist);
 
     caspCon->sendCommand(query);
-    caspCon->run();
+    caspCon->run(5000);
 
     cout << endl << "Now testing CasparQueryResponseProcessor::getTemplateList." <<endl;
     query = CasparCommand(CASPAR_COMMAND_TLS, &dotemplatelist);
 
     caspCon->sendCommand(query);
-    caspCon->run();
+    caspCon->run(5000);
 
     cout << endl << "Now testing CasparQueryResponseProcessor::readLayerStatus." <<endl;
     CasparCommand statuscom(CASPAR_COMMAND_INFO, &dolayerstatus);
     statuscom.addParam("1");
     statuscom.addParam("1");
     caspCon->sendCommand(statuscom);
-    caspCon->run();
+    caspCon->run(5000);
 
     cout << endl << "Now testing CasparFlashCommand. " << endl;
     CasparFlashCommand flashcom(1);
     flashcom.setLayer(2);
+    flashcom.addData("test", "1");
     flashcom.play("Phone");
 
     resp.clear();
     caspCon->sendCommand(flashcom);
-    caspCon->run();
+    caspCon->run(-1);
     cout << endl << "Testing complete." << endl;
 
     return 0;

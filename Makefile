@@ -4,17 +4,14 @@ INCLUDE=./include
 
 include Makefile.inc
 
-.PHONY: all $(DIRS) tests ClipSniffer boost
+.PHONY: all $(DIRS) tests boost
 
-all : $(DIRS) ClipSniffer
+all : $(DIRS)
 
 $(DIRS) tests: boost
 	$(MAKE) --directory $@
 
 tests: src
-
-ClipSniffer:
-	$(MAKE) --directory ClipSniffer/src
 	
 boost:
 	$(MAKE) --directory boost
@@ -30,7 +27,6 @@ clean :
 distclean : clean
 	rm -f bin/Tarantula
 	rm -f bin/libCasparTestApp
-	rm -f bin/ClipSniffer
 	rm -f bin/*.so
 	$(MAKE) --directory boost clean
 

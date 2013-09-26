@@ -70,7 +70,7 @@ PlaylistDB::PlaylistDB (std::string channel_name) :
             "FROM events WHERE parent = ? AND processed = 0 "
             "ORDER BY trigger ASC");
     m_getparentevent_query = prepare("SELECT ev.id FROM events AS ev "
-            "LEFT JOIN events as cev ON ev.id = cev.parent WHERE cev.id = ? AND processed >= 0");
+            "LEFT JOIN events as cev ON ev.id = cev.parent WHERE cev.id = ? AND ev.processed >= 0");
     m_geteventdetails_query = prepare("SELECT id, type, trigger, device, devicetype, action, duration, "
             "parent, processed, lastupdate, callback, description "
             "FROM events WHERE id = ? AND processed >= 0");
@@ -279,6 +279,7 @@ std::vector<PlaylistEntry> PlaylistDB::getChildEvents (int parentid)
  */
 int PlaylistDB::getParentEventID (int eventID)
 {
+    dump("test.db");
     m_getparentevent_query->rmParams();
     m_getparentevent_query->addParam(1, DBParam(eventID));
     m_getparentevent_query->bindParams();

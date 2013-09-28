@@ -80,6 +80,7 @@ public:
 
     void updateHardwareStatus ();
     void getFiles ();
+    void immediatePlay (std::string clip);
     void cue (std::string clip);
     void play ();
     void stop ();

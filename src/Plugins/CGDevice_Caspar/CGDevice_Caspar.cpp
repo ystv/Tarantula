@@ -153,25 +153,22 @@ void CGDevice_Caspar::add (std::string graphicname, int layer,
     if (m_plugindata.count(layer))
     {
         g_logger.warn("CGDevice_Demo::Add",
-                "unable to add new item as the layer already exists");
-        return;
+                "Adding item to already existing layer");
     }
-    else
+
+    m_plugindata[layer] = newmap;
+
+    CasparFlashCommand com(1);
+    com.setLayer(m_layer);
+    com.setHostLayer(layer);
+
+    for (auto item : *pdata)
     {
-        m_plugindata[layer] = newmap;
-
-        CasparFlashCommand com(1);
-        com.setLayer(m_layer);
-        com.setHostLayer(layer);
-
-        for (auto item : *pdata)
-        {
-            com.addData(item.first, item.second);
-        }
-
-        com.play(graphicname);
-        m_pcaspcon->sendCommand(com);
+        com.addData(item.first, item.second);
     }
+
+    com.play(graphicname);
+    m_pcaspcon->sendCommand(com);
 
 }
 
@@ -188,7 +185,7 @@ void CGDevice_Caspar::remove (int layer)
     if (!m_plugindata.count(layer))
     {
         m_hook.gs->L->warn("CGDevice_Demo::Remove",
-                "unable to remove item as the layer doesn't exists");
+                "Unable to remove item as the layer doesn't exist");
         return;
     }
     else

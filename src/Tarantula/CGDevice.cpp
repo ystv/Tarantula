@@ -108,6 +108,7 @@ void CGDevice::runDeviceEvent (std::shared_ptr<Device> device, PlaylistEntry& ev
         try
         {
             parseExtraData(event, &graphicname, &layer, &templatedata);
+            g_logger.info(event.m_device, "Now adding " + graphicname);
             eventdevice->add(graphicname, layer, &templatedata);
         } catch (...)
         {
@@ -121,6 +122,7 @@ void CGDevice::runDeviceEvent (std::shared_ptr<Device> device, PlaylistEntry& ev
         try
         {
             parseExtraData(event, NULL, &layer, NULL);
+            g_logger.info(event.m_device, "Now playing on layer " + std::to_string(layer));
             eventdevice->play(layer);
         } catch (...)
         {
@@ -135,6 +137,7 @@ void CGDevice::runDeviceEvent (std::shared_ptr<Device> device, PlaylistEntry& ev
         try
         {
             parseExtraData(event, NULL, &layer, &templatedata);
+            g_logger.info(event.m_device, "Now updating on layer " + std::to_string(layer));
             eventdevice->update(layer, &templatedata);
         } catch (...)
         {
@@ -148,6 +151,7 @@ void CGDevice::runDeviceEvent (std::shared_ptr<Device> device, PlaylistEntry& ev
         try
         {
             parseExtraData(event, NULL, &layer, NULL);
+            g_logger.info(event.m_device, "Now removing on layer " + std::to_string(layer));
             eventdevice->remove(layer);
         } catch (...)
         {

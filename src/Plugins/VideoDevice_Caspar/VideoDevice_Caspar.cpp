@@ -29,6 +29,8 @@
 #include "PluginConfig.h"
 #include <unistd.h>
 #include <mutex>
+#include <algorithm>
+#include <boost/algorithm/string/replace.hpp>
 
 /* File list disk database interface */
 
@@ -80,12 +82,17 @@ void CasparFileList::updateFileList (
 
     if (deletedfiles->size() > 0)
     {
+        std::string filename = deletedfiles->at(0);
+        boost::replace_all(filename, "'", "''");
         deletedquery = "DELETE FROM [" + m_table + "_files] "
-                "WHERE filename IN ('" + deletedfiles->at(0) + "'";
+                "WHERE filename IN ('" + filename + "'";
 
         for (unsigned int i = 1; i < deletedfiles->size(); ++i)
         {
-            deletedquery += ", '" + deletedfiles->at(i) + "'";
+            filename = deletedfiles->at(i);
+            boost::replace_all(filename, "'", "''");
+
+            deletedquery += ", '" + filename + "'";
         }
 
         deletedquery += ");";
@@ -279,14 +286,22 @@ void VideoDevice_Caspar::cue (std::string clip)
         return;
     }
 
-    //Update internal status
-    m_videostatus.filename = clip;
+    //Get filename and update status
+    if (m_files.count(clip))
+    {
+        //Update internal status
+        m_videostatus.filename = clip;
 
-    CasparCommand cc1(CASPAR_COMMAND_LOADBG);
-    cc1.addParam("1");
-    cc1.addParam("1");
-    cc1.addParam(clip);
-    m_pcaspcon->sendCommand(cc1);
+        CasparCommand cc1(CASPAR_COMMAND_LOADBG);
+        cc1.addParam("1");
+        cc1.addParam("1");
+        cc1.addParam(clip);
+        m_pcaspcon->sendCommand(cc1);
+    }
+    else
+    {
+        m_hook.gs->L->error(m_pluginname, "File " + clip + " not known!");
+    }
 }
 
 /**
@@ -307,15 +322,46 @@ void VideoDevice_Caspar::play ()
         return;
     }
 
-    //Get filename and update status
     m_videostatus.remainingframes = m_files[m_videostatus.filename].m_duration;
     m_videostatus.state = VDS_PLAYING;
-
     CasparCommand cc1(CASPAR_COMMAND_PLAY);
     cc1.addParam("1");
     cc1.addParam("1");
     m_pcaspcon->sendCommand(cc1);
 
+}
+
+void VideoDevice_Caspar::immediatePlay (std::string clip)
+{
+    if (WAITING == m_status)
+    {
+        if (m_pcaspcon->m_connectstate)
+        {
+            m_status = READY;
+        }
+    }
+    else if (READY != m_status)
+    {
+        m_hook.gs->L->error(m_pluginname, "Plugin not in ready state for cue");
+        return;
+    }
+
+    //Get filename and update status
+    if (m_files.count(clip))
+    {
+        //Update internal status
+        m_videostatus.filename = clip;
+
+        CasparCommand cc1(CASPAR_COMMAND_PLAY);
+        cc1.addParam("1");
+        cc1.addParam("1");
+        cc1.addParam(clip);
+        m_pcaspcon->sendCommand(cc1);
+    }
+    else
+    {
+        m_hook.gs->L->error(m_pluginname, "File " + clip + " not known!");
+    }
 }
 
 /**

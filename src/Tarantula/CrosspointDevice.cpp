@@ -246,23 +246,25 @@ void CrosspointDevice::runDeviceEvent (std::shared_ptr<Device> pdevice, Playlist
         {
             try
             {
+                g_logger.info(event.m_device, "Now switching output " + event.m_extras["output"] + " to input"
+                        + event.m_extras["input"]);
                 peventdevice->switchOP(event.m_extras["output"], event.m_extras["input"]);
             } catch (...)
             {
-                g_logger.warn(event.m_device,
+                g_logger.warn(event.m_device + ERROR_LOC,
                         "An error occurred switching output " + event.m_extras["output"] + " to input "
                                 + event.m_extras["input"]);
             }
         }
         else
         {
-            g_logger.warn("Crosspoint Device RunDeviceEvent",
+            g_logger.warn("Crosspoint Device RunDeviceEvent" + ERROR_LOC,
                     "Event " + ConvertType::intToString(event.m_eventid) + " malformed, no output/input specified");
         }
     }
     else
     {
-        g_logger.error("Crosspoint Device RunDeviceEvent",
+        g_logger.error("Crosspoint Device RunDeviceEvent" + ERROR_LOC,
                 "Event " + ConvertType::intToString(event.m_eventid) + " has a non-existent action");
 
     }

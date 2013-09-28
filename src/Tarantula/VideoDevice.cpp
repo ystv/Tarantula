@@ -98,6 +98,7 @@ void VideoDevice::runDeviceEvent (std::shared_ptr<Device> pdevice, PlaylistEntry
         {
             try
             {
+                g_logger.info(event.m_device, "Now loading " + event.m_extras["filename"]);
                 peventdevice->cue(event.m_extras["filename"]);
             } catch (...)
             {
@@ -116,6 +117,7 @@ void VideoDevice::runDeviceEvent (std::shared_ptr<Device> pdevice, PlaylistEntry
         {
             try
             {
+                g_logger.info(event.m_device, "Now playing " + event.m_extras["filename"]);
                 peventdevice->immediatePlay(event.m_extras["filename"]);
             } catch (...)
             {
@@ -133,6 +135,7 @@ void VideoDevice::runDeviceEvent (std::shared_ptr<Device> pdevice, PlaylistEntry
     {
         try
         {
+            g_logger.info(event.m_device, "Now playing");
             peventdevice->play();
         } catch (...)
         {
@@ -143,6 +146,7 @@ void VideoDevice::runDeviceEvent (std::shared_ptr<Device> pdevice, PlaylistEntry
     {
         try
         {
+            g_logger.info(event.m_device, "Now stopping");
             peventdevice->stop();
         } catch (...)
         {

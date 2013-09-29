@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TarantulaPlugin>
+    <PluginLoad>
+        <Name>Graphics Event Helper</Name>
+        <Type>EventProcessor</Type>
+        <Library>EventProcessor_GFXHelper</Library>
+        <Instance>Graphics Helper</Instance>
+        <Enabled>true</Enabled>
+    </PluginLoad>
+    <PluginData mode="simple">
+        <Device>Main Video Server Graphics</Device>
+    </PluginData>
+</TarantulaPlugin>

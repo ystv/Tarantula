@@ -415,8 +415,8 @@ void EventProcessor_Fill::readConfig (PluginConfig config)
 	m_continuityfill.m_extradata["hostlayer"] = continuitynode.child_value("HostLayer");
     if (m_continuityfill.m_extradata["hostlayer"].empty())
     {
-        m_hook.gs->L->warn(config.m_instance, "ContinuityFill HostLayer not set, selecting 0");
-        m_continuityfill.m_extradata["hostlayer"] = "0";
+        m_hook.gs->L->warn(config.m_instance, "ContinuityFill HostLayer not set, selecting 1");
+        m_continuityfill.m_extradata["hostlayer"] = "1";
         return;
     }
 
@@ -438,8 +438,8 @@ void EventProcessor_Fill::readConfig (PluginConfig config)
 
     continuitychild.m_action_name = "Add";
     continuitychild.m_duration = 1;
-    continuitychild.m_extradata["next"] = "ppfill";
-    continuitychild.m_extradata["then"] = "ppfill";
+    continuitychild.m_extradata["nexttext"] = "ppfill";
+    continuitychild.m_extradata["thentext"] = "ppfill";
 
     m_continuityfill.m_childevents.push_back(continuitychild);
 
@@ -447,6 +447,7 @@ void EventProcessor_Fill::readConfig (PluginConfig config)
     continuitychild.m_action_name = "Remove";
     continuitychild.m_preprocessor = "";
     continuitychild.m_extradata.clear();
+    continuitychild.m_extradata["hostlayer"] = m_continuityfill.m_extradata["hostlayer"];
     m_continuityfill.m_childevents.push_back(continuitychild);
 
     m_continuityfill.m_action_name = "Parent";
@@ -690,12 +691,12 @@ void EventProcessor_Fill::generateFilledEvents (std::shared_ptr<MouseCatcherEven
     continuityfill.m_duration = static_cast<int>((continuitymin + duration) / framerate);
     continuityfill.m_triggertime = templateevent.m_triggertime;
 
-    continuityfill.m_childevents[0].m_extradata["now"] = event->m_description;
+    continuityfill.m_childevents[0].m_extradata["nowtext"] = "Now: " + event->m_description;
     continuityfill.m_childevents[0].m_channel = event->m_channel;
     continuityfill.m_childevents[1].m_channel = event->m_channel;
     continuityfill.m_childevents[0].m_triggertime = templateevent.m_triggertime;
     continuityfill.m_childevents[1].m_triggertime = templateevent.m_triggertime +
-            static_cast<int>(duration / framerate);
+            static_cast<int>((continuitymin + duration) / framerate);
     event->m_childevents.push_back(continuityfill);
 }
 
@@ -791,13 +792,20 @@ void EventProcessor_Fill::populateCGNowNext (PlaylistEntry &event, Channel *pcha
     if (!followlist.empty())
     {
         // Populate "next" from the description of next event if required
-        if (!event.m_extras["next"].compare("ppfill"))
+        if (!event.m_extras["nexttext"].compare("ppfill"))
         {
-            event.m_extras["next"] = followlist[0].m_description;
+            if (!followlist[0].m_description.empty())
+            {
+                event.m_extras["nexttext"] = "Next: " + followlist[0].m_description;
+            }
+            else
+            {
+                event.m_extras["nexttext"] = "";
+            }
         }
 
         // Do the same for "then" if required
-        if (!event.m_extras["then"].compare("ppfill"))
+        if (!event.m_extras["thentext"].compare("ppfill"))
         {
             int trig = followlist[0].m_trigger;
             int duration = followlist[0].m_duration;
@@ -806,9 +814,18 @@ void EventProcessor_Fill::populateCGNowNext (PlaylistEntry &event, Channel *pcha
 
             if (!followlist.empty())
             {
-                event.m_extras["then"] = followlist[0].m_description;
+                event.m_extras["thentext"] = "Then: " + followlist[0].m_description;
+            }
+            else
+            {
+                event.m_extras["thentext"] = "";
             }
         }
+    }
+
+    if (!event.m_extras["nexttext"].compare("ppfill"))
+    {
+        event.m_extras["nexttext"] = "";
     }
 }
 

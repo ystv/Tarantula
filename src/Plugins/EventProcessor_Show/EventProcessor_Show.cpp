@@ -177,8 +177,11 @@ void EventProcessor_Show::handleEvent (MouseCatcherEvent originalEvent, MouseCat
             cgchild.m_action_name = "Add";
             cgchild.m_triggertime = runningtrigtime;
             cgchild.m_extradata["graphicname"] = m_nownextname;
-            cgchild.m_extradata["now"] = originalEvent.m_description;
-            cgchild.m_extradata["next"] = "ppfill"; //Checked if not blank and filled by PP
+            if (!originalEvent.m_description.empty())
+            {
+                cgchild.m_extradata["nowtext"] = originalEvent.m_description;
+            }
+            cgchild.m_extradata["nexttext"] = "ppfill"; //Checked if not blank and filled by PP
 
             // Hijack a preprocessor from EP_Fill
             cgchild.m_preprocessor = "EventProcessor_Fill::populateCGNowNext";

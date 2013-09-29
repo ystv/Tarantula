@@ -82,7 +82,7 @@ private:
     static void generateFilledEvents (std::shared_ptr<MouseCatcherEvent> event, std::shared_ptr<FillDB> db,
             std::vector<std::pair<std::string, std::string>> structuredata, bool filler,
             MouseCatcherEvent continuityfill, int continuitymin, float framerate, std::shared_ptr<void> data,
-            std::timed_mutex &core_lock);
+            std::timed_mutex &core_lock, int offset);
     void populatePlaceholderEvent (std::shared_ptr<MouseCatcherEvent> event, int placeholder_id,
             std::shared_ptr<void> data);
     void periodicDatabaseSync (std::shared_ptr<void> data, std::timed_mutex &core_lock);
@@ -97,6 +97,7 @@ private:
     std::vector<std::pair<std::string, std::string>> m_structuredata; ///< An example could be {"ident", "device1"}
     bool m_filler; ///< Whether to fill remaining time with the last item.
     bool m_toplevel; ///< Should top-level events or children be generated?
+    int m_offset; ///< Should each trigger time be offset?
 
     MouseCatcherEvent m_continuityfill; ///< Event to tack on the end to fill remaining time
     int m_continuitymin; ///< Minimum length for continuity fill

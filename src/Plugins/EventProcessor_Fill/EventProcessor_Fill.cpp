@@ -352,6 +352,13 @@ void EventProcessor_Fill::readConfig (PluginConfig config)
     	m_fileweight = 0;
     }
 
+    m_offset = config.m_plugindata_xml.child("ItemOffset").text().as_int(-1);
+    if (-1 == m_fileweight)
+    {
+        m_hook.gs->L->warn(config.m_instance, "ItemOffset factor not set, assuming 0");
+        m_offset = 0;
+    }
+
     m_jobpriority = config.m_plugindata_xml.child("JobPriority").text().as_int(-1);
     if (-1 == m_jobpriority)
     {
@@ -524,7 +531,7 @@ void EventProcessor_Fill::handleEvent(MouseCatcherEvent originalEvent,
     m_hook.gs->Async->newAsyncJob(
             std::bind(&EventProcessor_Fill::generateFilledEvents, pfilledevent, m_pdb, m_structuredata, m_filler,
                     m_continuityfill, m_continuitymin, g_pbaseconfig->getFramerate(),
-                    std::placeholders::_1, std::placeholders::_2),
+                    std::placeholders::_1, std::placeholders::_2, m_offset),
             std::bind(&EventProcessor_Fill::populatePlaceholderEvent, this, pfilledevent, m_placeholderid,
                     std::placeholders::_1),
             pfilledevent, m_jobpriority, false);
@@ -576,10 +583,11 @@ void EventProcessor_Fill::addFile (std::string filename, std::string device, std
  * @param framerate      System frame rate
  * @param data           Unused pointer to async data struct
  * @param core_lock      Reference to core locking mutex
+ * @param offset         Timings offset for events
  */
 void EventProcessor_Fill::generateFilledEvents (std::shared_ptr<MouseCatcherEvent> event, std::shared_ptr<FillDB> db,
         std::vector<std::pair<std::string, std::string>> structuredata, bool filler, MouseCatcherEvent continuityfill,
-        int continuitymin, float framerate, std::shared_ptr<void> data, std::timed_mutex &core_lock)
+        int continuitymin, float framerate, std::shared_ptr<void> data, std::timed_mutex &core_lock, int offset)
 {
     int duration = event->m_duration;
 
@@ -631,7 +639,7 @@ void EventProcessor_Fill::generateFilledEvents (std::shared_ptr<MouseCatcherEven
             playdata.push_back(std::make_pair(id, templateevent.m_triggertime));
 
             // Update template triggertime
-            templateevent.m_triggertime += static_cast<int>(resultduration / framerate);
+            templateevent.m_triggertime += static_cast<int>(resultduration / framerate) + offset;
 
             // Reduce remaining duration
             duration -= resultduration;
@@ -666,7 +674,7 @@ void EventProcessor_Fill::generateFilledEvents (std::shared_ptr<MouseCatcherEven
                 playdata.push_back(std::make_pair(id, templateevent.m_triggertime));
 
                 // Update template triggertime
-                templateevent.m_triggertime += static_cast<int>(resultduration / framerate);
+                templateevent.m_triggertime += static_cast<int>(resultduration / framerate) + offset;
 
                 // Reduce remaining duration
                 duration -= resultduration;

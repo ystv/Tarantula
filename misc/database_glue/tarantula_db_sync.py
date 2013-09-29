@@ -28,7 +28,7 @@ cur.execute("SELECT schedule_fill_items.video_id, upper(substring(filename from 
             "WHERE video_file_types.mode = 'schedule'")
 result = cur.fetchall()
 
-cur.execute("SELECT videos.id, upper(substring(filename from 9)), 'Show', 'show', (extract('epoch' from duration) + 150) * 25, "
+cur.execute("SELECT videos.id, upper(substring(filename from 9)), 'Show', 'show', (extract('epoch' from duration)) * 25, "
 	"CASE WHEN created_date > (current_date - interval '1 year') THEN '1' "
 	     "WHEN created_date > (current_date - interval '2 years') THEN '5' "
 	     "ELSE '20' "

@@ -47,7 +47,7 @@ public:
     void addFile (std::string filename, std::string device, std::string type,
             int duration, int weight);
     int getBestFile (std::string& filename, int inserttime, int duration,
-    		std::string device, std::string type, int& resultduration,
+    		std::string device, std::string type, int& resultduration, std::string& description,
     		std::set<int>& excludeid);
     void syncDatabase (std::string databasefile);
 
@@ -96,6 +96,7 @@ private:
 
     std::vector<std::pair<std::string, std::string>> m_structuredata; ///< An example could be {"ident", "device1"}
     bool m_filler; ///< Whether to fill remaining time with the last item.
+    bool m_toplevel; ///< Should top-level events or children be generated?
 
     MouseCatcherEvent m_continuityfill; ///< Event to tack on the end to fill remaining time
     int m_continuitymin; ///< Minimum length for continuity fill

@@ -55,7 +55,7 @@ FillDB::FillDB (std::string databasefile, std::map<int, int>& weightpoints,
 	// Table creation
 	oneTimeExec("CREATE TABLE items (id INTEGER PRIMARY KEY AUTOINCREMENT, "
 			"name TEXT NOT NULL, device TEXT NOT NULL, type TEXT NOT NULL, "
-			"duration INT NOT NULL, weight INT NOT NULL)");
+			"duration INT NOT NULL, weight INT NOT NULL, description TEXT)");
 	oneTimeExec("CREATE TABLE plays (id INTEGER PRIMARY KEY AUTOINCREMENT, "
 			"itemid INT NOT NULL, timestamp INT)");
 
@@ -68,13 +68,13 @@ FillDB::FillDB (std::string databasefile, std::map<int, int>& weightpoints,
 
             oneTimeExec("BEGIN TRANSACTION");
 
-            oneTimeExec("INSERT INTO items (id, name, device, type, duration, weight) "
-                    "SELECT id, name, device, type, duration, weight FROM disk.items");
+            oneTimeExec("INSERT INTO items (id, name, device, type, duration, weight, description) "
+                    "SELECT id, name, device, type, duration, weight, description FROM disk.items");
             oneTimeExec("INSERT INTO plays (id, itemid, timestamp) "
                     "SELECT id, itemid, timestamp FROM disk.plays");
-            oneTimeExec("DETACH disk");
 
             oneTimeExec("END TRANSACTION");
+            oneTimeExec("DETACH disk");
 	    }
 	    catch (std::exception &ex)
 	    {
@@ -91,7 +91,6 @@ FillDB::FillDB (std::string databasefile, std::map<int, int>& weightpoints,
 
     m_pgetbestfile_query = NULL;
     updateWeightPoints(weightpoints, fileweight);
-
 }
 
 /**
@@ -104,7 +103,7 @@ void FillDB::updateWeightPoints(std::map<int, int>& weightpoints, int fileweight
 {
 	// Assemble the start of the best file query
 	std::stringstream newquery;
-	newquery << "SELECT items.name, items.duration, items.id, total(CASE ";
+	newquery << "SELECT items.name, items.duration, items.id, items.description, total(CASE ";
 
 	// Assemble the weightpoints query segment
 	std::map<int, int>::iterator lastitem = weightpoints.begin();
@@ -185,7 +184,7 @@ void FillDB::addFile (std::string filename, std::string device, std::string type
 void FillDB::syncDatabase (std::string databasefile)
 {
 	// Attach the file
-	oneTimeExec("ATTACH " + databasefile + " AS disk");
+	oneTimeExec("ATTACH \"" + databasefile + "\" AS disk");
 	oneTimeExec("BEGIN TRANSACTION");
 
 	// Remove orphaned plays where itemid has gone missing
@@ -197,8 +196,8 @@ void FillDB::syncDatabase (std::string databasefile)
 			"(SELECT disk.items.id FROM disk.items)");
 
 	// Add items missing from memory table
-	oneTimeExec("INSERT INTO items (id, name, device, type, duration, weight) "
-			"SELECT id, name, device, type, duration, weight FROM "
+	oneTimeExec("INSERT INTO items (id, name, device, type, duration, weight, description) "
+			"SELECT id, name, device, type, duration, weight, description FROM "
 			"disk.items WHERE disk.items.id NOT IN (SELECT items.id FROM "
 			"items)");
 
@@ -238,11 +237,12 @@ void FillDB::endTransaction ()
  * @param device         Device to find a file for
  * @param type           Type of file to find (ident, trailer, etc)
  * @param resultduration Duration of returned file
+ * @param description    Description for returned file
  * @param excludeid		 Comma seperated list of RowIDs to exclude completely
  * @return               ID of best file, -1 for not found
  */
 int FillDB::getBestFile(std::string& filename, int inserttime, int duration,
-		std::string device, std::string type, int& resultduration,
+		std::string device, std::string type, int& resultduration, std::string& description,
 		std::set<int>& excludeid)
 {
     // Ensure that updateWeightPoints has been called at least once
@@ -270,6 +270,7 @@ int FillDB::getBestFile(std::string& filename, int inserttime, int duration,
     		resultduration = sqlite3_column_int(stmt, 1);
 			excludeid.insert(id);
 			filename = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0)));
+			description = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3)));
 			return sqlite3_column_int(stmt, 2);
     	}
 
@@ -341,6 +342,8 @@ void EventProcessor_Fill::readConfig (PluginConfig config)
     	m_status = FAILED;
     	return;
     }
+
+    m_toplevel = config.m_plugindata_xml.child("GenerateTopLevel").text().as_bool(false);
 
     m_fileweight = config.m_plugindata_xml.child("FileWeight").text().as_int(-1);
     if (-1 == m_fileweight)
@@ -605,13 +608,14 @@ void EventProcessor_Fill::generateFilledEvents (std::shared_ptr<MouseCatcherEven
 
     std::set<int> pastids;
     std::string filename;
+    std::string description;
     int id;
 
     // Loop over each type in m_structuredata and generate an event
     for (std::pair<std::string, std::string> thistype : structuredata)
     {
         id = db->getBestFile(filename, event->m_triggertime,
-                duration, thistype.second, thistype.first, resultduration, pastids);
+                duration, thistype.second, thistype.first, resultduration, description, pastids);
 
         if (id > 0)
         {
@@ -619,6 +623,7 @@ void EventProcessor_Fill::generateFilledEvents (std::shared_ptr<MouseCatcherEven
             templateevent.m_extradata["filename"] = filename;
             templateevent.m_duration = resultduration;
             templateevent.m_targetdevice = thistype.second;
+            templateevent.m_description = description;
 
             event->m_childevents.push_back(templateevent);
 
@@ -645,7 +650,7 @@ void EventProcessor_Fill::generateFilledEvents (std::shared_ptr<MouseCatcherEven
         {
             id = db->getBestFile(filename, event->m_triggertime,
                     duration, structuredata.back().second,
-                    structuredata.back().first, resultduration, pastids);
+                    structuredata.back().first, resultduration, description, pastids);
 
             if (id > 0)
             {
@@ -653,6 +658,7 @@ void EventProcessor_Fill::generateFilledEvents (std::shared_ptr<MouseCatcherEven
                 templateevent.m_extradata["filename"] = filename;
                 templateevent.m_duration = resultduration;
                 templateevent.m_targetdevice = structuredata.front().second;
+                templateevent.m_description = description;
 
                 event->m_childevents.push_back(templateevent);
 
@@ -721,33 +727,34 @@ void EventProcessor_Fill::populatePlaceholderEvent (std::shared_ptr<MouseCatcher
     // Look for the correct data tag
     int eventid = -1;
 
-    for (PlaylistEntry &ev : eventlist)
+    if (m_toplevel == false)
     {
-        if (ev.m_extras.count("placeholderID"))
+        for (PlaylistEntry &ev : eventlist)
         {
-            if (!ev.m_extras["placeholderID"].compare(ConvertType::intToString(m_placeholderid)))
+            if (ev.m_extras.count("placeholderID"))
             {
-                eventid = ev.m_eventid;
-                break;
+                if (!ev.m_extras["placeholderID"].compare(ConvertType::intToString(m_placeholderid)))
+                {
+                    eventid = ev.m_eventid;
+                    break;
+                }
             }
+        }
+
+        if (eventid <= -1)
+        {
+            m_hook.gs->L->error("populatePlaceholderEvent", "Got a non-existent playlist event. Failing silently.");
+            return;
         }
     }
 
     // Add each child to the playlist using the normal processEvent() mechanism
-    if (eventid > -1)
-    {
-        EventAction action;
+    EventAction action;
 
-        for (MouseCatcherEvent child : event->m_childevents)
-        {
-            MouseCatcherCore::processEvent(child, eventid, true, action);
-        }
-    }
-    else
+    for (MouseCatcherEvent child : event->m_childevents)
     {
-        m_hook.gs->L->error("populatePlaceholderEvent", "Got a non-existent playlist event. Failing silently.");
+        MouseCatcherCore::processEvent(child, eventid, true, action);
     }
-
 }
 
 /**

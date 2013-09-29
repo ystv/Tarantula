@@ -87,13 +87,6 @@ std::shared_ptr<AsyncJobData> AsyncJobSystem::newAsyncJob (AsyncJobFunction func
  */
 void AsyncJobSystem::completeAsyncJobs ()
 {
-    // Lock the queue or abort if it is locked
-	std::lock_guard<std::mutex> lock(m_jobqueue_mutex);
-    /*if (!lock)
-    {
-        return;
-    }*/
-
     // Run callbacks and update job states
     for (std::set<std::shared_ptr<AsyncJobData>>::iterator thisjob = m_jobs.begin(); thisjob != m_jobs.end(); )
     {
@@ -106,10 +99,12 @@ void AsyncJobSystem::completeAsyncJobs ()
 
             if (true == (*thisjob)->m_repeat)
             {
+                std::lock_guard<std::mutex> lock(m_jobqueue_mutex);
                 (*thisjob)->m_state = JOB_READY;
             }
             else
             {
+                std::lock_guard<std::mutex> lock(m_jobqueue_mutex);
                 // Job does not repeat and should be erased. Loop will be advanced
                 thisjob = m_jobs.erase(thisjob);
                 continue;
@@ -118,6 +113,7 @@ void AsyncJobSystem::completeAsyncJobs ()
         else if (JOB_FAILED == (*thisjob)->m_state)
         {
             g_logger.warn("Job Runner" + ERROR_LOC, "A job threw an unhandled exception");
+            (*thisjob)->m_state = JOB_ERASE;
         }
 
         ++thisjob;

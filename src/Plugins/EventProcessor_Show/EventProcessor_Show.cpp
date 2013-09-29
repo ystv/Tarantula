@@ -168,14 +168,13 @@ void EventProcessor_Show::handleEvent (MouseCatcherEvent originalEvent, MouseCat
                     static_cast<int>(m_nownextperiod / g_pbaseconfig->getFramerate());
         }
 
-        cgparent.m_triggertime = runningtrigtime;
 
         while (runningtrigtime < (videoevent.m_triggertime + videoseconds))
         {
             // Generate progressive CG events
+            cgparent.m_triggertime = runningtrigtime;
             MouseCatcherEvent cgchild = cgparent;
             cgchild.m_action_name = "Add";
-            cgchild.m_triggertime = runningtrigtime;
             cgchild.m_extradata["graphicname"] = m_nownextname;
             if (!originalEvent.m_description.empty())
             {
@@ -192,10 +191,11 @@ void EventProcessor_Show::handleEvent (MouseCatcherEvent originalEvent, MouseCat
             cgparent.m_childevents.push_back(cgchild);
 
             runningtrigtime += static_cast<int>(m_nownextperiod / g_pbaseconfig->getFramerate());
-        }
 
-        cgparent.m_duration = (runningtrigtime - cgparent.m_triggertime) * 25 - m_nownextperiod + 1;
-        resultingEvent.m_childevents.push_back(cgparent);
+            cgparent.m_duration = (runningtrigtime - cgparent.m_triggertime) * 25 - m_nownextperiod + 1;
+            resultingEvent.m_childevents.push_back(cgparent);
+            cgparent.m_childevents.clear();
+        }
     }
 
 

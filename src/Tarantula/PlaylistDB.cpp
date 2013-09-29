@@ -480,7 +480,7 @@ void PlaylistDB::writeToDisk (std::string file, std::string table, std::timed_mu
                     "'" + updateevents[0].m_device + "' AS 'device', "
                     + std::to_string(updateevents[0].m_devicetype) + " AS 'devicetype', "
                     + std::to_string(updateevents[0].m_action) + " AS 'action', "
-                    + std::to_string(updateevents[0].m_action) + " AS 'duration', "
+                    + std::to_string(updateevents[0].m_duration) + " AS 'duration', "
                     + std::to_string(updateevents[0].m_parent) + " AS 'parent', "
                     "'" + updateevents[0].m_preprocessor + "' AS 'callback', "
                     "'" + updateevents[0].m_description + "' AS 'description' ";

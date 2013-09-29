@@ -10,7 +10,7 @@ db_pass = "pass"
 db_name = "dbname"
 
 # Local database files
-filler_db = "/opt/Tarantula/datafiles/EventProcessor_Fill/filedata.db"
+filler_db = "/home/sam.nicholson/Code/Tarantula/datafiles/EventProcessor_Fill/filedata.db"
 
 
 # Connect to remote database
@@ -33,12 +33,12 @@ cur.close()
 
 # Assemble the insert query
 if (len(result) > 0):
-    insertq = "INSERT INTO 'items' SELECT " + str(result[0][0]) + " AS 'video_id', '" + os.path.splitext(result[0][1])[0] + \
+    insertq = "INSERT INTO 'items' SELECT " + str(result[0][0]) + " AS 'video_id', '" + str(os.path.splitext(result[0][1])[0]).upper() + \
         "' AS 'name', '" + result[0][2] + "' AS 'device', '" + result[0][3] + "' AS 'type', " + str(int(result[0][4])) + \
         " AS 'duration', " + str(result[0][5]) + " AS 'weight'"
     
     for row in result[1:]:
-        insertq += " UNION SELECT " + str(row[0]) + ", '" + os.path.splitext(row[1])[0] + "', '" + row[2] + "', '" + \
+        insertq += " UNION SELECT " + str(row[0]) + ", '" + str(os.path.splitext(row[1])[0]).upper() + "', '" + row[2] + "', '" + \
         row[3] + "', " + str(int(row[4])) + ", " + str(row[5])
         
     # Connect to the SQLite database

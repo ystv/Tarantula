@@ -79,6 +79,8 @@ PlaylistDB::PlaylistDB (std::string channel_name) :
             "id = ? AND processed >= 0; UPDATE extradata SET processed = 1 WHERE eventid = ?");
     m_addextras_query = prepare("INSERT INTO extradata VALUES (?,?,?,0)");
     m_getextras_query = prepare("SELECT key,value FROM extradata WHERE eventid = ?");
+    m_gethold_query = prepare("SELECT id FROM events WHERE trigger <= ? AND processed = 0 AND type = ? "
+            "ORDER BY trigger DESC LIMIT 1");
 
     // Queries used by EventSource interface
     m_geteventlist_query = prepare("SELECT * FROM events WHERE trigger >= ? AND trigger < ? AND "
@@ -96,8 +98,9 @@ PlaylistDB::PlaylistDB (std::string channel_name) :
 
     // Queries used by Shunt command
     m_shunt_eventcount_query = prepare("SELECT trigger, duration FROM events WHERE parent = 0 AND processed >= 0 AND "
-            "trigger > ? AND trigger <= ? ORDER BY trigger ASC, duration DESC LIMIT 1");
-    m_shunt_eventupdate_query = prepare("UPDATE events SET trigger = trigger + ? WHERE trigger > ? AND trigger <= ?");
+            "trigger >= ? AND trigger < ? ORDER BY trigger ASC, duration DESC LIMIT 1");
+    m_shunt_eventupdate_query = prepare("UPDATE events SET trigger = trigger + ?, lastupdate = strftime('%s', 'now') "
+            "WHERE trigger >= ? AND trigger < ?");
 
     // Read in some data
     m_channame = channel_name;
@@ -362,6 +365,30 @@ void PlaylistDB::removeEvent (int eventID)
 }
 
 /**
+ * Return the event ID of the most-recently activated manual hold
+ *
+ * @param bytime The time at which to search (usually now)
+ * @return       EventID of hold event, or 0 for no hold
+ */
+int PlaylistDB::getActiveHold(time_t bytime)
+{
+    m_gethold_query->rmParams();
+    m_gethold_query->addParam(1, DBParam(bytime));
+    m_gethold_query->addParam(2, DBParam(EVENT_MANUAL));
+    m_gethold_query->bindParams();
+
+    sqlite3_stmt* stmt = m_gethold_query->getStmt();
+    if (SQLITE_ROW == sqlite3_step(stmt))
+    {
+        return sqlite3_column_int(stmt, 0);
+    }
+    else
+    {
+        return 0;
+    }
+}
+
+/**
  * Move all connected events in or out by a delay factor to delay entire schedule.
  *
  * @param starttime   Time in current playlist to shunt from. Shunt will catch events after this.
@@ -396,7 +423,7 @@ void PlaylistDB::shunt(time_t starttime, int shuntlength)
             break;
         }
 
-        startmark = sqlite3_column_int(stmt, 0);
+        startmark = sqlite3_column_int(stmt, 0) + 1;
         int newdelay = sqlite3_column_int(stmt, 1);
         endmark = startmark + newdelay + searchdelay + fudgefactor;
     }

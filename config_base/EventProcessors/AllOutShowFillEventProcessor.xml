@@ -14,6 +14,7 @@
         <FileWeight>2</FileWeight>
         <CyclesBeforeSync>40</CyclesBeforeSync>
         <JobPriority>5</JobPriority>
+        <ItemOffset>150</ItemOffset>
         <WeightPoints>
             <WeightPoint>
                 <Offset>3600</Offset>

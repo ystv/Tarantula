@@ -246,7 +246,7 @@ void CrosspointDevice::runDeviceEvent (std::shared_ptr<Device> pdevice, Playlist
         {
             try
             {
-                g_logger.info(event.m_device, "Now switching output " + event.m_extras["output"] + " to input"
+                g_logger.info(event.m_device, "Now switching output " + event.m_extras["output"] + " to input "
                         + event.m_extras["input"]);
                 peventdevice->switchOP(event.m_extras["output"], event.m_extras["input"]);
             } catch (...)

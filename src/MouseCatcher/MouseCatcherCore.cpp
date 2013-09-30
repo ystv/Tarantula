@@ -38,8 +38,7 @@
 #include "CGDevice.h"
 
 extern std::vector<std::shared_ptr<MouseCatcherSourcePlugin>> g_mcsources;
-extern std::map<std::string,
-    std::shared_ptr<MouseCatcherProcessorPlugin>> g_mcprocessors;
+extern std::map<std::string, std::shared_ptr<MouseCatcherProcessorPlugin>> g_mcprocessors;
 
 namespace MouseCatcherCore
 {
@@ -104,8 +103,8 @@ namespace MouseCatcherCore
             return -1;
         }
 
-        // Process event through EventProcessors, then run this function on new events
-        if (0 == g_devices.count(event.m_targetdevice))
+        // Process event through EventProcessors, then run this function on new events (ignore "special" manual events)
+        if (0 == g_devices.count(event.m_targetdevice) && EVENT_MANUAL != event.m_eventtype)
         {
             g_logger.info("MouseCatcherCore", "Scanning Event Processors");
 
@@ -268,6 +267,23 @@ namespace MouseCatcherCore
         }
 
         g_channels.at(channelid)->m_pl.shunt(action.event.m_triggertime, action.event.m_duration);
+    }
+
+    void triggerEvent (EventAction &action)
+    {
+        int channelid;
+
+        try
+        {
+            channelid = Channel::getChannelByName(action.event.m_channel);
+        } catch (std::exception&)
+        {
+            action.returnmessage = "Attempted to trigger events from a nonexistent channel";
+            g_logger.warn("Event Queue", action.returnmessage);
+            return;
+        }
+
+        g_channels.at(channelid)->manualTrigger(action.eventid);
     }
 
     /**
@@ -441,6 +457,11 @@ namespace MouseCatcherCore
                             shuntEvents(thisaction);
                         }
                         break;
+                        case ACTION_TRIGGER:
+                        {
+                            triggerEvent(thisaction);
+                        }
+                        break;
                         case ACTION_UPDATE_PLAYLIST:
                         {
                             if (thisaction.thisplugin)
@@ -523,30 +544,33 @@ namespace MouseCatcherCore
             pgeneratedevent->m_preprocessor = pplaylistevent->m_preprocessor;
             pgeneratedevent->m_description = pplaylistevent->m_description;
 
-            // Check the device/processor is real and remains active
-            if ((0 == g_devices.count(pgeneratedevent->m_targetdevice)) &&
-                    (0 == g_mcprocessors.count(pgeneratedevent->m_targetdevice)))
+            if (EVENT_MANUAL != pplaylistevent->m_eventtype)
             {
-                g_logger.warn("convertToMCEvent", "Got event for non-existent or unloaded device or processor: " +
-                        pgeneratedevent->m_targetdevice);
-                throw std::exception();
-            }
-
-            // Get an action name if not an EP
-            if (pgeneratedevent->m_action > -1)
-            {
-                try
+                // Check the device/processor is real and remains active
+                if ((0 == g_devices.count(pgeneratedevent->m_targetdevice)) &&
+                        (0 == g_mcprocessors.count(pgeneratedevent->m_targetdevice)))
                 {
-                    pgeneratedevent->m_action_name = g_devices[pgeneratedevent->m_targetdevice]->m_actionlist->
-                            at(pgeneratedevent->m_action)->name;
-                }
-                catch (std::exception &ex)
-                {
-                    g_logger.warn("convertToMCEvent", "Unable to locate action with index " +
-                            ConvertType::intToString(pgeneratedevent->m_action) + " on device " +
+                    g_logger.warn("convertToMCEvent", "Got event for non-existent or unloaded device or processor: " +
                             pgeneratedevent->m_targetdevice);
+                    throw std::exception();
                 }
 
+                // Get an action name if not an EP
+                if (pgeneratedevent->m_action > -1)
+                {
+                    try
+                    {
+                        pgeneratedevent->m_action_name = g_devices[pgeneratedevent->m_targetdevice]->m_actionlist->
+                                at(pgeneratedevent->m_action)->name;
+                    }
+                    catch (std::exception &ex)
+                    {
+                        g_logger.warn("convertToMCEvent", "Unable to locate action with index " +
+                                ConvertType::intToString(pgeneratedevent->m_action) + " on device " +
+                                pgeneratedevent->m_targetdevice);
+                    }
+
+                }
             }
 
             // Recursively grab child events
@@ -583,7 +607,7 @@ namespace MouseCatcherCore
     bool convertToPlaylistEvent (MouseCatcherEvent *pmcevent, int parentid,
             PlaylistEntry *pplaylistevent)
     {
-        if (1 == g_devices.count(pmcevent->m_targetdevice))
+        if (1 == g_devices.count(pmcevent->m_targetdevice) && EVENT_MANUAL != pmcevent->m_eventtype)
         {
             pplaylistevent->m_devicetype = g_devices[pmcevent->m_targetdevice]->getType();
 
@@ -608,7 +632,7 @@ namespace MouseCatcherCore
                 }
             }
         }
-        else
+        else if (EVENT_MANUAL != pmcevent->m_eventtype)
         {
             if (1 == g_mcprocessors.count(pmcevent->m_targetdevice))
             {
@@ -634,10 +658,8 @@ namespace MouseCatcherCore
         {
             pplaylistevent->m_parent = parentid;
         }
-        else
-        {
-            pplaylistevent->m_eventtype = pmcevent->m_eventtype;
-        }
+
+        pplaylistevent->m_eventtype = pmcevent->m_eventtype;
 
         return true;
     }

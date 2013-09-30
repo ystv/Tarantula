@@ -55,6 +55,8 @@ public:
     void endPlaying (std::string name, int id);
     int createEvent (PlaylistEntry *ev);
 
+    void manualTrigger (int id);
+
     PlaylistDB m_pl;
     std::string m_channame;
     //! Crosspoint name for this channel
@@ -64,12 +66,16 @@ public:
 
     static int getChannelByName (std::string channelname);
 
+    static void manualHoldRelease (PlaylistEntry &event, Channel *pchannel);
+
 private:
     void runEvent (PlaylistEntry& pevent);
 
     void periodicDatabaseSync (std::shared_ptr<void> data, std::timed_mutex &core_lock);
 
     int m_sync_counter;
+
+    int m_hold_event;
 };
 
 /*

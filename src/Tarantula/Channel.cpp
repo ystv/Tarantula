@@ -29,6 +29,8 @@
 #include "CGDevice.h"
 #include "Misc.h"
 #include "Log.h"
+#include "MouseCatcherCommon.h"
+#include "MouseCatcherCore.h"
 
 //this is here because if it were in core header, it would create a loop.
 extern std::vector<std::shared_ptr<Channel>> g_channels;
@@ -100,9 +102,11 @@ void Channel::init ()
         }
     }
 
-    // Attempt to pull events from the offline store
+    // Disable manual hold
+    m_hold_event = -1;
 
-
+    // Register the preprocessor
+    g_preprocessorlist.emplace("Channel::manualHoldRelease", &Channel::manualHoldRelease);
 }
 
 /**
@@ -110,13 +114,25 @@ void Channel::init ()
  */
 void Channel::tick ()
 {
+    // Update hold flag
+    m_hold_event = m_pl.getActiveHold(time(NULL));
+
     //Pull all the time triggered events at the current time
     std::vector<PlaylistEntry> events = m_pl.getEvents(EVENT_FIXED, (time(NULL)));
 
     //Execute events on devices
     for (PlaylistEntry thisevent : events)
     {
-        runEvent(thisevent);
+        // Only run events if the channel is not in hold, or the event is a child of the hold
+        if (0 == m_hold_event || thisevent.m_parent == m_hold_event)
+        {
+            runEvent(thisevent);
+        }
+        else
+        {
+            g_logger.info(m_channame + " Runner", std::string("Event ") + std::to_string(thisevent.m_eventid) +
+                    std::string(" ignored due to active hold ") + std::to_string(m_hold_event));
+        }
     }
 
     // Sync database
@@ -125,13 +141,47 @@ void Channel::tick ()
         m_sync_counter = 0;
 
         g_async.newAsyncJob(
-                std::bind(&Channel::periodicDatabaseSync, this, std::placeholders::_1,
-                        std::placeholders::_2), NULL,
+                std::bind(&Channel::periodicDatabaseSync, this, std::placeholders::_1, std::placeholders::_2), NULL,
                         NULL, 50, false);
     }
     else
     {
         m_sync_counter++;
+    }
+}
+
+/**
+ * Trigger a manual event and release hold on channel
+ *
+ * @param id Event ID to trigger
+ */
+void Channel::manualTrigger (int id)
+{
+    if (id == m_hold_event)
+    {
+        m_hold_event = 0;
+
+        PlaylistEntry event;
+        m_pl.getEventDetails(id, event);
+
+        // Run the callback function
+        if (!event.m_preprocessor.empty())
+        {
+            if (g_preprocessorlist.count(event.m_preprocessor) > 0)
+            {
+                g_preprocessorlist[event.m_preprocessor](event, this);
+            }
+            else
+            {
+                g_logger.warn("Channel Runner" + ERROR_LOC, "Ignoring invalid PreProcessor " + event.m_preprocessor);
+            }
+        }
+
+        m_pl.processEvent(id);
+    }
+    else
+    {
+        g_logger.warn(m_channame + ERROR_LOC, "Got a manual trigger for an inactive hold, ignoring");
     }
 }
 
@@ -189,7 +239,7 @@ void Channel::runEvent (PlaylistEntry& event)
         }
         else
         {
-            g_logger.warn("Channel Runner", "Ignoring invalid PreProcessor " + event.m_preprocessor);
+            g_logger.warn("Channel Runner" + ERROR_LOC, "Ignoring invalid PreProcessor " + event.m_preprocessor);
         }
     }
 
@@ -302,3 +352,38 @@ int Channel::getChannelByName (std::string channelname)
     return -1;
 }
 
+/**
+ * Callback function for a LiveShow EP manual trigger. Unfortunately it has to go here as the plugin can't access
+ * the SQL database directly.
+ */
+void Channel::manualHoldRelease (PlaylistEntry &event, Channel *pchannel)
+{
+    // Erase any remaining children of this event
+    std::vector<PlaylistEntry> children = pchannel->m_pl.getChildEvents(event.m_eventid);
+
+    for (PlaylistEntry thischild : children)
+    {
+        pchannel->m_pl.removeEvent(thischild.m_eventid);
+    }
+
+    // Perform the shunt
+    time_t starttime = event.m_trigger + static_cast<int>(event.m_duration / g_pbaseconfig->getFramerate());
+    int length = time(NULL) - starttime;
+    pchannel->m_pl.shunt(starttime, length);
+
+    // Add xpoint switch
+
+    MouseCatcherEvent xpswitch;
+    xpswitch.m_action_name = "Switch";
+    xpswitch.m_channel = pchannel->m_channame;
+    xpswitch.m_duration = 1;
+    xpswitch.m_eventtype = EVENT_FIXED;
+    xpswitch.m_targetdevice = pchannel->m_xpdevicename;
+    xpswitch.m_triggertime = time(NULL);
+    xpswitch.m_extradata["output"] = pchannel->m_xpport;
+    xpswitch.m_extradata["input"] = event.m_extras["switchchannel"];
+
+    EventAction action;
+    MouseCatcherCore::processEvent(xpswitch, event.m_parent, true, action);
+
+}

@@ -6,14 +6,19 @@
         <Description>
             Generate a video event, continuity filler and Now/Next overlays for pre-recorded material
         </Description>
-        <Library>EventProcessor_Show</Library>
-        <Instance>Show</Instance>
+        <Library>EventProcessor_LiveShow</Library>
+        <Instance>LiveShow</Instance>
         <Enabled>true</Enabled>
     </PluginLoad>
     <PluginData mode="simple">
-        <VideoDevice>Main Video Server</VideoDevice>
+        <CrosspointDevice>Demo Crosspoint 1</CrosspointDevice>
+        <LiveInput>DaVE</LiveInput>
+        <DefaultInput>Caspar</DefaultInput>
+        <Output>YSTV Stream</Output>
+        
         <FillProcessorName>Event Filler 1</FillProcessorName>
-        <FillLength units="frames">3750</FillLength>
+        <FillLength units="frames">250</FillLength>
+        
         <EnableOverlay>true</EnableOverlay>
         <CGDevice>Main Video Server Graphics</CGDevice>
         <NowNextName>nownext</NowNextName>
@@ -21,5 +26,9 @@
         <NowNextMin units="frames">3000</NowNextMin>
         <NowNextDuration units="frames">250</NowNextDuration>
         <NowNextHostLayer>5</NowNextHostLayer>
+        
+        <VTDevice>Main Video Server</VTDevice>
+        <VTClockFilename>AMB</VTClockFilename>
+        <VTClockDuration>30</VTClockDuration>
     </PluginData>
 </TarantulaPlugin>

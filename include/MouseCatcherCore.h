@@ -57,6 +57,7 @@ namespace MouseCatcherCore
     void editEvent (EventAction& action);
     void updateEvents (EventAction& action);
     void shuntEvents (EventAction& action);
+    void triggerEvent (EventAction& action);
     int processEvent (MouseCatcherEvent event, int lastid, bool ischild,
             EventAction& action);
 

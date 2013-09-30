@@ -144,6 +144,7 @@ public:
     std::vector<PlaylistEntry> getEventList (time_t starttime, int length);
     void processEvent (int eventID);
     void removeEvent (int eventID);
+    int getActiveHold (time_t bytime);
     void shunt (time_t starttime, int shuntlength);
 
     void writeToDisk (std::string file, std::string table, std::timed_mutex &core_lock);
@@ -166,6 +167,7 @@ private:
     DBQuery* m_processevent_query;
     DBQuery* m_addextras_query;
     DBQuery* m_getextras_query;
+    DBQuery* m_gethold_query;
     DBQuery* m_geteventlist_query;
     DBQuery* m_updateevent_query;
     DBQuery* m_getdeletelist_query;

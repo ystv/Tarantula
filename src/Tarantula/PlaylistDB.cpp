@@ -483,6 +483,49 @@ struct extralines
    std::string value;
 };
 
+class DBWriter : public MemDB
+{
+    DBQuery* m_insert_events;
+    DBQuery* m_insert_data;
+public:
+    DBWriter(std::string filename, std::string table) : MemDB(filename.c_str())
+    {
+        m_insert_events = prepare("INSERT INTO [" + table + "] (id, type, trigger, device, devicetype, action, "
+                "duration, parent, callback, description) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        m_insert_data = prepare("INSERT INTO [" + table + "_data] (eventid, key, value) VALUES (?, ?, ?)");
+    }
+
+    void insertdata(std::vector<PlaylistEntry>& updateevents, std::vector<extralines>& updatedatalines)
+    {
+        for (PlaylistEntry thisev : updateevents)
+        {
+            m_insert_events->rmParams();
+            m_insert_events->addParam(1, DBParam(thisev.m_eventid));
+            m_insert_events->addParam(2, DBParam(thisev.m_eventtype));
+            m_insert_events->addParam(3, DBParam(thisev.m_trigger));
+            m_insert_events->addParam(4, DBParam(thisev.m_device));
+            m_insert_events->addParam(5, DBParam(thisev.m_devicetype));
+            m_insert_events->addParam(6, DBParam(thisev.m_action));
+            m_insert_events->addParam(7, DBParam(thisev.m_duration));
+            m_insert_events->addParam(8, DBParam(thisev.m_parent));
+            m_insert_events->addParam(9, DBParam(thisev.m_preprocessor));
+            m_insert_events->addParam(10, DBParam(thisev.m_description));
+            m_insert_events->bindParams();
+            sqlite3_step(m_insert_events->getStmt());
+        }
+
+        for (extralines thisline : updatedatalines)
+        {
+            m_insert_data->rmParams();
+            m_insert_data->addParam(1, DBParam(thisline.eventid));
+            m_insert_data->addParam(2, DBParam(thisline.key));
+            m_insert_data->addParam(3, DBParam(thisline.value));
+            m_insert_data->bindParams();
+            sqlite3_step(m_insert_data->getStmt());
+        }
+    }
+};
+
 /**
  * Write changed database events to the disk
  *
@@ -550,67 +593,11 @@ void PlaylistDB::writeToDisk (std::string file, std::string table, std::timed_mu
         }
 
         std::string datadeletequery;
-        std::string eventquery;
-        std::string dataquery;
-        if (updateevents.size() > 0)
-        {
-            PlaylistEntry ev;
-            eventquery = "INSERT INTO [" + table + "] SELECT "
-                    + std::to_string(updateevents[0].m_eventid) + " AS id, "
-                    + std::to_string(updateevents[0].m_eventtype) + " AS 'type', "
-                    + std::to_string(updateevents[0].m_trigger) + " AS 'trigger', "
-                    "'" + updateevents[0].m_device + "' AS 'device', "
-                    + std::to_string(updateevents[0].m_devicetype) + " AS 'devicetype', "
-                    + std::to_string(updateevents[0].m_action) + " AS 'action', "
-                    + std::to_string(updateevents[0].m_duration) + " AS 'duration', "
-                    + std::to_string(updateevents[0].m_parent) + " AS 'parent', "
-                    "'" + updateevents[0].m_preprocessor + "' AS 'callback', "
-                    "'" + updateevents[0].m_description + "' AS 'description' ";
-        }
 
-        if (updateevents.size() > 1)
-        {
-            for (unsigned int i = 1; i < updateevents.size(); ++i)
-            {
-                eventquery += "UNION SELECT "
-                    + std::to_string(updateevents[i].m_eventid) + ", "
-                    + std::to_string(updateevents[i].m_eventtype) + ", "
-                    + std::to_string(updateevents[i].m_trigger) + ", "
-                    "'" + updateevents[i].m_device + "', "
-                    + std::to_string(updateevents[i].m_devicetype) + ", "
-                    + std::to_string(updateevents[i].m_action) + ", "
-                    + std::to_string(updateevents[i].m_duration) + ", "
-                    + std::to_string(updateevents[i].m_parent) + ", "
-                    "'" + updateevents[i].m_preprocessor + "', "
-                    "'" + updateevents[i].m_description + "' ";
-            }
-        }
+        DBWriter filedata(file.c_str(), table);
 
-        if (updatedatalines.size() > 0)
-        {
-            datadeletequery = "DELETE FROM [" + table + "_data] "
-                    "WHERE eventid IN (" + std::to_string(updatedatalines[0].eventid);
+        filedata.oneTimeExec("BEGIN TRANSACTION");
 
-            dataquery = "INSERT INTO [" + table + "_data] SELECT "
-                    + std::to_string(updatedatalines[0].eventid) + " AS 'eventid', "
-                    "'" + updatedatalines[0].key + "' AS 'key', "
-                    "'" + updatedatalines[0].value + "' AS 'value' ";
-        }
-
-        if (updatedatalines.size() > 1)
-        {
-            for (unsigned int i = 1; i < updatedatalines.size(); ++i)
-            {
-                datadeletequery += ", " + std::to_string(updatedatalines[i].eventid);
-
-                dataquery += "UNION SELECT "
-                        + std::to_string(updatedatalines[i].eventid) + ", "
-                        "'" + updatedatalines[i].key + "', "
-                        "'" + updatedatalines[i].value + "' ";
-            }
-        }
-
-        MemDB filedata(file.c_str());
         if (deletedids.length() > 2)
         {
             deletedids = deletedids.substr(0, deletedids.length() - 2);
@@ -618,17 +605,14 @@ void PlaylistDB::writeToDisk (std::string file, std::string table, std::timed_mu
             filedata.oneTimeExec("DELETE FROM [" + table + "] WHERE id IN (" + deletedids + ")");
         }
 
-        if (!eventquery.empty())
+        if (datadeletequery.length() > 2)
         {
-            filedata.oneTimeExec(eventquery);
+            filedata.oneTimeExec(datadeletequery + ")");
         }
 
-        if (!dataquery.empty())
-        {
-            datadeletequery += ")";
-            filedata.oneTimeExec(datadeletequery);
-            filedata.oneTimeExec(dataquery);
-        }
+        filedata.insertdata(updateevents, updatedatalines);
+
+        filedata.oneTimeExec("END TRANSACTION");
         m_last_sync = time(NULL);
 
     }

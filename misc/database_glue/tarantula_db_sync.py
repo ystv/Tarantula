@@ -10,7 +10,7 @@ db_pass = "pass"
 db_name = "database"
 
 # Local database files
-filler_db = "/home/sam.nicholson/Code/Tarantula/datafiles/EventProcessor_Fill/filedata.db"
+filler_db = "/opt/Tarantula/datafiles/EventProcessor_Fill/filedata.db"
 
 
 # Connect to remote database
@@ -19,7 +19,7 @@ conn = psycopg2.connect(host=db_server, port=db_port, user=db_user, password=db_
 # Read data for the schedule_fill_items table
 cur = conn.cursor()
 
-cur.execute("SELECT schedule_fill_items.video_id, upper(substring(filename from 9)), "
+cur.execute("SELECT schedule_fill_items.video_id, left(upper(substring(filename from 9)), -4), "
             "device, item_type, extract('epoch' from duration) * 25, priority, '' "
             "FROM schedule_fill_items "
             "LEFT JOIN video_files ON schedule_fill_items.video_id = video_files.video_id "
@@ -28,7 +28,7 @@ cur.execute("SELECT schedule_fill_items.video_id, upper(substring(filename from 
             "WHERE video_file_types.mode = 'schedule'")
 result = cur.fetchall()
 
-cur.execute("SELECT videos.id, upper(substring(filename from 9)), 'Show', 'show', (extract('epoch' from duration)) * 25, "
+cur.execute("SELECT videos.id, left(upper(substring(filename from 9)), -4), 'Show', 'show', (extract('epoch' from duration)) * 25, "
 	"CASE WHEN created_date > (current_date - interval '1 year') THEN '1' "
 	     "WHEN created_date > (current_date - interval '2 years') THEN '5' "
 	     "ELSE '20' "

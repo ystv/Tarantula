@@ -221,8 +221,7 @@ namespace MouseCatcherCore
             channelid = Channel::getChannelByName(action.event.m_channel);
         } catch (std::exception&)
         {
-            action.returnmessage =
-                    "Attempted to delete an event from a nonexistent channel";
+            action.returnmessage = "Attempted to delete an event from a nonexistent channel";
             g_logger.warn("Event Queue", action.returnmessage);
             return;
         }
@@ -248,6 +247,27 @@ namespace MouseCatcherCore
             action.returnmessage = "Unable to locate event to edit";
         }
 
+    }
+
+    /**
+     * Push a set of playlist events out by a set amount of time
+     * @param action EventAction with some data. m_triggertime becomes shunt start, and m_duration becomes length
+     */
+    void shuntEvents (EventAction& action)
+    {
+        int channelid;
+
+        try
+        {
+            channelid = Channel::getChannelByName(action.event.m_channel);
+        } catch (std::exception&)
+        {
+            action.returnmessage = "Attempted to shunt events from a nonexistent channel";
+            g_logger.warn("Event Queue", action.returnmessage);
+            return;
+        }
+
+        g_channels.at(channelid)->m_pl.shunt(action.event.m_triggertime, action.event.m_duration);
     }
 
     /**
@@ -414,6 +434,11 @@ namespace MouseCatcherCore
                         case ACTION_EDIT:
                         {
                             editEvent(thisaction);
+                        }
+                        break;
+                        case ACTION_SHUNT:
+                        {
+                            shuntEvents(thisaction);
                         }
                         break;
                         case ACTION_UPDATE_PLAYLIST:

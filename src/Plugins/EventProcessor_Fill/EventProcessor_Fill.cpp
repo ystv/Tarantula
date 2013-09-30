@@ -761,7 +761,7 @@ void EventProcessor_Fill::populatePlaceholderEvent (std::shared_ptr<MouseCatcher
 
     for (MouseCatcherEvent child : event->m_childevents)
     {
-        MouseCatcherCore::processEvent(child, eventid, true, action);
+        MouseCatcherCore::processEvent(child, eventid, eventid > -1, action);
     }
 }
 

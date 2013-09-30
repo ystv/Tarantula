@@ -398,6 +398,34 @@ bool EventSource_XML_Network::processIncoming (XML_Incoming& newdata,
 		}
 
     }
+    else if (!action.compare("Shunt"))
+    {
+        if (-1 == xml.child("starttime").empty() || -1 == xml.child("length").text().as_int(-1))
+        {
+            try
+            {
+                boost::asio::write(newdata.m_conn->socket(),
+                        boost::asio::buffer("400 NO DATA\r\n"));
+            }
+            catch (std::exception &e)
+            {
+
+            }
+            return false;
+        }
+
+        std::string start = xml.child_value("starttime");
+        if (!start.empty())
+        {
+            tm starttime = boost::posix_time::to_tm(
+                boost::posix_time::time_from_string(start));
+            newaction.event.m_triggertime = mktime(&starttime);
+        }
+
+        newaction.action = ACTION_SHUNT;
+        newaction.event.m_channel = xml.child_value("channel");
+        newaction.event.m_duration = xml.child("length").text().as_int(-1);
+    }
     else if (!action.compare("UpdatePlaylist"))
     {
         newaction.action = ACTION_UPDATE_PLAYLIST;

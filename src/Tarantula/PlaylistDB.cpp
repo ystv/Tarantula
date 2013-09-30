@@ -82,7 +82,7 @@ PlaylistDB::PlaylistDB (std::string channel_name) :
 
     // Queries used by EventSource interface
     m_geteventlist_query = prepare("SELECT * FROM events WHERE trigger >= ? AND trigger < ? AND "
-            "parent = 0 ORDER BY trigger ASC");
+            "parent = 0 AND processed >= 0 ORDER BY trigger ASC");
     m_updateevent_query = prepare("UPDATE events SET type = ?, trigger = ?, filename = ?, device = ?, devicetype = ?, "
             "duration = ?, lastupdate = strftime('%s', 'now'), callback = ?, description = ?");
 
@@ -93,6 +93,11 @@ PlaylistDB::PlaylistDB (std::string channel_name) :
             "lastupdate, callback, description FROM events WHERE lastupdate > ? AND processed >= 0");
     m_getextradata_query = prepare("SELECT * FROM extradata LEFT JOIN events "
             "ON extradata.eventid = events.id WHERE events.lastupdate > ? AND events.processed >= 0");
+
+    // Queries used by Shunt command
+    m_shunt_eventcount_query = prepare("SELECT trigger, duration FROM events WHERE parent = 0 AND processed >= 0 AND "
+            "trigger > ? AND trigger <= ? ORDER BY trigger ASC, duration DESC LIMIT 1");
+    m_shunt_eventupdate_query = prepare("UPDATE events SET trigger = trigger + ? WHERE trigger > ? AND trigger <= ?");
 
     // Read in some data
     m_channame = channel_name;
@@ -354,6 +359,56 @@ void PlaylistDB::removeEvent (int eventID)
     m_removeevent_query->addParam(2, eventID);
     m_removeevent_query->bindParams();
     sqlite3_step(m_removeevent_query->getStmt());
+}
+
+/**
+ * Move all connected events in or out by a delay factor to delay entire schedule.
+ *
+ * @param starttime   Time in current playlist to shunt from. Shunt will catch events after this.
+ * @param shuntlength Number of seconds forward or back to shunt
+ */
+void PlaylistDB::shunt(time_t starttime, int shuntlength)
+{
+    int searchdelay = 0;
+    // When the shunt is backwards, the delay should not be accounted for
+    if (shuntlength >= 0)
+    {
+        searchdelay = shuntlength;
+    }
+
+    // Increase to catch not-quite overlapping events
+    int fudgefactor = 5;
+
+    time_t startmark = starttime;
+    time_t endmark = starttime + searchdelay + fudgefactor;
+
+    // Find the edges of the time boundary to shunt
+    while (1)
+    {
+        m_shunt_eventcount_query->rmParams();
+        m_shunt_eventcount_query->addParam(1, DBParam(startmark));
+        m_shunt_eventcount_query->addParam(2, DBParam(endmark));
+        m_shunt_eventcount_query->bindParams();
+
+        sqlite3_stmt *stmt = m_shunt_eventcount_query->getStmt();
+        if (sqlite3_step(stmt) != SQLITE_ROW)
+        {
+            break;
+        }
+
+        startmark = sqlite3_column_int(stmt, 0);
+        int newdelay = sqlite3_column_int(stmt, 1);
+        endmark = startmark + newdelay + searchdelay + fudgefactor;
+    }
+
+    // Apply the shunt
+    m_shunt_eventupdate_query->rmParams();
+    m_shunt_eventupdate_query->addParam(1, DBParam(shuntlength));
+    m_shunt_eventupdate_query->addParam(2, DBParam(starttime));
+    m_shunt_eventupdate_query->addParam(3, DBParam(endmark));
+    m_shunt_eventupdate_query->bindParams();
+    sqlite3_step(m_shunt_eventupdate_query->getStmt());
+
 }
 
 /**

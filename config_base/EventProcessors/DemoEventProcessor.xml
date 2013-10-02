@@ -5,6 +5,6 @@
         <Type>EventProcessor</Type>
         <Library>EventProcessor_Demo</Library>
         <Instance>Demo Event Processor 1</Instance>
-        <Enabled>true</Enabled>
+        <Enabled>false</Enabled>
     </PluginLoad>
 </TarantulaPlugin>

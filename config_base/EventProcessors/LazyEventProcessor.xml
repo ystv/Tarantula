@@ -5,7 +5,7 @@
         <Type>EventProcessor</Type>
         <Library>EventProcessor_Fill</Library>
         <Instance>Lazy Scheduler</Instance>
-        <Description>Generate EventProcessor_Show events to do the operators job for them</Description>
+        <Description>Fill event used by EP_Lazy to actually generate the events</Description>
         <Enabled>true</Enabled>
     </PluginLoad>
     <PluginData>
@@ -14,7 +14,7 @@
         <FileWeight>2</FileWeight>
         <CyclesBeforeSync>40</CyclesBeforeSync>
         <JobPriority>5</JobPriority>
-        <ItemOffset>150</ItemOffset>
+        <ItemOffset>3750</ItemOffset>
         <WeightPoints>
             <WeightPoint>
                 <Offset>3600</Offset>
@@ -36,6 +36,7 @@
             </StructureItem>
         </StructureData>
         <EnableFill>true</EnableFill>
+        <SingleShotMode>true</SingleShotMode>
         <ContinuityFill> <!--  Describes a CG event to pad out unfilled time -->
             <MinimumTime units="frames">0</MinimumTime> <!--  Minimum length of CG event -->
             <Device>Main Video Server Graphics</Device>

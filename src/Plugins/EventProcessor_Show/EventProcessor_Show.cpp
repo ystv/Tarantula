@@ -178,7 +178,7 @@ void EventProcessor_Show::handleEvent (MouseCatcherEvent originalEvent, MouseCat
             cgchild.m_extradata["graphicname"] = m_nownextname;
             if (!originalEvent.m_description.empty())
             {
-                cgchild.m_extradata["nowtext"] = originalEvent.m_description;
+                cgchild.m_extradata["nowtext"] = "Now: " + originalEvent.m_description;
             }
             cgchild.m_extradata["nexttext"] = "ppfill"; //Checked if not blank and filled by PP
 

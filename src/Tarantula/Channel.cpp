@@ -219,17 +219,6 @@ void Channel::endPlaying (std::string name, int id)
  */
 void Channel::runEvent (PlaylistEntry& event)
 {
-    if ((0 == g_devices.count(event.m_device)) && (event.m_devicetype != EVENTDEVICE_PROCESSOR))
-    {
-        g_logger.warn("Channel Runner",
-                "Device " + event.m_device + " not found for event ID " + ConvertType::intToString(event.m_eventid));
-
-        // Mark event as processed
-        m_pl.processEvent(event.m_eventid);
-
-        return;
-    }
-
     // Run the callback function
     if (!event.m_preprocessor.empty())
     {
@@ -241,6 +230,17 @@ void Channel::runEvent (PlaylistEntry& event)
         {
             g_logger.warn("Channel Runner" + ERROR_LOC, "Ignoring invalid PreProcessor " + event.m_preprocessor);
         }
+    }
+
+    if ((0 == g_devices.count(event.m_device)) && (event.m_devicetype != EVENTDEVICE_PROCESSOR))
+    {
+        g_logger.warn("Channel Runner",
+                "Device " + event.m_device + " not found for event ID " + ConvertType::intToString(event.m_eventid));
+
+        // Mark event as processed
+        m_pl.processEvent(event.m_eventid);
+
+        return;
     }
 
     switch (event.m_devicetype)

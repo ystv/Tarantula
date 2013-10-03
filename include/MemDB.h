@@ -76,8 +76,9 @@ class DBQuery
 {
 public:
     DBQuery ();
+    DBQuery (std::string querystring, sqlite3 *pdb);
     ~DBQuery ();
-    void sql (std::string sql, sqlite3 *db);
+    void sql (std::string querystring, sqlite3 *pdb);
     void addParam (const int pos, DBParam param);
     void rmParams (); // Clears all params
     void bindParams (); // Binds params to query
@@ -85,6 +86,8 @@ public:
 private:
     std::map<int, DBParam> m_params;
     sqlite3_stmt* m_pstmt;
+    std::string m_querytext;
+    sqlite3* m_pdb;
 };
 
 /**
@@ -104,6 +107,5 @@ protected:
     int getLastRowID ();
 
 private:
-    std::map<std::string, DBQuery> m_queries;
     sqlite3 *m_pdb;
 };

@@ -114,28 +114,7 @@ void MemDB::dump (const char* filename)
  */
 DBQuery* MemDB::prepare (std::string sql)
 {
-    // First make an attempt to find the query in the existing list:
-    std::map<std::string, DBQuery>::iterator it = m_queries.find(sql);
-
-    if (it != m_queries.end())
-    {
-        return &(it->second);
-    }
-
-    // If the query did not exist, create it.
-    m_queries[sql].sql(sql, m_pdb);
-    return &m_queries[sql];
-}
-
-/**
- * Remove a query from the query map.
- *
- * @param sql SQL string of query (argument to prepare())
- */
-void MemDB::remove (std::string sql)
-{
-    //deleting the item will cause it's destructor to be called.
-    m_queries.erase(sql);
+    return new DBQuery(sql, m_pdb);
 }
 
 /**
@@ -176,6 +155,12 @@ int MemDB::getLastRowID ()
 DBQuery::DBQuery ()
 {
     m_pstmt = NULL;
+    m_pdb = NULL;
+}
+
+DBQuery::DBQuery (std::string querystring, sqlite3 *pdb)
+{
+    sql(querystring, pdb);
 }
 
 /**
@@ -184,9 +169,12 @@ DBQuery::DBQuery ()
  * @param sql SQL statement to execute
  * @param db  Pointer to an sqlite3 database.
  */
-void DBQuery::sql (std::string sql, sqlite3 *pdb)
+void DBQuery::sql (std::string querystring, sqlite3 *pdb)
 {
-    sqlite3_prepare_v2(pdb, (const char*) sql.c_str(), -1, &m_pstmt, NULL);
+    m_pdb = pdb;
+    m_querytext = querystring;
+
+    sqlite3_prepare_v2(pdb, (const char*) querystring.c_str(), -1, &m_pstmt, NULL);
 }
 
 DBQuery::~DBQuery ()
@@ -210,6 +198,11 @@ void DBQuery::addParam (const int pos, DBParam param)
  */
 void DBQuery::rmParams ()
 {
+    if (m_pstmt == NULL)
+    {
+        sql(m_querytext, m_pdb);
+    }
+
     //clear statement
     sqlite3_clear_bindings(m_pstmt);
     //clear vector

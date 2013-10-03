@@ -386,10 +386,20 @@ void EventProcessor_Fill::generateFilledEvents (std::shared_ptr<MouseCatcherEven
 
     int resultduration;
 
-    std::set<int> pastids;
+    std::string pastids;
     std::string filename;
     std::string description;
     int id;
+
+    // Is a list of IDs to avoid already set?
+    if (event->m_extradata.count("blacklistids") > 0)
+    {
+        pastids = event->m_extradata["blacklistids"];
+    }
+    else
+    {
+        pastids = "-1";
+    }
 
     // Loop over each type in m_structuredata and generate an event
     for (std::pair<std::string, std::string> thistype : structuredata)
@@ -418,6 +428,9 @@ void EventProcessor_Fill::generateFilledEvents (std::shared_ptr<MouseCatcherEven
 
                 // Propagate the placeholder ID
                 templateevent.m_extradata["placeholderID"] = event->m_extradata["placeholderID"];
+
+                // Set blacklisted IDs
+                templateevent.m_extradata["blacklistids"] = pastids;
             }
 
             event->m_childevents.push_back(templateevent);
@@ -680,6 +693,7 @@ void EventProcessor_Fill::singleShotMode (PlaylistEntry &event, Channel *pchanne
     newevent.m_targetdevice = event.m_device;
     newevent.m_triggertime = event.m_trigger +
             static_cast<int>(event.m_duration / g_pbaseconfig->getFramerate());
+    newevent.m_extradata["blacklistids"] = event.m_extras["blacklistids"];
 
     g_logger.info("Single Shot Preprocessor" + ERROR_LOC, "Now generating new event with " +
             std::to_string(newevent.m_duration / g_pbaseconfig->getFramerate()) + " seconds left.");
@@ -791,7 +805,7 @@ void FillDB::updateWeightPoints(std::map<int, int>& weightpoints, int fileweight
 
     newquery << "END) + items.weight * " << fileweight << " AS weight FROM items ";
     newquery << " LEFT JOIN plays ON plays.itemid = items.id ";
-    newquery << " WHERE device = ?2 AND duration < ?3 AND type = ?4 ";
+    newquery << " WHERE device = ?2 AND duration < ?3 AND type = ?4 AND items.id NOT IN (?5)";
     newquery << " GROUP BY items.id ORDER BY weight ASC";
 
     // Erase the old query
@@ -910,7 +924,7 @@ void FillDB::endTransaction ()
  */
 int FillDB::getBestFile(std::string& filename, int inserttime, int duration,
         std::string device, std::string type, int& resultduration, std::string& description,
-        std::set<int>& excludeid)
+        std::string &excludeid)
 {
     // Ensure that updateWeightPoints has been called at least once
     if (!m_pgetbestfile_query)
@@ -924,6 +938,7 @@ int FillDB::getBestFile(std::string& filename, int inserttime, int duration,
     m_pgetbestfile_query->addParam(2, DBParam(device));
     m_pgetbestfile_query->addParam(3, duration);
     m_pgetbestfile_query->addParam(4, DBParam(type));
+    m_pgetbestfile_query->addParam(5, DBParam(excludeid));
 
     m_pgetbestfile_query->bindParams();
     sqlite3_stmt *stmt = m_pgetbestfile_query->getStmt();
@@ -932,15 +947,11 @@ int FillDB::getBestFile(std::string& filename, int inserttime, int duration,
     {
         int id = sqlite3_column_int(stmt, 2);
 
-        if (excludeid.count(id) == 0)
-        {
-            resultduration = sqlite3_column_int(stmt, 1);
-            excludeid.insert(id);
-            filename = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0)));
-            description = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3)));
-            return sqlite3_column_int(stmt, 2);
-        }
-
+        resultduration = sqlite3_column_int(stmt, 1);
+        excludeid += "," + id;
+        filename = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0)));
+        description = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3)));
+        return sqlite3_column_int(stmt, 2);
     }
 
     // No valid items found, return failure

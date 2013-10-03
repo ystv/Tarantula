@@ -82,9 +82,6 @@ PlaylistDB::PlaylistDB (std::string channel_name) :
     m_gethold_query = prepare("SELECT id FROM events WHERE trigger <= ? AND processed = 0 AND type = ? "
             "ORDER BY trigger DESC LIMIT 1");
 
-    m_purgeevents_query = prepare("DELETE FROM extradata WHERE eventid IN (SELECT id FROM events WHERE processed > 0); "
-    		"DELETE FROM events WHERE processed > 1");
-
     // Queries used by EventSource interface
     m_geteventlist_query = prepare("SELECT * FROM events WHERE trigger >= ? AND trigger < ? AND "
             "parent = 0 AND processed >= 0 ORDER BY trigger ASC");
@@ -102,6 +99,8 @@ PlaylistDB::PlaylistDB (std::string channel_name) :
             "lastupdate, callback, description FROM events WHERE lastupdate > ? AND processed >= 0");
     m_getextradata_query = prepare("SELECT * FROM extradata LEFT JOIN events "
             "ON extradata.eventid = events.id WHERE events.processed >= 0");
+    m_purgeevents_query = prepare("DELETE FROM extradata WHERE processed > 0; "
+            "DELETE FROM events WHERE processed > 0");
 
     // Queries used by Shunt command
     m_shunt_eventcount_query = prepare("SELECT trigger, duration FROM events WHERE parent = 0 AND processed >= 0 AND "
@@ -294,7 +293,6 @@ std::vector<PlaylistEntry> PlaylistDB::getChildEvents (int parentid)
  */
 int PlaylistDB::getParentEventID (int eventID)
 {
-    dump("test.db");
     m_getparentevent_query->rmParams();
     m_getparentevent_query->addParam(1, DBParam(eventID));
     m_getparentevent_query->bindParams();
@@ -618,7 +616,7 @@ void PlaylistDB::writeToDisk (std::string file, std::string table, std::timed_mu
         	// Purge extradata and then the events table
         	m_purgeevents_query->rmParams();
         	m_purgeevents_query->bindParams();
-        	sqlite3_step(m_purgeevents_query->getStmt());
+        	sqlite3_stmt *purgedata = m_purgeevents_query->getStmt();
 
             // Get deleted rows
             while (sqlite3_step(deletedlist) == SQLITE_ROW)
@@ -643,6 +641,9 @@ void PlaylistDB::writeToDisk (std::string file, std::string table, std::timed_mu
                 el.value = reinterpret_cast<const char *>(sqlite3_column_text(updatedata, 2));
                 updatedatalines.push_back(el);
             }
+
+            // Purge some data
+            sqlite3_step(purgedata);
         }
 
         if (updateevents.size() > 0)

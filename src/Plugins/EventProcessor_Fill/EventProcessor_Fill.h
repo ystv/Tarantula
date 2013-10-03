@@ -48,7 +48,7 @@ public:
             int duration, int weight);
     int getBestFile (std::string& filename, int inserttime, int duration,
     		std::string device, std::string type, int& resultduration, std::string& description,
-    		std::set<int>& excludeid);
+    		std::string& excludeid);
     void syncDatabase (std::string databasefile);
 
     void beginTransaction ();

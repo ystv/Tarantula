@@ -217,7 +217,15 @@ void EventSource_XML_Network::handleAccept (
 bool EventSource_XML_Network::parseEvent (const pugi::xml_node xmlnode,
         MouseCatcherEvent& outputevent)
 {
-    outputevent.m_action = xmlnode.child("action").text().as_int();
+    if (-1 != xmlnode.child("action").text().as_int(-1))
+    {
+        outputevent.m_action = xmlnode.child("action").text().as_int();
+    }
+    else
+    {
+        outputevent.m_action_name = xmlnode.child_value("actionname");
+    }
+
     outputevent.m_channel = xmlnode.child_value("channel");
     outputevent.m_duration = xmlnode.child("duration").text().as_int(1);
     outputevent.m_description = xmlnode.child_value("description");

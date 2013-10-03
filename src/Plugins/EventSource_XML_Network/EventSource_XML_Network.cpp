@@ -452,6 +452,8 @@ bool EventSource_XML_Network::processIncoming (XML_Incoming& newdata,
 
         std::string start = xml.child_value("starttime");
 
+        newaction.event.m_action_name = xml.child("specialaction").text().as_string("");
+
         if (!start.empty())
         {
 			tm starttime = boost::posix_time::to_tm(

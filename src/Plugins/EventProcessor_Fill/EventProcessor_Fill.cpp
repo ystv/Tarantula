@@ -72,7 +72,7 @@ EventProcessor_Fill::EventProcessor_Fill (PluginConfig config, Hook h) :
     g_preprocessorlist.emplace("EventProcessor_Fill::singleShotMode_" + config.m_instance,
             std::bind(&EventProcessor_Fill::singleShotMode, std::placeholders::_1, std::placeholders::_2,
                     m_structuredata, m_filler, m_continuityfill, m_continuitymin, m_offset, m_jobpriority,
-                    m_pdb, m_pluginname));
+                    m_pdb, m_pluginname, m_dbfile));
 
 }
 
@@ -311,8 +311,8 @@ void EventProcessor_Fill::handleEvent(MouseCatcherEvent originalEvent,
     {
         m_cyclesremaining = m_cyclesbeforesync;
         m_hook.gs->Async->newAsyncJob(
-                std::bind(&EventProcessor_Fill::periodicDatabaseSync, this, std::placeholders::_1,
-                        std::placeholders::_2), NULL,
+                std::bind(&EventProcessor_Fill::periodicDatabaseSync, std::placeholders::_1,
+                        std::placeholders::_2, m_dbfile, m_pdb), NULL,
                         NULL, m_jobpriority + 50, false);
     }
     else
@@ -570,12 +570,15 @@ void EventProcessor_Fill::populatePlaceholderEvent (std::shared_ptr<MouseCatcher
  * Lock the core and sync the database in memory with the one on disk
  *
  * @param data Unused
+ * @param file File name to save to
+ * @param pdb  Database pointer
  */
-void EventProcessor_Fill::periodicDatabaseSync (std::shared_ptr<void> data, std::timed_mutex &core_lock)
+void EventProcessor_Fill::periodicDatabaseSync (std::shared_ptr<void> data, std::timed_mutex &core_lock,
+		std::string file, std::shared_ptr<FillDB> pdb)
 {
     // Lock is not technically needed, but a precaution against future multithreaded async jobs
     std::lock_guard<std::timed_mutex> lock(core_lock);
-    m_pdb->syncDatabase(m_dbfile);
+    pdb->syncDatabase(file);
 }
 
 /**
@@ -659,11 +662,13 @@ void EventProcessor_Fill::populateCGNowNext (PlaylistEntry &event, Channel *pcha
  * @param offset         Timings offset for events
  * @param jobpriority    Priority setting for async jobs
  * @param pdb            Pointer to database
+ * @param pluginname     Instance name for this file
+ * @param dbfile         Database file name
  */
 void EventProcessor_Fill::singleShotMode (PlaylistEntry &event, Channel *pchannel,
         std::vector<std::pair<std::string, std::string>> structuredata, bool filler,
         MouseCatcherEvent continuityfill, int continuitymin, int offset,
-        int jobpriority, std::shared_ptr<FillDB> pdb, std::string pluginname)
+        int jobpriority, std::shared_ptr<FillDB> pdb, std::string pluginname, std::string dbfile)
 {
     MouseCatcherEvent newevent;
     newevent.m_action = -1;
@@ -689,6 +694,12 @@ void EventProcessor_Fill::singleShotMode (PlaylistEntry &event, Channel *pchanne
             std::bind(&EventProcessor_Fill::populatePlaceholderEvent, pfilledevent,
                     -1, std::placeholders::_1),
             pfilledevent, jobpriority, false);
+
+    // Sync the DB
+    g_async.newAsyncJob(
+			std::bind(&EventProcessor_Fill::periodicDatabaseSync, std::placeholders::_1,
+					std::placeholders::_2, dbfile, pdb), NULL,
+					NULL, jobpriority + 50, false);
 }
 
 /*****************************************************************************

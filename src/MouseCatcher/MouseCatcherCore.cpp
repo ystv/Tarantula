@@ -167,10 +167,11 @@ namespace MouseCatcherCore
      * @param starttime     Only fetch events scheduled after this timestamp.
      * @param length		Length of range to fetch events for
      * @param eventvector   Vector to insert the events into.
+     * @param action        Should we grab current or next events?
      * @return              False if given channel was invalid, otherwise true.
      */
     void getEvents (int channelid, time_t starttime, int length,
-            std::vector<MouseCatcherEvent>& eventvector)
+            std::vector<MouseCatcherEvent>& eventvector, std::string action)
     {
         std::vector<PlaylistEntry> playlistevents;
         std::vector<std::shared_ptr<Channel>>::iterator channelstart;
@@ -190,7 +191,26 @@ namespace MouseCatcherCore
         for (std::vector<std::shared_ptr<Channel>>::iterator it = channelstart;
                 it != channelend; ++it)
         {
-            playlistevents = (*it)->m_pl.getEventList(starttime, length);
+        	if (!action.compare("current"))
+        	{
+        		playlistevents = (*it)->m_pl.getExecutingEvents();
+        	}
+        	else if (!action.compare("next"))
+        	{
+        		try
+        		{
+        			playlistevents.push_back((*it)->m_pl.getNextEvent());
+        		}
+        		catch (std::exception&)
+        		{
+        			// Nothing found, not an error.
+        		}
+        	}
+        	else
+        	{
+        		playlistevents = (*it)->m_pl.getEventList(starttime, length);
+        	}
+
             for (std::vector<PlaylistEntry>::iterator it2 =
                     playlistevents.begin(); it2 != playlistevents.end(); ++it2)
             {
@@ -291,6 +311,8 @@ namespace MouseCatcherCore
      * Selects all events between m_triggertime and m_triggertime + m_duration,
      * and provides them to the EventSource using the updatePlaylist callback.
      *
+     * Optionally allows for getting current or next event
+     *
      * @param action EventAction containing data for this event
      */
     void updateEvents (EventAction& action)
@@ -309,8 +331,9 @@ namespace MouseCatcherCore
             action.returnmessage = "Invalid channel name supplied";
             return;
         }
+
         getEvents(channelref, action.event.m_triggertime,
-        		action.event.m_duration, eventdata);
+        		action.event.m_duration, eventdata, action.event.m_action_name);
 
         action.thisplugin->updatePlaylist(eventdata, action.additionaldata);
     }

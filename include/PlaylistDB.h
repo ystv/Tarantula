@@ -147,6 +147,9 @@ public:
     int getActiveHold (time_t bytime);
     void shunt (time_t starttime, int shuntlength);
 
+    std::vector<PlaylistEntry> getExecutingEvents ();
+    PlaylistEntry getNextEvent ();
+
     void writeToDisk (std::string file, std::string table, std::timed_mutex &core_lock);
 
 private:
@@ -175,4 +178,7 @@ private:
     DBQuery* m_getextradata_query;
     DBQuery* m_shunt_eventcount_query;
     DBQuery* m_shunt_eventupdate_query;
+    DBQuery* m_getcurrent_toplevel_query;
+    DBQuery* m_getnext_toplevel_query;
+    DBQuery* m_purgeevents_query;
 };

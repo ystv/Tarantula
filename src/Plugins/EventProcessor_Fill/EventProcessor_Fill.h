@@ -80,7 +80,7 @@ public:
     static void singleShotMode (PlaylistEntry &event, Channel *pchannel,
             std::vector<std::pair<std::string, std::string>> structuredata, bool filler,
             MouseCatcherEvent continuityfill, int continuitymin, int offset,
-            int jobpriority, std::shared_ptr<FillDB> pdb, std::string pluginname);
+            int jobpriority, std::shared_ptr<FillDB> pdb, std::string pluginname, std::string dbfile);
 
     std::shared_ptr<FillDB> m_pdb;
 private:
@@ -90,7 +90,8 @@ private:
             std::timed_mutex &core_lock, int offset, std::string pluginname);
     static void populatePlaceholderEvent (std::shared_ptr<MouseCatcherEvent> event, int placeholder_id,
             std::shared_ptr<void> data);
-    void periodicDatabaseSync (std::shared_ptr<void> data, std::timed_mutex &core_lock);
+    static void periodicDatabaseSync (std::shared_ptr<void> data, std::timed_mutex &core_lock, std::string file,
+    		std::shared_ptr<FillDB> pdb);
 
     // Data from configuration file
     std::string m_dbfile;

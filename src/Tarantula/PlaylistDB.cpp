@@ -82,11 +82,18 @@ PlaylistDB::PlaylistDB (std::string channel_name) :
     m_gethold_query = prepare("SELECT id FROM events WHERE trigger <= ? AND processed = 0 AND type = ? "
             "ORDER BY trigger DESC LIMIT 1");
 
+    m_purgeevents_query = prepare("DELETE FROM extradata WHERE eventid IN (SELECT id FROM events WHERE processed > 0); "
+    		"DELETE FROM events WHERE processed > 1");
+
     // Queries used by EventSource interface
     m_geteventlist_query = prepare("SELECT * FROM events WHERE trigger >= ? AND trigger < ? AND "
             "parent = 0 AND processed >= 0 ORDER BY trigger ASC");
     m_updateevent_query = prepare("UPDATE events SET type = ?, trigger = ?, filename = ?, device = ?, devicetype = ?, "
             "duration = ?, lastupdate = strftime('%s', 'now'), callback = ?, description = ?");
+    m_getcurrent_toplevel_query = prepare ("SELECT * FROM events WHERE parent = 0 AND processed > 0 "
+    		"AND (trigger + duration) < strftime('%s', 'now')");
+    m_getnext_toplevel_query = prepare ("SELECT * FROM events WHERE parent = 0 AND processed = 0 "
+    		"AND trigger > strftime('%s', 'now') ORDER BY trigger ASC LIMIT 1");
 
     // Queries used by playlist sync system
     m_getdeletelist_query = prepare("SELECT events.id FROM events WHERE processed = -1; "
@@ -94,7 +101,7 @@ PlaylistDB::PlaylistDB (std::string channel_name) :
     m_getupdatelist_query = prepare("SELECT id, type, trigger, device, devicetype, action, duration, parent, processed, "
             "lastupdate, callback, description FROM events WHERE lastupdate > ? AND processed >= 0");
     m_getextradata_query = prepare("SELECT * FROM extradata LEFT JOIN events "
-            "ON extradata.eventid = events.id WHERE events.lastupdate > ? AND events.processed >= 0");
+            "ON extradata.eventid = events.id WHERE events.processed >= 0");
 
     // Queries used by Shunt command
     m_shunt_eventcount_query = prepare("SELECT trigger, duration FROM events WHERE parent = 0 AND processed >= 0 AND "
@@ -439,6 +446,55 @@ void PlaylistDB::shunt(time_t starttime, int shuntlength)
 }
 
 /**
+ * Get event all currently running top level events
+ */
+std::vector<PlaylistEntry> PlaylistDB::getExecutingEvents()
+{
+	std::vector<PlaylistEntry> eventlist;
+
+	m_getcurrent_toplevel_query->rmParams();
+	m_getcurrent_toplevel_query->bindParams();
+
+	sqlite3_stmt* stmt = m_getcurrent_toplevel_query->getStmt();
+	while (SQLITE_ROW == sqlite3_step(stmt))
+	{
+		PlaylistEntry ple;
+		populateEvent(stmt, &ple);
+
+		getExtraData(&ple);
+
+		eventlist.push_back(ple);
+	}
+
+	return eventlist;
+}
+
+/**
+ * Get the next top-level event to execute
+ */
+PlaylistEntry PlaylistDB::getNextEvent()
+{
+	m_getnext_toplevel_query->rmParams();
+	m_getnext_toplevel_query->bindParams();
+
+	sqlite3_stmt* stmt = m_getnext_toplevel_query->getStmt();
+
+	if (SQLITE_ROW == sqlite3_step(stmt))
+	{
+		PlaylistEntry ple;
+		populateEvent(stmt, &ple);
+
+		getExtraData(&ple);
+
+		return ple;
+	}
+	else
+	{
+		throw std::exception();
+	}
+}
+
+/**
  * Read the playlist from a database on disk
  *
  * @param file  File name to read from
@@ -541,11 +597,7 @@ void PlaylistDB::writeToDisk (std::string file, std::string table, std::timed_mu
         std::vector<extralines> updatedatalines;
 
         {
-            std::lock_guard<std::timed_mutex> lock(core_lock);
-            // Prepare to get deleted rows
-            m_getdeletelist_query->rmParams();
-            m_getdeletelist_query->bindParams();
-            sqlite3_stmt *deletedlist = m_getdeletelist_query->getStmt();
+        	std::lock_guard<std::timed_mutex> lock(core_lock);
 
             // Prepare to get updated rows
             m_getupdatelist_query->rmParams();
@@ -553,11 +605,20 @@ void PlaylistDB::writeToDisk (std::string file, std::string table, std::timed_mu
             m_getupdatelist_query->bindParams();
             sqlite3_stmt *updaterows = m_getupdatelist_query->getStmt();
 
+            // Prepare to get deleted rows
+            m_getdeletelist_query->rmParams();
+            m_getdeletelist_query->bindParams();
+            sqlite3_stmt *deletedlist = m_getdeletelist_query->getStmt();
+
             // Prepare to get updated extradata
             m_getextradata_query->rmParams();
-            m_getextradata_query->addParam(1, DBParam(m_last_sync));
             m_getextradata_query->bindParams();
             sqlite3_stmt *updatedata = m_getextradata_query->getStmt();
+
+        	// Purge extradata and then the events table
+        	m_purgeevents_query->rmParams();
+        	m_purgeevents_query->bindParams();
+        	sqlite3_step(m_purgeevents_query->getStmt());
 
             // Get deleted rows
             while (sqlite3_step(deletedlist) == SQLITE_ROW)

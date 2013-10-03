@@ -71,5 +71,5 @@ namespace MouseCatcherCore
     bool convertToMCEvent (PlaylistEntry * const playlistevent,
             std::shared_ptr<Channel> channel, MouseCatcherEvent *generatedevent, Log *log);
     void getEvents (int channelid, time_t starttime, int length,
-                std::vector<MouseCatcherEvent>& eventvector);
+                std::vector<MouseCatcherEvent>& eventvector, std::string action);
 }

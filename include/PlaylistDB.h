@@ -180,5 +180,4 @@ private:
     DBQuery* m_shunt_eventupdate_query;
     DBQuery* m_getcurrent_toplevel_query;
     DBQuery* m_getnext_toplevel_query;
-    DBQuery* m_purgeevents_query;
 };

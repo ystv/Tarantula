@@ -49,7 +49,7 @@ public:
     int getBestFile (std::string& filename, int inserttime, int duration,
     		std::string device, std::string type, int& resultduration, std::string& description,
     		std::string& excludeid);
-    void syncDatabase (std::string databasefile);
+    void syncDatabase (std::string databasefile, int last_sync);
 
     void beginTransaction ();
     void endTransaction ();
@@ -80,7 +80,8 @@ public:
     static void singleShotMode (PlaylistEntry &event, Channel *pchannel,
             std::vector<std::pair<std::string, std::string>> structuredata, bool filler,
             MouseCatcherEvent continuityfill, int continuitymin, int offset,
-            int jobpriority, std::shared_ptr<FillDB> pdb, std::string pluginname, std::string dbfile);
+            int jobpriority, std::shared_ptr<FillDB> pdb, std::string pluginname, std::string dbfile,
+            std::shared_ptr<int> psynctime);
 
     std::shared_ptr<FillDB> m_pdb;
 private:
@@ -91,7 +92,7 @@ private:
     static void populatePlaceholderEvent (std::shared_ptr<MouseCatcherEvent> event, int placeholder_id,
             std::shared_ptr<void> data);
     static void periodicDatabaseSync (std::shared_ptr<void> data, std::timed_mutex &core_lock, std::string file,
-    		std::shared_ptr<FillDB> pdb);
+    		std::shared_ptr<FillDB> pdb, int synctime);
 
     // Data from configuration file
     std::string m_dbfile;
@@ -104,6 +105,7 @@ private:
     bool m_filler; ///< Whether to fill remaining time with the last item.
     bool m_singleshot; ///< Should events be generated in bulk or on-the-fly?
     int m_offset; ///< Should each trigger time be offset?
+    std::shared_ptr<int> m_psynctime;
 
     MouseCatcherEvent m_continuityfill; ///< Event to tack on the end to fill remaining time
     int m_continuitymin; ///< Minimum length for continuity fill

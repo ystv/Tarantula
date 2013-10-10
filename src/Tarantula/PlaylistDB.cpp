@@ -25,6 +25,7 @@
 
 #include "PlaylistDB.h"
 #include "TarantulaCore.h"
+#include "Log.h"
 #include "Misc.h"
 
 /**
@@ -88,9 +89,9 @@ PlaylistDB::PlaylistDB (std::string channel_name) :
     m_updateevent_query = prepare("UPDATE events SET type = ?, trigger = ?, filename = ?, device = ?, devicetype = ?, "
             "duration = ?, lastupdate = strftime('%s', 'now'), callback = ?, description = ?");
     m_getcurrent_toplevel_query = prepare ("SELECT * FROM events WHERE parent = 0 AND processed > 0 "
-    		"AND (trigger + duration) < strftime('%s', 'now')");
+            "AND (trigger + duration) < strftime('%s', 'now') ORDER BY trigger DESC, duration ASC");
     m_getnext_toplevel_query = prepare ("SELECT * FROM events WHERE parent = 0 AND processed = 0 "
-    		"AND trigger > strftime('%s', 'now') ORDER BY trigger ASC LIMIT 1");
+    		"AND trigger > strftime('%s', 'now')");
 
     // Queries used by playlist sync system
     m_getdeletelist_query = prepare("SELECT events.id FROM events WHERE processed = -1; "
@@ -98,9 +99,7 @@ PlaylistDB::PlaylistDB (std::string channel_name) :
     m_getupdatelist_query = prepare("SELECT id, type, trigger, device, devicetype, action, duration, parent, processed, "
             "lastupdate, callback, description FROM events WHERE lastupdate > ? AND processed >= 0");
     m_getextradata_query = prepare("SELECT * FROM extradata LEFT JOIN events "
-            "ON extradata.eventid = events.id WHERE events.processed >= 0");
-    m_purgeevents_query = prepare("DELETE FROM extradata WHERE processed > 0; "
-            "DELETE FROM events WHERE processed > 0");
+            "ON extradata.eventid = events.id WHERE events.processed >= 0 AND events.lastupdate > ?");
 
     // Queries used by Shunt command
     m_shunt_eventcount_query = prepare("SELECT trigger, duration FROM events WHERE parent = 0 AND processed >= 0 AND "
@@ -520,9 +519,9 @@ void PlaylistDB::readFromDisk (std::string file, std::string table)
         oneTimeExec("INSERT INTO extradata (eventid, key, value, processed) "
                 "SELECT eventid, key, value, 0 FROM disk.[" + table + "_data]");
 
-        oneTimeExec("DETACH disk");
-
         oneTimeExec("END TRANSACTION");
+
+        oneTimeExec("DETACH disk");
     }
     catch (...)
     {
@@ -610,13 +609,9 @@ void PlaylistDB::writeToDisk (std::string file, std::string table, std::timed_mu
 
             // Prepare to get updated extradata
             m_getextradata_query->rmParams();
+            m_getextradata_query->addParam(1, DBParam(m_last_sync));
             m_getextradata_query->bindParams();
             sqlite3_stmt *updatedata = m_getextradata_query->getStmt();
-
-        	// Purge extradata and then the events table
-        	m_purgeevents_query->rmParams();
-        	m_purgeevents_query->bindParams();
-        	sqlite3_stmt *purgedata = m_purgeevents_query->getStmt();
 
             // Get deleted rows
             while (sqlite3_step(deletedlist) == SQLITE_ROW)
@@ -641,9 +636,6 @@ void PlaylistDB::writeToDisk (std::string file, std::string table, std::timed_mu
                 el.value = reinterpret_cast<const char *>(sqlite3_column_text(updatedata, 2));
                 updatedatalines.push_back(el);
             }
-
-            // Purge some data
-            sqlite3_step(purgedata);
         }
 
         if (updateevents.size() > 0)
@@ -656,26 +648,37 @@ void PlaylistDB::writeToDisk (std::string file, std::string table, std::timed_mu
 
         std::string datadeletequery;
 
-        DBWriter filedata(file.c_str(), table);
+        DBWriter* pfiledata;
 
-        filedata.oneTimeExec("BEGIN TRANSACTION");
-
-        if (deletedids.length() > 2)
+        try
         {
-            deletedids = deletedids.substr(0, deletedids.length() - 2);
 
-            filedata.oneTimeExec("DELETE FROM [" + table + "] WHERE id IN (" + deletedids + ")");
+            DBWriter filedata(file.c_str(), table);
+
+            filedata.oneTimeExec("BEGIN TRANSACTION");
+
+            if (deletedids.length() > 2)
+            {
+                deletedids = deletedids.substr(0, deletedids.length() - 2);
+
+                filedata.oneTimeExec("DELETE FROM [" + table + "] WHERE id IN (" + deletedids + ")");
+            }
+
+            if (datadeletequery.length() > 2)
+            {
+                filedata.oneTimeExec(datadeletequery + ")");
+            }
+
+            filedata.insertdata(updateevents, updatedatalines);
+
+            filedata.oneTimeExec("END TRANSACTION");
+
+            m_last_sync = time(NULL);
         }
-
-        if (datadeletequery.length() > 2)
+        catch (std::exception ex)
         {
-            filedata.oneTimeExec(datadeletequery + ")");
+            g_logger.warn("PlaylistDB Disk Sync" + ERROR_LOC, "An error ocurred syncing the database. Will retry shortly");
         }
-
-        filedata.insertdata(updateevents, updatedatalines);
-
-        filedata.oneTimeExec("END TRANSACTION");
-        m_last_sync = time(NULL);
 
     }
     catch (...)

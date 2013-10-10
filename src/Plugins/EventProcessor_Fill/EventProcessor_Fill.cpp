@@ -61,6 +61,7 @@ EventProcessor_Fill::EventProcessor_Fill (PluginConfig config, Hook h) :
     m_pdb = std::shared_ptr<FillDB>(new FillDB(m_dbfile, m_weightpoints, m_fileweight));
 
     m_placeholderid = 0;
+    m_psynctime = std::make_shared<int>(0);
 
     // Populate information array
     m_processorinfo.data["duration"] = "int";
@@ -72,7 +73,7 @@ EventProcessor_Fill::EventProcessor_Fill (PluginConfig config, Hook h) :
     g_preprocessorlist.emplace("EventProcessor_Fill::singleShotMode_" + config.m_instance,
             std::bind(&EventProcessor_Fill::singleShotMode, std::placeholders::_1, std::placeholders::_2,
                     m_structuredata, m_filler, m_continuityfill, m_continuitymin, m_offset, m_jobpriority,
-                    m_pdb, m_pluginname, m_dbfile));
+                    m_pdb, m_pluginname, m_dbfile, m_psynctime));
 
 }
 
@@ -81,7 +82,7 @@ EventProcessor_Fill::EventProcessor_Fill (PluginConfig config, Hook h) :
  */
 EventProcessor_Fill::~EventProcessor_Fill ()
 {
-    m_pdb->syncDatabase(m_dbfile);
+    m_pdb->syncDatabase(m_dbfile, *m_psynctime);
     g_preprocessorlist.erase("EventProcessor_Fill::populateCGNowNext");
     g_preprocessorlist.erase("EventProcessor_Fill::singleShotMode_" + m_pluginname);
 }
@@ -312,8 +313,9 @@ void EventProcessor_Fill::handleEvent(MouseCatcherEvent originalEvent,
         m_cyclesremaining = m_cyclesbeforesync;
         m_hook.gs->Async->newAsyncJob(
                 std::bind(&EventProcessor_Fill::periodicDatabaseSync, std::placeholders::_1,
-                        std::placeholders::_2, m_dbfile, m_pdb), NULL,
+                        std::placeholders::_2, m_dbfile, m_pdb, *m_psynctime), NULL,
                         NULL, m_jobpriority + 50, false);
+        *m_psynctime = time(NULL);
     }
     else
     {
@@ -587,11 +589,11 @@ void EventProcessor_Fill::populatePlaceholderEvent (std::shared_ptr<MouseCatcher
  * @param pdb  Database pointer
  */
 void EventProcessor_Fill::periodicDatabaseSync (std::shared_ptr<void> data, std::timed_mutex &core_lock,
-		std::string file, std::shared_ptr<FillDB> pdb)
+		std::string file, std::shared_ptr<FillDB> pdb, int synctime)
 {
     // Lock is not technically needed, but a precaution against future multithreaded async jobs
     std::lock_guard<std::timed_mutex> lock(core_lock);
-    pdb->syncDatabase(file);
+    pdb->syncDatabase(file, synctime);
 }
 
 /**
@@ -681,7 +683,8 @@ void EventProcessor_Fill::populateCGNowNext (PlaylistEntry &event, Channel *pcha
 void EventProcessor_Fill::singleShotMode (PlaylistEntry &event, Channel *pchannel,
         std::vector<std::pair<std::string, std::string>> structuredata, bool filler,
         MouseCatcherEvent continuityfill, int continuitymin, int offset,
-        int jobpriority, std::shared_ptr<FillDB> pdb, std::string pluginname, std::string dbfile)
+        int jobpriority, std::shared_ptr<FillDB> pdb, std::string pluginname, std::string dbfile,
+        std::shared_ptr<int> psynctime)
 {
     MouseCatcherEvent newevent;
     newevent.m_action = -1;
@@ -712,8 +715,9 @@ void EventProcessor_Fill::singleShotMode (PlaylistEntry &event, Channel *pchanne
     // Sync the DB
     g_async.newAsyncJob(
 			std::bind(&EventProcessor_Fill::periodicDatabaseSync, std::placeholders::_1,
-					std::placeholders::_2, dbfile, pdb), NULL,
+					std::placeholders::_2, dbfile, pdb, *psynctime), NULL,
 					NULL, jobpriority + 50, false);
+    *psynctime = time(NULL);
 }
 
 /*****************************************************************************
@@ -738,7 +742,7 @@ FillDB::FillDB (std::string databasefile, std::map<int, int>& weightpoints,
             "name TEXT NOT NULL, device TEXT NOT NULL, type TEXT NOT NULL, "
             "duration INT NOT NULL, weight INT NOT NULL, description TEXT)");
     oneTimeExec("CREATE TABLE plays (id INTEGER PRIMARY KEY AUTOINCREMENT, "
-            "itemid INT NOT NULL, timestamp INT)");
+            "itemid INT NOT NULL, timestamp INT, addtime INT)");
 
     if (!databasefile.empty())
     {
@@ -749,10 +753,16 @@ FillDB::FillDB (std::string databasefile, std::map<int, int>& weightpoints,
 
             oneTimeExec("BEGIN TRANSACTION");
 
+            oneTimeExec("CREATE TABLE IF NOT EXISTS disk.items (id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                    "name TEXT NOT NULL, device TEXT NOT NULL, type TEXT NOT NULL, "
+                    "duration INT NOT NULL, weight INT NOT NULL, description TEXT)");
+            oneTimeExec("CREATE TABLE IF NOT EXISTS disk.plays (id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                    "itemid INT NOT NULL, timestamp INT)");
+
             oneTimeExec("INSERT INTO items (id, name, device, type, duration, weight, description) "
                     "SELECT id, name, device, type, duration, weight, description FROM disk.items");
-            oneTimeExec("INSERT INTO plays (id, itemid, timestamp) "
-                    "SELECT id, itemid, timestamp FROM disk.plays");
+            oneTimeExec("INSERT INTO plays (id, itemid, timestamp, addtime) "
+                    "SELECT id, itemid, timestamp, strftime('%s', 'now') FROM disk.plays");
 
             oneTimeExec("END TRANSACTION");
             oneTimeExec("DETACH disk");
@@ -765,8 +775,8 @@ FillDB::FillDB (std::string databasefile, std::map<int, int>& weightpoints,
     // Index speeds up some lookups
     oneTimeExec("CREATE INDEX itemid_index ON plays (itemid)");
 
-    m_paddplay_query = prepare("INSERT INTO plays (itemid, timestamp) "
-            "VALUES (?, ?);");
+    m_paddplay_query = prepare("INSERT INTO plays (itemid, timestamp, addtime) "
+            "VALUES (?, ?, strftime('%s', 'now'));");
     m_paddfile_query = prepare("INSERT INTO items (name, device, type, duration, "
             "weight) VALUES (?, ?, ?, ?, ?);");
 
@@ -784,7 +794,7 @@ void FillDB::updateWeightPoints(std::map<int, int>& weightpoints, int fileweight
 {
     // Assemble the start of the best file query
     std::stringstream newquery;
-    newquery << "SELECT items.name, items.duration, items.id, items.description, total(CASE ";
+    newquery << "SELECT items.name, items.duration, items.id, items.description, (COALESCE(total(CASE ";
 
     // Assemble the weightpoints query segment
     std::map<int, int>::iterator lastitem = weightpoints.begin();
@@ -803,10 +813,10 @@ void FillDB::updateWeightPoints(std::map<int, int>& weightpoints, int fileweight
         lastitem = it;
     }
 
-    newquery << "END) + items.weight * " << fileweight << " AS weight FROM items ";
+    newquery << "END), 0) + (items.weight * " << fileweight << ")) AS weight FROM items ";
     newquery << " LEFT JOIN plays ON plays.itemid = items.id ";
     newquery << " WHERE device = ?2 AND duration < ?3 AND type = ?4 AND items.id NOT IN (?5)";
-    newquery << " GROUP BY items.id ORDER BY weight ASC";
+    newquery << " GROUP BY items.id ORDER BY weight ASC, RANDOM()";
 
     // Erase the old query
     delete m_pgetbestfile_query;
@@ -862,7 +872,7 @@ void FillDB::addFile (std::string filename, std::string device, std::string type
  *
  * @param databasefile Name of database on disk
  */
-void FillDB::syncDatabase (std::string databasefile)
+void FillDB::syncDatabase (std::string databasefile, int last_sync)
 {
     // Attach the file
     oneTimeExec("ATTACH \"" + databasefile + "\" AS disk");
@@ -883,9 +893,8 @@ void FillDB::syncDatabase (std::string databasefile)
             "items)");
 
     // Sync new plays data
-    oneTimeExec("INSERT INTO disk.plays (itemid, timestamp) SELECT  "
-            "itemid, timestamp FROM plays WHERE plays.id > "
-            "(SELECT COALESCE(MAX(disk.plays.id), 0) FROM disk.plays)");
+    oneTimeExec(std::string("INSERT INTO disk.plays (itemid, timestamp) SELECT  "
+            "itemid, timestamp FROM plays WHERE plays.addtime > " + std::to_string(last_sync)).c_str());
 
     // Detach the database
     oneTimeExec("END TRANSACTION");
@@ -948,7 +957,7 @@ int FillDB::getBestFile(std::string& filename, int inserttime, int duration,
         int id = sqlite3_column_int(stmt, 2);
 
         resultduration = sqlite3_column_int(stmt, 1);
-        excludeid += "," + id;
+        excludeid += "," + std::to_string(id);
         filename = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0)));
         description = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3)));
         return sqlite3_column_int(stmt, 2);

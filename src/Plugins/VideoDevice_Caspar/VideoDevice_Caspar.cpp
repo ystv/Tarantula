@@ -163,8 +163,16 @@ VideoDevice_Caspar::VideoDevice_Caspar (PluginConfig config, Hook h) :
         return;
     }
 
-    CasparFileList listb("test", "test");
-    m_pfiledb = std::shared_ptr<CasparFileList>(new CasparFileList(g_pbaseconfig->getOfflineDatabasePath(), m_pluginname));
+    try
+    {
+        m_pfiledb = std::shared_ptr<CasparFileList>(new CasparFileList(g_pbaseconfig->getOfflineDatabasePath(), m_pluginname));
+    }
+    catch (std::exception&)
+    {
+        m_hook.gs->L->error(m_pluginname + ERROR_LOC, "Unable to connect to database");
+        m_status = FAILED;
+        return;
+    }
 
     m_pfiledb->readFileList(m_files);
 

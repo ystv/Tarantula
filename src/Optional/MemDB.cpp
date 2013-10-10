@@ -26,7 +26,11 @@
 
 
 #include "MemDB.h"
+#include "Log.h"
+#include "ErrorMacro.h"
 #include <iostream>
+
+extern Log g_logger;
 
 /*
  * DBParam constructor implementations
@@ -76,7 +80,13 @@ MemDB::MemDB ()
  */
 MemDB::MemDB (const char* filename)
 {
-    sqlite3_open(filename, &m_pdb);
+    int ret = sqlite3_open(filename, &m_pdb);
+
+    if (SQLITE_OK != ret)
+    {
+        g_logger.error("MemDB Open()" + ERROR_LOC, sqlite3_errmsg(m_pdb));
+        throw std::exception();
+    }
 }
 
 MemDB::~MemDB ()
@@ -133,7 +143,13 @@ void MemDB::oneTimeExec (std::string sql)
     }
 
     // Run query
-    sqlite3_step(stmt);
+    int ret = sqlite3_step(stmt);
+    if (SQLITE_DONE != ret)
+    {
+        g_logger.error("MemDB oneTimeExec()" + ERROR_LOC, sqlite3_errmsg(m_pdb));
+        volatile int error = -1;
+        error = ret;
+    }
 
     // Remove from prepared statement store to free memory
     sqlite3_finalize(stmt);

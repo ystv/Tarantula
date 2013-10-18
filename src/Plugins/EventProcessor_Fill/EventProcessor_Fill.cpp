@@ -819,7 +819,7 @@ void FillDB::updateWeightPoints(std::map<int, int>& weightpoints, int fileweight
     newquery << " GROUP BY items.id ORDER BY weight ASC, RANDOM()";
 
     // Erase the old query
-    delete m_pgetbestfile_query;
+    m_pgetbestfile_query.reset();
 
     // Replace the query
     m_pgetbestfile_query = prepare(newquery.str().c_str());

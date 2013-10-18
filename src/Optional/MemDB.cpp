@@ -91,7 +91,7 @@ MemDB::MemDB (const char* filename)
 
 MemDB::~MemDB ()
 {
-    sqlite3_close(m_pdb);
+    sqlite3_close_v2(m_pdb);
 }
 
 /**
@@ -122,9 +122,9 @@ void MemDB::dump (const char* filename)
  * @param sql The SQL query string to be executed
  * @return    A pointer to the entry in the MemDB instance query table.
  */
-DBQuery* MemDB::prepare (std::string sql)
+std::shared_ptr<DBQuery> MemDB::prepare (std::string sql)
 {
-    return new DBQuery(sql, m_pdb);
+    return std::make_shared<DBQuery>(sql, m_pdb);
 }
 
 /**

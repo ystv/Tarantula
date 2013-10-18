@@ -61,8 +61,8 @@ public:
         std::shared_ptr<std::vector<std::string>> deletedfiles, std::timed_mutex &core_lock);
 
 private:
-    DBQuery *m_pgetfilelist_query;
-    DBQuery *m_pinsertfile_query;
+    std::shared_ptr<DBQuery> m_pgetfilelist_query;
+    std::shared_ptr<DBQuery> m_pinsertfile_query;
     std::string m_table;
 };
 

@@ -538,8 +538,8 @@ struct extralines
 
 class DBWriter : public MemDB
 {
-    DBQuery* m_insert_events;
-    DBQuery* m_insert_data;
+    std::shared_ptr<DBQuery> m_insert_events;
+    std::shared_ptr<DBQuery> m_insert_data;
 public:
     DBWriter(std::string filename, std::string table) : MemDB(filename.c_str())
     {
@@ -647,8 +647,6 @@ void PlaylistDB::writeToDisk (std::string file, std::string table, std::timed_mu
         }
 
         std::string datadeletequery;
-
-        DBWriter* pfiledata;
 
         try
         {

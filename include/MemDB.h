@@ -39,6 +39,7 @@
 #include <string>
 #include <map>
 #include <vector>
+#include <memory>
 #include "../src/sqlite-amalgamation/sqlite3.h"
 
 
@@ -102,7 +103,7 @@ public:
     void dump (const char* filename); // Dumps out the database to an SQLite file
     void oneTimeExec (std::string sql); // Run a query verbatim without parameters
 protected:
-    DBQuery* prepare (std::string sql);
+    std::shared_ptr<DBQuery> prepare (std::string sql);
     void remove (std::string sql);
     int getLastRowID ();
 

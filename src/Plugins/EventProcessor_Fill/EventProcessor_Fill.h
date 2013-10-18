@@ -56,9 +56,9 @@ public:
 
 
 private:
-    DBQuery* m_pgetbestfile_query;
-    DBQuery* m_paddplay_query;
-    DBQuery* m_paddfile_query;
+    std::shared_ptr<DBQuery> m_pgetbestfile_query;
+    std::shared_ptr<DBQuery> m_paddplay_query;
+    std::shared_ptr<DBQuery> m_paddfile_query;
 };
 
 /**

@@ -12,6 +12,7 @@ db_name = "db"
 # Local database files
 filler_db = "/opt/Tarantula/datafiles/EventProcessor_Fill/filedata.db"
 file_db = "/opt/Tarantula/datafiles/EventProcessor_Fill/lazydata.db"
+core_db = "/opt/Tarantula/datafiles/coredata.db"
 
 # Connect to remote database
 conn = psycopg2.connect(host=db_server, port=db_port, user=db_user, password=db_pass, database=db_name)
@@ -30,8 +31,8 @@ result = cur.fetchall()
 
 cur.execute("SELECT videos.id, (upper(substring(filename from 9 for (length(filename) - 12)))), 'Show', 'show', (extract('epoch' from duration)) * 25, "
 	"CASE WHEN created_date > (current_date - interval '1 year') THEN '1' "
-	     "WHEN created_date > (current_date - interval '2 years') THEN '5' "
-	     "ELSE '20' "
+	     "WHEN created_date > (current_date - interval '2 years') THEN '3' "
+	     "ELSE '5' "
 	"END, "
 	"COALESCE(NULLIF(video_boxes.display_name, ''),NULLIF(video_boxes.name,''),NULLIF(video_boxes.url_name,'')) "
 	"FROM video_files "
@@ -61,9 +62,14 @@ conn2.close()
 
 conn2 = sqlite3.connect(file_db)
 inscur = conn2.cursor()
+inscur.execute("ATTACH '" + core_db + "' AS filelist")
 inscur.execute("DELETE FROM items;")
 inscur.executemany("INSERT INTO items (id, name, device, type, duration, weight, description) VALUES (?, ?, ?, ?, ?, ?, ?);", fullvideolist)
-
+inscur.execute("DELETE FROM items WHERE id IN \
+	(SELECT id FROM items \
+		LEFT OUTER JOIN filelist.[main video server_files] f ON f.filename = items.name \
+		WHERE f.filename IS NULL)")
+inscur.execute("DETACH filelist")
 conn2.commit()
 conn2.close()
 

@@ -289,6 +289,11 @@ namespace MouseCatcherCore
         g_channels.at(channelid)->m_pl.shunt(action.event.m_triggertime, action.event.m_duration);
     }
 
+    /**
+     * End a manual playlist hold and run the next events
+     *
+     * @param action EventAction with some data. Only the channel is used
+     */
     void triggerEvent (EventAction &action)
     {
         int channelid;
@@ -304,6 +309,57 @@ namespace MouseCatcherCore
         }
 
         g_channels.at(channelid)->manualTrigger(action.eventid);
+    }
+
+
+    /**
+     * Rerun the EventProcessors that created an event
+     *
+     * @param action EventAction with some data. Channel and eventid used
+     */
+    void regenerateEvent (EventAction &action)
+    {
+        int channelid;
+
+        try
+        {
+            channelid = Channel::getChannelByName(action.event.m_channel);
+        }
+        catch (std::exception&)
+        {
+            action.returnmessage = "Attempted to regenerate events from a nonexistent channel";
+            g_logger.warn("Event Queue", action.returnmessage);
+            return;
+        }
+
+        // Get this event from the playlist
+        PlaylistEntry currentevent;
+        g_channels.at(channelid)->m_pl.getEventDetails(action.eventid, currentevent);
+
+        // Check that event was actually an EventProcessor, there's no point running this on anything else
+        if (EVENTDEVICE_PROCESSOR != currentevent.m_devicetype)
+        {
+            action.returnmessage = "Attempted to regenerate a non-processor event";
+            g_logger.info("Event Queue" + ERROR_LOC, action.returnmessage);
+            return;
+        }
+
+        MouseCatcherEvent currentMCevent;
+        if (!convertToMCEvent(&currentevent, g_channels.at(channelid), &currentMCevent, &g_logger))
+        {
+            action.returnmessage = "Unable to convert event for regeneration";
+            g_logger.info("Event Queue" + ERROR_LOC, action.returnmessage);
+            return;
+        }
+
+        // Delete the existing playlist event
+        g_channels.at(channelid)->m_pl.removeEvent(action.eventid);
+
+        // Clean up the existing event
+        currentMCevent.m_childevents.clear();
+
+        // Generate a fresh one
+        processEvent(currentMCevent, -1, false, action);
     }
 
     /**
@@ -483,6 +539,11 @@ namespace MouseCatcherCore
                         case ACTION_TRIGGER:
                         {
                             triggerEvent(thisaction);
+                        }
+                        break;
+                        case ACTION_REGENERATE:
+                        {
+                            regenerateEvent(thisaction);
                         }
                         break;
                         case ACTION_UPDATE_PLAYLIST:

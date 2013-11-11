@@ -377,7 +377,7 @@ void HTTPConnection::handleIncomingData (
 					{
 						int eventid = ConvertType::stringToInt(data);
 						EventAction removeaction;
-						removeaction.event.m_eventid = eventid;
+						removeaction.eventid = eventid;
 						removeaction.action = ACTION_REMOVE;
 						removeaction.event.m_channel = m_config.m_channel;
 						m_sharedata->m_localqueue.push_back(removeaction);
@@ -395,6 +395,31 @@ void HTTPConnection::handleIncomingData (
 								http::server3::reply::bad_request);
 						commitResponse();
 					}
+				}
+				else if (!base.compare("regenerate"))
+				{
+                    try
+                    {
+                        int eventid = ConvertType::stringToInt(data);
+                        EventAction regenerateaction;
+                        regenerateaction.eventid = eventid;
+                        regenerateaction.action = ACTION_REGENERATE;
+                        regenerateaction.event.m_channel = m_config.m_channel;
+                        m_sharedata->m_localqueue.push_back(regenerateaction);
+
+                        m_reply = http::server3::reply::stock_reply(
+                                http::server3::reply::moved_temporarily);
+                        m_reply.headers.resize(3);
+                        m_reply.headers[2].name = "Location";
+                        m_reply.headers[2].value = "/index.html";
+                        commitResponse();
+                    }
+                    catch (std::exception&)
+                    {
+                        m_reply = http::server3::reply::stock_reply(
+                                http::server3::reply::bad_request);
+                        commitResponse();
+                    }
 				}
 				else if (!base.compare("update"))
 				{

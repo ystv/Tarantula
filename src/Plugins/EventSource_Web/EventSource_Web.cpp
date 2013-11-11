@@ -645,6 +645,15 @@ void EventSource_Web::generateScheduleSegment(MouseCatcherEvent& targetevent,
         generateScheduleSegment(child, childevents);
     }
 
+    // Generate regenerate link if an EP
+    if (-1 == targetevent.m_action)
+    {
+        pugi::xml_node regenerate_event = datadiv.append_child("p").append_child("a");
+        regenerate_event.append_attribute("href").set_value(
+                std::string("/regenerate/" + std::to_string(targetevent.m_eventid)).c_str());
+        regenerate_event.text().set("Regenerate Event");
+    }
+
     // Generate remove event link
     pugi::xml_node remove_event = datadiv.append_child("p").append_child("a");
     remove_event.append_attribute("href").set_value(

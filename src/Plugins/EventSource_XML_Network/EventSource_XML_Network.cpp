@@ -371,6 +371,26 @@ bool EventSource_XML_Network::processIncoming (XML_Incoming& newdata,
         newaction.eventid = xml.child("eventid").text().as_int(-1);
         newaction.event.m_channel = xml.child_value("channel");
     }
+    else if (!action.compare("Regenerate"))
+    {
+        if (-1 == xml.child("eventid").text().as_int(-1))
+        {
+            try
+            {
+                boost::asio::write(newdata.m_conn->socket(),
+                        boost::asio::buffer("400 NO DATA\r\n"));
+            }
+            catch (std::exception &e)
+            {
+
+            }
+            return false;
+        }
+
+        newaction.action = ACTION_REGENERATE;
+        newaction.eventid = xml.child("eventid").text().as_int(-1);
+        newaction.event.m_channel = xml.child_value("channel");
+    }
     else if (!action.compare("Edit"))
     {
         if ((xml.child("MCEvent").empty())

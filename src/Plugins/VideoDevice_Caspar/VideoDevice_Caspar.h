@@ -31,6 +31,7 @@
 #include <cstdlib>
 #include <queue>
 #include <pthread.h>
+#include <mutex>
 
 #include "libCaspar/libCaspar.h"
 #include "VideoDevice.h"
@@ -64,6 +65,7 @@ private:
     std::shared_ptr<DBQuery> m_pgetfilelist_query;
     std::shared_ptr<DBQuery> m_pinsertfile_query;
     std::string m_table;
+    std::mutex m_list_lock;
 };
 
 /**

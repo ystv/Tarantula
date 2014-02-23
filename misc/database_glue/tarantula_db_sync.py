@@ -57,6 +57,7 @@ conn2 = sqlite3.connect(filler_db)
 inscur = conn2.cursor()
 inscur.execute("DELETE FROM items;")
 inscur.executemany("INSERT INTO items (id, name, device, type, duration, weight, description) VALUES (?, ?, ?, ?, ?, ?, ?);", result)
+inscur.close()
 conn2.commit()
 conn2.close()
 
@@ -70,6 +71,7 @@ inscur.execute("DELETE FROM items WHERE id IN \
 		LEFT OUTER JOIN filelist.[main video server_files] f ON f.filename = items.name \
 		WHERE f.filename IS NULL)")
 inscur.execute("DETACH filelist")
+inscur.close()
 conn2.commit()
 conn2.close()
 

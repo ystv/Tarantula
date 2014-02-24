@@ -29,21 +29,23 @@ cur.execute("SELECT schedule_fill_items.video_id, (upper(substring(filename from
             "WHERE video_file_types.mode = 'schedule'")
 result = cur.fetchall()
 
+# Read data for the full lazy mode table
 cur.execute("SELECT videos.id, (upper(substring(filename from 9 for (length(filename) - 12)))), 'Show', 'show', (extract('epoch' from duration)) * 25, "
 	"CASE WHEN created_date > (current_date - interval '1 year') THEN '1' "
 	     "WHEN created_date > (current_date - interval '2 years') THEN '3' "
 	     "ELSE '5' "
 	"END, "
-	"COALESCE(NULLIF(video_boxes.display_name, ''),NULLIF(video_boxes.name,''),NULLIF(video_boxes.url_name,'')) "
+	"COALESCE(NULLIF(videos.schedule_name, ''),NULLIF(video_boxes.display_name, ''), "
+		"NULLIF(video_boxes.name,''),NULLIF(video_boxes.url_name,'')) "
 	"FROM video_files "
 	"LEFT JOIN videos ON videos.id = video_files.video_id "
 	"LEFT JOIN video_boxes ON videos.video_box_id = video_boxes.id "
 	"LEFT JOIN video_file_types ON video_files.video_file_type_name = video_file_types.name "
-	"WHERE video_file_types.mode = 'schedule' AND duration > interval '0 seconds' "
+	"WHERE video_file_types.mode = 'schedule' AND duration > interval '0 seconds' AND schedule_fill_enable = 'true' "
 	"AND video_id NOT IN "
 		"(SELECT video_id FROM schedule_fill_items) "
         "GROUP BY videos.id, filename, duration, created_date, video_boxes.display_name, video_boxes.name, video_boxes.url_name, "
-        "videos.display_name, videos.url_name "
+        "videos.display_name, videos.url_name, videos.schedule_name "
 	"ORDER BY created_date DESC")
 
 fullvideolist = cur.fetchall()

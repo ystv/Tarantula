@@ -591,8 +591,6 @@ void EventProcessor_Fill::populatePlaceholderEvent (std::shared_ptr<MouseCatcher
 void EventProcessor_Fill::periodicDatabaseSync (std::shared_ptr<void> data, std::timed_mutex &core_lock,
 		std::string file, std::shared_ptr<FillDB> pdb, int synctime)
 {
-    // Lock is not technically needed, but a precaution against future multithreaded async jobs
-    std::lock_guard<std::timed_mutex> lock(core_lock);
     pdb->syncDatabase(file, synctime);
 }
 
@@ -749,6 +747,7 @@ FillDB::FillDB (std::string databasefile, std::map<int, int>& weightpoints,
         // Load from existing
         try
         {
+            g_logger.info("FillDB()" + ERROR_LOC, "Attaching database " + databasefile);
             oneTimeExec("ATTACH \"" + databasefile + "\" AS disk");
 
             oneTimeExec("BEGIN TRANSACTION");
@@ -766,9 +765,11 @@ FillDB::FillDB (std::string databasefile, std::map<int, int>& weightpoints,
 
             oneTimeExec("END TRANSACTION");
             oneTimeExec("DETACH disk");
+            g_logger.info("FillDB()" + ERROR_LOC, "Detaching database " + databasefile);
         }
         catch (std::exception &ex)
         {
+            g_logger.error("FillDB()" + ERROR_LOC, ex.what());
         }
     }
 
@@ -808,6 +809,11 @@ void FillDB::updateWeightPoints(std::map<int, int>& weightpoints, int fileweight
         {
             newquery << "AND (?1 - timestamp) > " << lastitem->first << " ";
         }
+        else
+        {
+            newquery << "AND (?1 - timestamp) > 0 ";
+        }
+
         newquery << " THEN (?1 - timestamp) * " << it->second << " ";
 
         lastitem = it;
@@ -822,7 +828,9 @@ void FillDB::updateWeightPoints(std::map<int, int>& weightpoints, int fileweight
     m_pgetbestfile_query.reset();
 
     // Replace the query
-    m_pgetbestfile_query = prepare(newquery.str().c_str());
+    std::string query = newquery.str();
+    
+    m_pgetbestfile_query = prepare(query.c_str());
 }
 
 /**
@@ -875,6 +883,7 @@ void FillDB::addFile (std::string filename, std::string device, std::string type
 void FillDB::syncDatabase (std::string databasefile, int last_sync)
 {
     // Attach the file
+    g_logger.info("DB Sync" + ERROR_LOC, "Attaching database " + databasefile);
     oneTimeExec("ATTACH \"" + databasefile + "\" AS disk");
     oneTimeExec("BEGIN TRANSACTION");
 
@@ -898,7 +907,14 @@ void FillDB::syncDatabase (std::string databasefile, int last_sync)
 
     // Detach the database
     oneTimeExec("END TRANSACTION");
+
+    // Reset the prepared statement or detach will fail
+    m_paddfile_query->getStmt();
+    m_pgetbestfile_query->getStmt();
+    m_paddplay_query->getStmt();
+
     oneTimeExec("DETACH disk");
+    g_logger.info("DB Sync" + ERROR_LOC, "Detached database " + databasefile);
 
 }
 

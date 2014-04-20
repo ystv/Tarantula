@@ -56,23 +56,23 @@ CasparFileList::CasparFileList (std::string database, std::string table) :
  */
 void CasparFileList::readFileList (std::map<std::string, VideoFile>& filelist)
 {
-	{
-		std::lock_guard<std::mutex> lock(m_list_lock);
-		m_pgetfilelist_query->rmParams();
-		m_pgetfilelist_query->bindParams();
+    {
+    std::lock_guard<std::mutex> lock(m_list_lock);
+    m_pgetfilelist_query->rmParams();
+    m_pgetfilelist_query->bindParams();
 
-		sqlite3_stmt *liststmt = m_pgetfilelist_query->getStmt();
+    sqlite3_stmt *liststmt = m_pgetfilelist_query->getStmt();
 
-		while (SQLITE_ROW == sqlite3_step(liststmt))
-		{
-			VideoFile thisfile;
-			thisfile.m_filename = reinterpret_cast<const char*>(sqlite3_column_text(liststmt, 0));
-			thisfile.m_path = reinterpret_cast<const char*>(sqlite3_column_text(liststmt, 1));
-			thisfile.m_duration = sqlite3_column_int64(liststmt, 2);
+    while (SQLITE_ROW == sqlite3_step(liststmt))
+    {
+        VideoFile thisfile;
+        thisfile.m_filename = reinterpret_cast<const char*>(sqlite3_column_text(liststmt, 0));
+        thisfile.m_path = reinterpret_cast<const char*>(sqlite3_column_text(liststmt, 1));
+        thisfile.m_duration = sqlite3_column_int64(liststmt, 2);
 
-			filelist[thisfile.m_filename] = thisfile;
-		}
-	}
+        filelist[thisfile.m_filename] = thisfile;
+    }
+    }
 }
 
 void CasparFileList::updateFileList (
@@ -101,6 +101,7 @@ void CasparFileList::updateFileList (
         deletedquery += ");";
     }
 
+    // Grab the lock for this bit as this function is async
     std::lock_guard<std::mutex> lock(m_list_lock);
 
     oneTimeExec("BEGIN TRANSACTION;");

@@ -64,16 +64,16 @@ PlaylistDB::PlaylistDB (std::string channel_name) :
             "parent, processed, lastupdate, callback, description) "
             "VALUES (?,?,?,?,?,?,?,0, strftime('%s', 'now'),?,?)");
     m_getevent_query = prepare("SELECT id, type, trigger, device, devicetype, action, duration, "
-            "parent, processed, lastupdate, callback, description FROM events "
+            "parent, callback, description FROM events "
             "WHERE type = ? AND trigger = ? AND processed = 0");
     m_getchildevents_query = prepare("SELECT id, type, trigger, device, devicetype, action, duration, "
-            "parent, processed, lastupdate, callback, description "
+            "parent, callback, description "
             "FROM events WHERE parent = ? AND processed = 0 "
             "ORDER BY trigger ASC");
     m_getparentevent_query = prepare("SELECT ev.id FROM events AS ev "
             "LEFT JOIN events as cev ON ev.id = cev.parent WHERE cev.id = ? AND ev.processed >= 0");
     m_geteventdetails_query = prepare("SELECT id, type, trigger, device, devicetype, action, duration, "
-            "parent, processed, lastupdate, callback, description "
+            "parent, callback, description "
             "FROM events WHERE id = ? AND processed >= 0");
     m_removeevent_query = prepare("UPDATE events SET processed = -1 WHERE id = ?; DELETE FROM extradata WHERE eventid = ?");
     m_processevent_query = prepare("UPDATE events SET processed = 1, lastupdate = strftime('%s', 'now') WHERE "
@@ -84,19 +84,33 @@ PlaylistDB::PlaylistDB (std::string channel_name) :
             "ORDER BY trigger DESC LIMIT 1");
 
     // Queries used by EventSource interface
-    m_geteventlist_query = prepare("SELECT * FROM events WHERE trigger >= ? AND trigger < ? AND "
-            "parent = 0 AND processed >= 0 ORDER BY trigger ASC");
+    m_geteventlist_query = prepare("SELECT DISTINCT events.id, events.type, events.trigger, events.device, "
+    		"events.devicetype, events.action, events.duration, events.parent, "
+    		"events.callback, events.description, extradata.key, extradata.value "
+    		"FROM events LEFT JOIN extradata ON extradata.eventid = events.id "
+    		"WHERE trigger >= ? AND trigger < ? AND parent = 0 AND events.processed >= 0 "
+    		"ORDER BY trigger ASC, events.id ASC");
     m_updateevent_query = prepare("UPDATE events SET type = ?, trigger = ?, filename = ?, device = ?, devicetype = ?, "
             "duration = ?, lastupdate = strftime('%s', 'now'), callback = ?, description = ?");
-    m_getcurrent_toplevel_query = prepare ("SELECT * FROM events WHERE parent = 0 AND processed > 0 "
-            "AND (trigger + duration) < strftime('%s', 'now') ORDER BY trigger DESC, duration ASC");
-    m_getnext_toplevel_query = prepare ("SELECT * FROM events WHERE parent = 0 AND processed = 0 "
+    m_getcurrent_toplevel_query = prepare ("SELECT events.id, events.type, events.trigger, events.device, "
+    		"events.devicetype, events.action, events.duration, events.parent,  "
+    		"events.preprocessor, events.description "
+    		"FROM events "
+    		"WHERE parent = 0 AND processed > 0 "
+            "AND (trigger + duration) < strftime('%s', 'now') "
+            "ORDER BY trigger DESC, duration ASC");
+
+    m_getnext_toplevel_query = prepare ("SELECT events.id, events.type, events.trigger, events.device, "
+    		"events.devicetype, events.action, events.duration, events.parent,  "
+    		"events.preprocessor, events.description "
+    		"FROM events "
+    		"WHERE parent = 0 AND processed = 0 "
     		"AND trigger > strftime('%s', 'now')");
 
     // Queries used by playlist sync system
     m_getdeletelist_query = prepare("SELECT events.id FROM events WHERE processed = -1; "
             "DELETE FROM events WHERE processed = -1");
-    m_getupdatelist_query = prepare("SELECT id, type, trigger, device, devicetype, action, duration, parent, processed, "
+    m_getupdatelist_query = prepare("SELECT id, type, trigger, device, devicetype, action, duration, parent, "
             "lastupdate, callback, description FROM events WHERE lastupdate > ? AND processed >= 0");
     m_getextradata_query = prepare("SELECT * FROM extradata LEFT JOIN events "
             "ON extradata.eventid = events.id WHERE events.processed >= 0 AND events.lastupdate > ?");
@@ -175,9 +189,9 @@ void PlaylistDB::populateEvent (sqlite3_stmt *pstmt, PlaylistEntry *pple)
     pple->m_duration = sqlite3_column_int(pstmt, 6);
     pple->m_parent = sqlite3_column_int(pstmt, 7);
     pple->m_preprocessor =
-            std::string(reinterpret_cast<const char*>(sqlite3_column_text (pstmt, 10)));
+            std::string(reinterpret_cast<const char*>(sqlite3_column_text (pstmt, 8)));
     pple->m_description =
-            std::string(reinterpret_cast<const char*>(sqlite3_column_text (pstmt, 11)));
+            std::string(reinterpret_cast<const char*>(sqlite3_column_text (pstmt, 9)));
 }
 
 /**
@@ -249,13 +263,32 @@ std::vector<PlaylistEntry> PlaylistDB::getEventList (time_t starttime,
     sqlite3_stmt *stmt = m_geteventlist_query->getStmt();
     while (sqlite3_step(stmt) == SQLITE_ROW)
     {
-        PlaylistEntry ple;
-        populateEvent(stmt, &ple);
+    	// Append to the last entry if ids match
+    	if (eventlist.size() > 0 &&
+    			sqlite3_column_int(stmt, 0) == eventlist.back().m_eventid)
+    	{
+    		eventlist.back().m_extras[reinterpret_cast<const char*>(
+            		sqlite3_column_text (stmt, 10))] =
+                    reinterpret_cast<const char*>(sqlite3_column_text (stmt, 11));
+    	}
+    	else
+    	{
 
-        getExtraData(&ple);
+			PlaylistEntry ple;
+			populateEvent(stmt, &ple);
 
-        eventlist.push_back(ple);
+			ple.m_extras[reinterpret_cast<const char*>(
+				sqlite3_column_text (stmt, 10))] =
+			    reinterpret_cast<const char*>(
+			    	sqlite3_column_text (stmt, 11));
+
+			eventlist.push_back(ple);
+    	}
     }
+
+    // Now go and get the extradata array
+
+
     return eventlist;
 }
 

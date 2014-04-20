@@ -25,8 +25,8 @@ Tarantula requires gcc-4.7 or above.
 ###Using Tarantula
 
 The default configuration enables several demo plugins and provides a simple
-user interface to add schedule events to the system. Additional plugins may
-be enabled in the config_base/ directory.
+user interface to add schedule events to the system. Copy the configuration 
+files from config_base/ to config/ and edit as needed to enable other plugins.
 
 Run `bin/Tarantula` after the build has completed to start the system. Then
 visit http://localhost:9816/ in a browser to access the web user interface.

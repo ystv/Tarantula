@@ -1,0 +1,15 @@
+# Ignore local config files
+config
+
+# Ignore built files
+*.o
+*.a
+*.so
+
+# Ignore databases
+*.db
+
+# Ignore Eclipse project files
+.project
+.cproject
+.settings

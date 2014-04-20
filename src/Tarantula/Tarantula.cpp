@@ -102,16 +102,16 @@ int main (int argc, char *argv[])
     Log_Screen ls(h);
 
     // Load the config
-    g_pbaseconfig = std::make_shared<BaseConfigLoader>("config_base/Base.xml");
+    g_pbaseconfig = std::make_shared<BaseConfigLoader>("config/Base.xml");
 
     // Load the core database
     // UNHAPPY NOTE: This MUST be run before any plugins try and use SQLite, or weird segfaults result
     g_pcoredatabase = std::make_shared<MemDB>(g_pbaseconfig->getOfflineDatabasePath().c_str());
 
     // Load all non-Mousecatcher plugins
-    loadAllPlugins("config_base/" + g_pbaseconfig->getDevicesPath(), "Device");
-    loadAllPlugins("config_base/" + g_pbaseconfig->getInterfacesPath(), "Interface");
-    loadAllPlugins("config_base/" + g_pbaseconfig->getLogsPath(), "Logger");
+    loadAllPlugins("config/" + g_pbaseconfig->getDevicesPath(), "Device");
+    loadAllPlugins("config/" + g_pbaseconfig->getInterfacesPath(), "Interface");
+    loadAllPlugins("config/" + g_pbaseconfig->getLogsPath(), "Logger");
     g_logger.info("Tarantula Core",
             "Config loaded. System name is: " + g_pbaseconfig->getSystemName());
 
@@ -135,8 +135,8 @@ int main (int argc, char *argv[])
     }
 
     // Initialise MouseCatcher
-    MouseCatcherCore::init("config_base/" + g_pbaseconfig->getEventSourcesPath(),
-            "config_base/" + g_pbaseconfig->getEventProcessorsPath());
+    MouseCatcherCore::init("config/" + g_pbaseconfig->getEventSourcesPath(),
+            "config/" + g_pbaseconfig->getEventProcessorsPath());
 
 
     // Tick loop with length set by framerate

@@ -5,7 +5,7 @@
 	    <Type>Device</Type>
 	    <Library>VideoDevice_Caspar</Library>
 	    <Instance>Main Video Server</Instance>
-	    <Enabled>true</Enabled>
+	    <Enabled>false</Enabled>
 	</PluginLoad>
 	<PluginData mode="simple">
 	    <Type>Video</Type>

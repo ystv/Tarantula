@@ -18,4 +18,4 @@ all: $(addprefix ../../build/$(NAME)-,$(FILES:.cpp=.o)) ../../bin/Tarantula
 	$(CXX) $(COPTS) -fpic -o $@ -c $<
 
 ../../bin/Tarantula: $(addprefix ../../build/$(NAME)-,$(FILES:.cpp=.o)) $(EXTRAS)
-	$(CXX) $(COPTS) -o $@ $(COMMON) $(addprefix ../../build/$(NAME)-,$(FILES:.cpp=.o)) $(EXTRAS) $(LIBS) -lpugixml -lrt -L../../bin
+	$(CXX) -rdynamic $(COPTS) -o $@ $(COMMON) $(addprefix ../../build/$(NAME)-,$(FILES:.cpp=.o)) $(EXTRAS) $(LIBS) -lpugixml -lrt -L../../bin

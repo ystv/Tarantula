@@ -4,7 +4,7 @@ OOPT ?=
 #COPTEXEC only used on executables, not libs 
 COPTEXEC ?=
 
-COPTS= $(MOPT) $(OOPT) -ggdb -pg -std=c++0x -Wl,-rpath=\$$ORIGIN -Wall $(addprefix -I,$(INCLUDE))
+COPTS= $(MOPT) $(OOPT) -ggdb -pg -std=c++0x -Wl,-rpath=\$$ORIGIN -Wall -Wno-unused-local-typedefs $(addprefix -I,$(INCLUDE))
 
 LIBS= -lpthread -ldl 
 

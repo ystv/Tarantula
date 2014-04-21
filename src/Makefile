@@ -18,7 +18,7 @@ Optional: sqlite-amalgamation
 MouseCatcher: Common
 	$(MAKE) -C $@
 	
-Tarantula: Common libPugiXML Optional
+Tarantula: Common libPugiXML Optional MouseCatcher
 	$(MAKE) -C $@
 	
 Plugins: Common Tarantula libCaspar Optional

@@ -18,7 +18,7 @@
 *
 *   File Name   : PlaylistDB.h
 *   Version     : 1.0
-*   Description : Extends MemDB to use as the playlist database
+*   Description : Extends SQLiteDB to use as the playlist database
 *
 *****************************************************************************/
 
@@ -29,7 +29,7 @@
 #include <cstdlib>
 #include <map>
 #include <mutex>
-#include "MemDB.h" //parent class
+#include "SQLiteDB.h" //parent class
 
 
 enum playlist_event_type_t
@@ -127,10 +127,10 @@ public:
 };
 
 /**
- * This is an extension of MemDB to hold Playlist data in a playlist table,
+ * This is an extension of SQLiteDB to hold Playlist data in a playlist table,
  * with a structure corresponding to the playlist XML spec.
  */
-class PlaylistDB: public MemDB
+class PlaylistDB: public SQLiteDB
 {
 public:
     PlaylistDB (std::string channel);

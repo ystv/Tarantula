@@ -20,7 +20,7 @@
 *   Version     : 1.0
 *   Description : Definition of an EventProcessor to generate events for
 *   idents, trailers and continuity graphics to fill schedules. Also contains
-*   a FillDB class to extend MemDB and provide a database backend.
+*   a FillDB class to extend SQLiteDB and provide a database backend.
 *
 *****************************************************************************/
 
@@ -34,9 +34,9 @@
 
 #include "MouseCatcherProcessorPlugin.h"
 #include "PluginConfig.h"
-#include "MemDB.h"
+#include "SQLiteDB.h"
 
-class FillDB : public MemDB
+class FillDB : public SQLiteDB
 {
 public:
     FillDB(std::string databasefile, std::map<int, int>& weightpoints,

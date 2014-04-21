@@ -18,7 +18,7 @@
 *
 *   File Name   : PlaylistDB.cpp
 *   Version     : 1.0
-*   Description : Extends MemDB to use as the playlist database
+*   Description : Extends SQLiteDB to use as the playlist database
 *
 *****************************************************************************/
 
@@ -50,7 +50,7 @@ PlaylistEntry::PlaylistEntry ()
  *
  */
 PlaylistDB::PlaylistDB (std::string channel_name) :
-        MemDB()
+        SQLiteDB()
 {
     // Do the initial database setup
     oneTimeExec("CREATE TABLE events (id INTEGER PRIMARY KEY AUTOINCREMENT, type INT, trigger INT64, device TEXT, "
@@ -569,12 +569,12 @@ struct extralines
    std::string value;
 };
 
-class DBWriter : public MemDB
+class DBWriter : public SQLiteDB
 {
     std::shared_ptr<DBQuery> m_insert_events;
     std::shared_ptr<DBQuery> m_insert_data;
 public:
-    DBWriter(std::string filename, std::string table) : MemDB(filename.c_str())
+    DBWriter(std::string filename, std::string table) : SQLiteDB(filename.c_str())
     {
         m_insert_events = prepare("INSERT INTO [" + table + "] (id, type, trigger, device, devicetype, action, "
                 "duration, parent, callback, description) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");

@@ -16,7 +16,7 @@
 *
 *   Contact     : tarantula@ystv.co.uk
 *
-*   File Name   : MemDB.cpp
+*   File Name   : SQLiteDB.cpp
 *   Version     : 1.0
 *   Description : Base class for an in-memory SQLite database. A wrapper around
 *                 the sqlite functions to make them a bit more C++y Also
@@ -25,7 +25,7 @@
 *****************************************************************************/
 
 
-#include "MemDB.h"
+#include "SQLiteDB.h"
 #include "Log.h"
 #include "ErrorMacro.h"
 #include <iostream>
@@ -67,9 +67,9 @@ DBParam::DBParam ()
 }
 
 /**
- * MemDB implementations.
+ * SQLiteDB implementations.
  */
-MemDB::MemDB ()
+SQLiteDB::SQLiteDB ()
 {
     sqlite3_open(":memory:", &m_pdb);
 }
@@ -78,18 +78,18 @@ MemDB::MemDB ()
  * Opens a file-based database instead of an in-memory one. Will create it if
  * it doesn't exist.
  */
-MemDB::MemDB (const char* filename)
+SQLiteDB::SQLiteDB (const char* filename)
 {
     int ret = sqlite3_open(filename, &m_pdb);
 
     if (SQLITE_OK != ret)
     {
-        g_logger.error("MemDB Open()" + ERROR_LOC, sqlite3_errmsg(m_pdb));
+        g_logger.error("SQLiteDB Open()" + ERROR_LOC, sqlite3_errmsg(m_pdb));
         throw std::exception();
     }
 }
 
-MemDB::~MemDB ()
+SQLiteDB::~SQLiteDB ()
 {
     sqlite3_close_v2(m_pdb);
 }
@@ -99,7 +99,7 @@ MemDB::~MemDB ()
  *
  * @param filename
  */
-void MemDB::dump (const char* filename)
+void SQLiteDB::dump (const char* filename)
 {
     sqlite3_backup *BackupObj;
     sqlite3 *file;
@@ -120,9 +120,9 @@ void MemDB::dump (const char* filename)
  * a pointer to the result. Does not create duplicates.
  *
  * @param sql The SQL query string to be executed
- * @return    A pointer to the entry in the MemDB instance query table.
+ * @return    A pointer to the entry in the SQLiteDB instance query table.
  */
-std::shared_ptr<DBQuery> MemDB::prepare (std::string sql)
+std::shared_ptr<DBQuery> SQLiteDB::prepare (std::string sql)
 {
     return std::make_shared<DBQuery>(sql, m_pdb);
 }
@@ -132,7 +132,7 @@ std::shared_ptr<DBQuery> MemDB::prepare (std::string sql)
  *
  * @param sql
  */
-void MemDB::oneTimeExec (std::string sql)
+void SQLiteDB::oneTimeExec (std::string sql)
 {
     // Prepare query
     sqlite3_stmt *stmt;
@@ -146,7 +146,7 @@ void MemDB::oneTimeExec (std::string sql)
     int ret = sqlite3_step(stmt);
     if (SQLITE_DONE != ret)
     {
-        g_logger.error("MemDB oneTimeExec()" + ERROR_LOC, sqlite3_errmsg(m_pdb));
+        g_logger.error("SQLiteDB oneTimeExec()" + ERROR_LOC, sqlite3_errmsg(m_pdb));
         volatile int error = -1;
         error = ret;
     }
@@ -159,7 +159,7 @@ void MemDB::oneTimeExec (std::string sql)
  * Return the row ID of the last inserted row.
  * @return
  */
-int MemDB::getLastRowID ()
+int SQLiteDB::getLastRowID ()
 {
     return sqlite3_last_insert_rowid(m_pdb);
 }

@@ -41,7 +41,7 @@
  * @param instance Name of this plugin instance, used to name tables
  */
 CasparFileList::CasparFileList (std::string database, std::string table) :
-    MemDB(database.c_str())
+    SQLiteDB(database.c_str())
 {
     oneTimeExec("CREATE TABLE IF NOT EXISTS [" + table + "_files] (filename TEXT, path TEXT, duration INT64)");
     m_pgetfilelist_query = prepare("SELECT filename, path, duration FROM [" + table + "_files]");

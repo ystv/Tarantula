@@ -36,7 +36,7 @@
 #include "libCaspar/libCaspar.h"
 #include "VideoDevice.h"
 #include "PluginConfig.h"
-#include "MemDB.h"
+#include "SQLiteDB.h"
 
 class threadCom
 {
@@ -52,7 +52,7 @@ public:
 /**
  * A disk database for persistent file list storage.
  */
-class CasparFileList : public MemDB
+class CasparFileList : public SQLiteDB
 {
 public:
     CasparFileList (std::string database, std::string m_table);

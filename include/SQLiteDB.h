@@ -16,11 +16,11 @@
 *
 *   Contact     : tarantula@ystv.co.uk
 *
-*   File Name   : MemDB.h
+*   File Name   : SQLiteDB.h
 *   Version     : 1.0
 *   Description : Base class for an in-memory SQLite database. A wrapper around
 *                 the sqlite functions to make them a bit more C++y Also
-*                 contains classes for DBParam and DBQuery used by MemDB.
+*                 contains classes for DBParam and DBQuery used by SQLiteDB.
 *
 *****************************************************************************/
 
@@ -94,12 +94,12 @@ private:
 /**
  * Wrapper around SQLite to be more C++
  */
-class MemDB
+class SQLiteDB
 {
 public:
-    MemDB ();
-    MemDB (const char* filename);
-    ~MemDB ();
+    SQLiteDB ();
+    SQLiteDB (const char* filename);
+    ~SQLiteDB ();
     void dump (const char* filename); // Dumps out the database to an SQLite file
     void oneTimeExec (std::string sql); // Run a query verbatim without parameters
 protected:

@@ -20,7 +20,7 @@
 *   Version     : 1.0
 *   Description : Implementation of an EventProcessor to generate events for
 *   idents, trailers and continuity graphics to fill schedules. Also contains
-*   a FillDB class to extend MemDB and provide a database backend.
+*   a FillDB class to extend SQLiteDB and provide a database backend.
 *
 *****************************************************************************/
 
@@ -732,7 +732,7 @@ void EventProcessor_Fill::singleShotMode (PlaylistEntry &event, Channel *pchanne
  */
 FillDB::FillDB (std::string databasefile, std::map<int, int>& weightpoints,
         int fileweight) :
-        MemDB()
+        SQLiteDB()
 {
 
     // Table creation

@@ -98,6 +98,10 @@ SQLiteDB::SQLiteDB (std::string filename)
         g_logger.error("SQLiteDB Open()" + ERROR_LOC, sqlite3_errmsg(m_pdb));
         throw std::exception();
     }
+
+    // Enable write-ahead and disable synchronous mode for performance
+    oneTimeExec("PRAGMA journal_mode=WAL");
+    oneTimeExec("PRAGMA synchronous=0");
 }
 
 
@@ -156,9 +160,10 @@ void SQLiteDB::oneTimeExec (std::string sql)
 
     // Run query
     int ret = sqlite3_step(stmt);
-    if (SQLITE_DONE != ret)
+    if (SQLITE_DONE != ret && SQLITE_ROW != ret)
     {
-        g_logger.error("SQLiteDB oneTimeExec()" + ERROR_LOC, sqlite3_errmsg(m_pdb));
+        g_logger.error("SQLiteDB oneTimeExec()" + ERROR_LOC,
+        		"Code: " + std::to_string(ret) + " - " + sqlite3_errmsg(m_pdb));
     }
 
     // Remove from prepared statement store to free memory

@@ -7,7 +7,7 @@ config
 *.so
 
 # Ignore databases
-*.db
+*.db*
 
 # Ignore Eclipse project files
 .project

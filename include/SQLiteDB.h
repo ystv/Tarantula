@@ -97,7 +97,7 @@ private:
 class SQLiteDB
 {
 public:
-    SQLiteDB ();
+	SQLiteDB (std::string filename);
     SQLiteDB (const char* filename);
     ~SQLiteDB ();
     void dump (const char* filename); // Dumps out the database to an SQLite file

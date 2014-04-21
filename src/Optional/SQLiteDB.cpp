@@ -67,16 +67,10 @@ DBParam::DBParam ()
 }
 
 /**
- * SQLiteDB implementations.
- */
-SQLiteDB::SQLiteDB ()
-{
-    sqlite3_open(":memory:", &m_pdb);
-}
-
-/**
- * Opens a file-based database instead of an in-memory one. Will create it if
- * it doesn't exist.
+ * Opens a file-based database.
+ * Will create it if it doesn't exist.
+ *
+ * @param filename Path to database file
  */
 SQLiteDB::SQLiteDB (const char* filename)
 {
@@ -89,13 +83,31 @@ SQLiteDB::SQLiteDB (const char* filename)
     }
 }
 
+/**
+ * Opens a file-based database.
+ * Will create it if it doesn't exist.
+ *
+ * @param filename Path to database file
+ */
+SQLiteDB::SQLiteDB (std::string filename)
+{
+    int ret = sqlite3_open(filename.c_str(), &m_pdb);
+
+    if (SQLITE_OK != ret)
+    {
+        g_logger.error("SQLiteDB Open()" + ERROR_LOC, sqlite3_errmsg(m_pdb));
+        throw std::exception();
+    }
+}
+
+
 SQLiteDB::~SQLiteDB ()
 {
     sqlite3_close_v2(m_pdb);
 }
 
 /**
- * Dump the entire database out to the specified file.
+ * Dump the entire database out to the specified file. Good for debugging
  *
  * @param filename
  */
@@ -147,8 +159,6 @@ void SQLiteDB::oneTimeExec (std::string sql)
     if (SQLITE_DONE != ret)
     {
         g_logger.error("SQLiteDB oneTimeExec()" + ERROR_LOC, sqlite3_errmsg(m_pdb));
-        volatile int error = -1;
-        error = ret;
     }
 
     // Remove from prepared statement store to free memory

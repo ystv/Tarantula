@@ -29,73 +29,78 @@
 #include "Misc.h"
 
 /**
- * Equivalent to a row in the playlist database, containing
- * all the data for a single event
- *
- */
-PlaylistEntry::PlaylistEntry ()
-{
-    m_eventid = -1;
-    m_eventtype = EVENT_FIXED;
-    m_trigger = 0;
-    m_device.clear();
-    m_duration = 0;
-    m_parent = 0;
-    m_extras.clear();
-}
-
-/**
  * Constructor.
  * Generates a database structure and prepares queries for other functions
  *
  */
 PlaylistDB::PlaylistDB (std::string channel_name) :
-        SQLiteDB()
+        SQLiteDB(g_pbaseconfig->getOfflineDatabasePath())
 {
+	// Identify db table names
+	std::string evt = "\"" + channel_name + "_events\"";
+	std::string edt = "\"" + channel_name + "_extradata\"";
+
     // Do the initial database setup
-    oneTimeExec("CREATE TABLE events (id INTEGER PRIMARY KEY AUTOINCREMENT, type INT, trigger INT64, device TEXT, "
-            "devicetype INT, action, duration INT, parent INT, processed INT, lastupdate INT64, callback TEXT, "
-            "description TEXT)");
-    oneTimeExec("CREATE TABLE extradata (eventid INT, key TEXT, value TEXT, processed INT)");
-    oneTimeExec("CREATE INDEX trigger_index ON events (trigger)");
+    oneTimeExec("CREATE TABLE IF NOT EXISTS " + evt + " (id INTEGER PRIMARY KEY AUTOINCREMENT, type INT, trigger INT64, "
+    		"device TEXT, devicetype INT, action, duration INT, parent INT, processed INT, lastupdate INT64, "
+    		"callback TEXT, description TEXT)");
+    oneTimeExec("CREATE TABLE IF NOT EXISTS " + edt + " (eventid INT, key TEXT, value TEXT, processed INT)");
+    oneTimeExec("CREATE INDEX IF NOT EXISTS \"" + channel_name + "_trigger_index\" ON " + evt + " (trigger)");
 
     // Queries used by other functions
-    m_addevent_query = prepare("INSERT INTO events (type, trigger, device, devicetype, action, duration, "
+    m_addevent_query = prepare("INSERT INTO " + evt + " (type, trigger, device, devicetype, action, duration, "
             "parent, processed, lastupdate, callback, description) "
             "VALUES (?,?,?,?,?,?,?,0, strftime('%s', 'now'),?,?)");
+
     m_getevent_query = prepare("SELECT id, type, trigger, device, devicetype, action, duration, "
-            "parent, callback, description FROM events "
+            "parent, callback, description "
+            "FROM " + evt + " "
             "WHERE type = ? AND trigger = ? AND processed = 0");
+
     m_getchildevents_query = prepare("SELECT id, type, trigger, device, devicetype, action, duration, "
             "parent, callback, description "
-            "FROM events WHERE parent = ? AND processed = 0 "
+            "FROM " + evt + " "
+            "WHERE parent = ? AND processed = 0 "
             "ORDER BY trigger ASC");
-    m_getparentevent_query = prepare("SELECT ev.id FROM events AS ev "
-            "LEFT JOIN events as cev ON ev.id = cev.parent WHERE cev.id = ? AND ev.processed >= 0");
+
+    m_getparentevent_query = prepare("SELECT ev.id FROM " + evt + " AS ev "
+            "LEFT JOIN " + evt + " as cev ON ev.id = cev.parent "
+            "WHERE cev.id = ? AND ev.processed >= 0");
+
     m_geteventdetails_query = prepare("SELECT id, type, trigger, device, devicetype, action, duration, "
             "parent, callback, description "
-            "FROM events WHERE id = ? AND processed >= 0");
-    m_removeevent_query = prepare("UPDATE events SET processed = -1 WHERE id = ?; DELETE FROM extradata WHERE eventid = ?");
-    m_processevent_query = prepare("UPDATE events SET processed = 1, lastupdate = strftime('%s', 'now') WHERE "
-            "id = ? AND processed >= 0; UPDATE extradata SET processed = 1 WHERE eventid = ?");
-    m_addextras_query = prepare("INSERT INTO extradata VALUES (?,?,?,0)");
-    m_getextras_query = prepare("SELECT key,value FROM extradata WHERE eventid = ?");
-    m_gethold_query = prepare("SELECT id FROM events WHERE trigger <= ? AND processed = 0 AND type = ? "
+            "FROM " + evt + " "
+            "WHERE id = ? AND processed >= 0");
+
+    m_removeevent_query = prepare("UPDATE " + evt + " SET processed = -1 WHERE id = ?; "
+    		"DELETE FROM " + edt + " WHERE eventid = ?");
+
+    m_processevent_query = prepare("UPDATE " + evt + " SET processed = 1, lastupdate = strftime('%s', 'now') WHERE "
+            "id = ? AND processed >= 0; "
+            "UPDATE " + edt + " SET processed = 1 WHERE eventid = ?");
+
+    m_addextras_query = prepare("INSERT INTO " + edt + " VALUES (?,?,?,0)");
+
+    m_getextras_query = prepare("SELECT key,value FROM " + edt + " WHERE eventid = ?");
+
+    m_gethold_query = prepare("SELECT id FROM " + evt + " WHERE trigger <= ? AND processed = 0 AND type = ? "
             "ORDER BY trigger DESC LIMIT 1");
 
     // Queries used by EventSource interface
     m_geteventlist_query = prepare("SELECT DISTINCT events.id, events.type, events.trigger, events.device, "
     		"events.devicetype, events.action, events.duration, events.parent, "
     		"events.callback, events.description, extradata.key, extradata.value "
-    		"FROM events LEFT JOIN extradata ON extradata.eventid = events.id "
+    		"FROM " + evt + " AS events LEFT JOIN " + edt + " AS extradata ON extradata.eventid = events.id "
     		"WHERE trigger >= ? AND trigger < ? AND parent = 0 AND events.processed >= 0 "
     		"ORDER BY trigger ASC, events.id ASC");
-    m_updateevent_query = prepare("UPDATE events SET type = ?, trigger = ?, filename = ?, device = ?, devicetype = ?, "
+
+    m_updateevent_query = prepare("UPDATE " + evt + " SET type = ?, trigger = ?, filename = ?, device = ?, devicetype = ?, "
             "duration = ?, lastupdate = strftime('%s', 'now'), callback = ?, description = ?");
+
     m_getcurrent_toplevel_query = prepare ("SELECT events.id, events.type, events.trigger, events.device, "
     		"events.devicetype, events.action, events.duration, events.parent,  "
     		"events.preprocessor, events.description "
-    		"FROM events "
+    		"FROM " + evt + " AS events "
     		"WHERE parent = 0 AND processed > 0 "
             "AND (trigger + duration) < strftime('%s', 'now') "
             "ORDER BY trigger DESC, duration ASC");
@@ -103,28 +108,27 @@ PlaylistDB::PlaylistDB (std::string channel_name) :
     m_getnext_toplevel_query = prepare ("SELECT events.id, events.type, events.trigger, events.device, "
     		"events.devicetype, events.action, events.duration, events.parent,  "
     		"events.preprocessor, events.description "
-    		"FROM events "
+    		"FROM " + evt + " AS events "
     		"WHERE parent = 0 AND processed = 0 "
     		"AND trigger > strftime('%s', 'now')");
 
     // Queries used by playlist sync system
-    m_getdeletelist_query = prepare("SELECT events.id FROM events WHERE processed = -1; "
-            "DELETE FROM events WHERE processed = -1");
+    m_getdeletelist_query = prepare("SELECT id FROM " + evt + " WHERE processed = -1; "
+            "DELETE FROM " + evt + " WHERE processed = -1");
+
     m_getupdatelist_query = prepare("SELECT id, type, trigger, device, devicetype, action, duration, parent, "
-            "lastupdate, callback, description FROM events WHERE lastupdate > ? AND processed >= 0");
-    m_getextradata_query = prepare("SELECT * FROM extradata LEFT JOIN events "
+            "lastupdate, callback, description FROM " + evt + " WHERE lastupdate > ? AND processed >= 0");
+
+    m_getextradata_query = prepare("SELECT * FROM " + edt + " AS extradata LEFT JOIN " + evt + " AS events "
             "ON extradata.eventid = events.id WHERE events.processed >= 0 AND events.lastupdate > ?");
 
     // Queries used by Shunt command
-    m_shunt_eventcount_query = prepare("SELECT trigger, duration FROM events WHERE parent = 0 AND processed >= 0 AND "
-            "trigger >= ? AND trigger < ? ORDER BY trigger ASC, duration DESC LIMIT 1");
-    m_shunt_eventupdate_query = prepare("UPDATE events SET trigger = trigger + ?, lastupdate = strftime('%s', 'now') "
-            "WHERE trigger >= ? AND trigger < ?");
+    m_shunt_eventcount_query = prepare("SELECT trigger, duration FROM " + evt + " "
+    		"WHERE parent = 0 AND processed >= 0 AND trigger >= ? AND trigger < ? "
+    		"ORDER BY trigger ASC, duration DESC LIMIT 1");
 
-    // Read in some data
-    m_channame = channel_name;
-    m_last_sync = 0;
-    readFromDisk(g_pbaseconfig->getOfflineDatabasePath(), channel_name);
+    m_shunt_eventupdate_query = prepare("UPDATE " + evt + " SET trigger = trigger + ?, lastupdate = strftime('%s', 'now') "
+            "WHERE trigger >= ? AND trigger < ?");
 }
 
 /**
@@ -522,197 +526,4 @@ PlaylistEntry PlaylistDB::getNextEvent()
 	{
 		throw std::exception();
 	}
-}
-
-/**
- * Read the playlist from a database on disk
- *
- * @param file  File name to read from
- * @param table Table name stub for this playlist
- */
-void PlaylistDB::readFromDisk (std::string file, std::string table)
-{
-    // Load from existing
-    try
-    {
-        oneTimeExec("ATTACH \"" + file + "\" AS disk");
-
-        oneTimeExec("CREATE TABLE IF NOT EXISTS disk.[" + table + "] (id INTEGER PRIMARY KEY AUTOINCREMENT, "
-                "type INT, trigger INT64, device TEXT, devicetype INT, action, "
-                "duration INT, parent INT, callback TEXT, description TEXT)");
-        oneTimeExec("CREATE TABLE IF NOT EXISTS disk.[" + table + "_data] (eventid INT, key TEXT, value TEXT)");
-
-        oneTimeExec("BEGIN TRANSACTION");
-
-        oneTimeExec("INSERT INTO events (id, type, trigger, device, devicetype, action, duration, parent, processed, lastupdate, "
-                "callback, description) "
-                "SELECT id, type, trigger, device, devicetype, action, duration, parent, 0, strftime('%s', 'now'),"
-                "callback, description FROM disk.[" + table + "] WHERE trigger > strftime('%s', 'now')");
-
-        oneTimeExec("INSERT INTO extradata (eventid, key, value, processed) "
-                "SELECT eventid, key, value, 0 FROM disk.[" + table + "_data]");
-
-        oneTimeExec("END TRANSACTION");
-
-        oneTimeExec("DETACH disk");
-    }
-    catch (...)
-    {
-    }
-}
-
-// Prepare to get updated data
-struct extralines
-{
-   int eventid;
-   std::string key;
-   std::string value;
-};
-
-class DBWriter : public SQLiteDB
-{
-    std::shared_ptr<DBQuery> m_insert_events;
-    std::shared_ptr<DBQuery> m_insert_data;
-public:
-    DBWriter(std::string filename, std::string table) : SQLiteDB(filename.c_str())
-    {
-        m_insert_events = prepare("INSERT INTO [" + table + "] (id, type, trigger, device, devicetype, action, "
-                "duration, parent, callback, description) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        m_insert_data = prepare("INSERT INTO [" + table + "_data] (eventid, key, value) VALUES (?, ?, ?)");
-    }
-
-    void insertdata(std::vector<PlaylistEntry>& updateevents, std::vector<extralines>& updatedatalines)
-    {
-        for (PlaylistEntry thisev : updateevents)
-        {
-            m_insert_events->rmParams();
-            m_insert_events->addParam(1, DBParam(thisev.m_eventid));
-            m_insert_events->addParam(2, DBParam(thisev.m_eventtype));
-            m_insert_events->addParam(3, DBParam(thisev.m_trigger));
-            m_insert_events->addParam(4, DBParam(thisev.m_device));
-            m_insert_events->addParam(5, DBParam(thisev.m_devicetype));
-            m_insert_events->addParam(6, DBParam(thisev.m_action));
-            m_insert_events->addParam(7, DBParam(thisev.m_duration));
-            m_insert_events->addParam(8, DBParam(thisev.m_parent));
-            m_insert_events->addParam(9, DBParam(thisev.m_preprocessor));
-            m_insert_events->addParam(10, DBParam(thisev.m_description));
-            m_insert_events->bindParams();
-            sqlite3_step(m_insert_events->getStmt());
-        }
-
-        for (extralines thisline : updatedatalines)
-        {
-            m_insert_data->rmParams();
-            m_insert_data->addParam(1, DBParam(thisline.eventid));
-            m_insert_data->addParam(2, DBParam(thisline.key));
-            m_insert_data->addParam(3, DBParam(thisline.value));
-            m_insert_data->bindParams();
-            sqlite3_step(m_insert_data->getStmt());
-        }
-    }
-};
-
-/**
- * Write changed database events to the disk
- *
- * @param file  File name to write to
- * @param table Table to write events to
- */
-void PlaylistDB::writeToDisk (std::string file, std::string table, std::timed_mutex &core_lock)
-{
-    try
-    {
-        std::string deletedids;
-        std::vector<PlaylistEntry> updateevents;
-        std::vector<extralines> updatedatalines;
-
-        {
-        	std::lock_guard<std::timed_mutex> lock(core_lock);
-
-            // Prepare to get updated rows
-            m_getupdatelist_query->rmParams();
-            m_getupdatelist_query->addParam(1, DBParam(m_last_sync));
-            m_getupdatelist_query->bindParams();
-            sqlite3_stmt *updaterows = m_getupdatelist_query->getStmt();
-
-            // Prepare to get deleted rows
-            m_getdeletelist_query->rmParams();
-            m_getdeletelist_query->bindParams();
-            sqlite3_stmt *deletedlist = m_getdeletelist_query->getStmt();
-
-            // Prepare to get updated extradata
-            m_getextradata_query->rmParams();
-            m_getextradata_query->addParam(1, DBParam(m_last_sync));
-            m_getextradata_query->bindParams();
-            sqlite3_stmt *updatedata = m_getextradata_query->getStmt();
-
-            // Get deleted rows
-            while (sqlite3_step(deletedlist) == SQLITE_ROW)
-            {
-                deletedids += std::to_string(sqlite3_column_int(deletedlist, 0)) + ", ";
-            }
-
-            // Get updated rows
-            while (sqlite3_step(updaterows) == SQLITE_ROW)
-            {
-                PlaylistEntry pl;
-                populateEvent(updaterows, &pl);
-                updateevents.push_back(pl);
-            }
-
-            // Get updated extradata lines
-            while (sqlite3_step(updatedata) == SQLITE_ROW)
-            {
-                extralines el;
-                el.eventid = sqlite3_column_int(updatedata, 0);
-                el.key = reinterpret_cast<const char *>(sqlite3_column_text(updatedata, 1));
-                el.value = reinterpret_cast<const char *>(sqlite3_column_text(updatedata, 2));
-                updatedatalines.push_back(el);
-            }
-        }
-
-        if (updateevents.size() > 0)
-        {
-            for (PlaylistEntry& ev : updateevents)
-            {
-                deletedids += std::to_string(ev.m_eventid) + ", ";
-            }
-        }
-
-        std::string datadeletequery;
-
-        try
-        {
-
-            DBWriter filedata(file.c_str(), table);
-
-            filedata.oneTimeExec("BEGIN TRANSACTION");
-
-            if (deletedids.length() > 2)
-            {
-                deletedids = deletedids.substr(0, deletedids.length() - 2);
-
-                filedata.oneTimeExec("DELETE FROM [" + table + "] WHERE id IN (" + deletedids + ")");
-            }
-
-            if (datadeletequery.length() > 2)
-            {
-                filedata.oneTimeExec(datadeletequery + ")");
-            }
-
-            filedata.insertdata(updateevents, updatedatalines);
-
-            filedata.oneTimeExec("END TRANSACTION");
-
-            m_last_sync = time(NULL);
-        }
-        catch (std::exception ex)
-        {
-            g_logger.warn("PlaylistDB Disk Sync" + ERROR_LOC, "An error ocurred syncing the database. Will retry shortly");
-        }
-
-    }
-    catch (...)
-    {
-    }
 }

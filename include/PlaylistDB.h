@@ -123,7 +123,6 @@ public:
     int m_parent;
     std::map<std::string, std::string> m_extras;
     std::string m_preprocessor;
-    PlaylistEntry ();
 };
 
 /**
@@ -159,7 +158,6 @@ private:
     void readFromDisk (std::string file, std::string table);
 
     std::string m_channame;
-    time_t m_last_sync;
 
     std::shared_ptr<DBQuery> m_addevent_query;
     std::shared_ptr<DBQuery> m_getevent_query;

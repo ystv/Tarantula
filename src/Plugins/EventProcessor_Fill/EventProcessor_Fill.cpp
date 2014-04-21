@@ -61,7 +61,6 @@ EventProcessor_Fill::EventProcessor_Fill (PluginConfig config, Hook h) :
     m_pdb = std::shared_ptr<FillDB>(new FillDB(m_dbfile, m_weightpoints, m_fileweight));
 
     m_placeholderid = 0;
-    m_psynctime = std::make_shared<int>(0);
 
     // Populate information array
     m_processorinfo.data["duration"] = "int";
@@ -73,16 +72,15 @@ EventProcessor_Fill::EventProcessor_Fill (PluginConfig config, Hook h) :
     g_preprocessorlist.emplace("EventProcessor_Fill::singleShotMode_" + config.m_instance,
             std::bind(&EventProcessor_Fill::singleShotMode, std::placeholders::_1, std::placeholders::_2,
                     m_structuredata, m_filler, m_continuityfill, m_continuitymin, m_offset, m_jobpriority,
-                    m_pdb, m_pluginname, m_dbfile, m_psynctime));
+                    m_pdb, m_pluginname));
 
 }
 
 /**
- * Destructor. Syncs the database in memory to disk and erases PP
+ * Destructor. Erases preprocessors
  */
 EventProcessor_Fill::~EventProcessor_Fill ()
 {
-    m_pdb->syncDatabase(m_dbfile, *m_psynctime);
     g_preprocessorlist.erase("EventProcessor_Fill::populateCGNowNext");
     g_preprocessorlist.erase("EventProcessor_Fill::singleShotMode_" + m_pluginname);
 }
@@ -124,14 +122,6 @@ void EventProcessor_Fill::readConfig (PluginConfig config)
         m_hook.gs->L->warn(config.m_instance, "JobPriority factor not set, assuming 5");
         m_jobpriority = 5;
     }
-
-    m_cyclesbeforesync = config.m_plugindata_xml.child("CyclesBeforeSync").text().as_int(-1);
-    if (-1 == m_cyclesbeforesync)
-    {
-        m_hook.gs->L->warn(config.m_instance, "CyclesBeforeSync factor not set, assuming 2");
-        m_cyclesbeforesync = 2;
-    }
-    m_cyclesremaining = m_cyclesbeforesync;
 
     // Parse the time-based weighting data
     for (pugi::xml_node weightpoint :
@@ -241,7 +231,7 @@ void EventProcessor_Fill::handleEvent(MouseCatcherEvent originalEvent,
         	originalEvent.m_duration = 0;
         	int lastfind = 0;
         	int i = 0;
-        	int found;
+        	size_t found;
 
         	do
         	{
@@ -306,21 +296,6 @@ void EventProcessor_Fill::handleEvent(MouseCatcherEvent originalEvent,
             std::bind(&EventProcessor_Fill::populatePlaceholderEvent, pfilledevent, currentplaceholder,
                     std::placeholders::_1),
             pfilledevent, m_jobpriority, false);
-
-    // Prepare to update the database if needed
-    if (m_cyclesremaining < 1)
-    {
-        m_cyclesremaining = m_cyclesbeforesync;
-        m_hook.gs->Async->newAsyncJob(
-                std::bind(&EventProcessor_Fill::periodicDatabaseSync, std::placeholders::_1,
-                        std::placeholders::_2, m_dbfile, m_pdb, *m_psynctime), NULL,
-                        NULL, m_jobpriority + 50, false);
-        *m_psynctime = time(NULL);
-    }
-    else
-    {
-        m_cyclesremaining--;
-    }
 }
 
 /**
@@ -582,19 +557,6 @@ void EventProcessor_Fill::populatePlaceholderEvent (std::shared_ptr<MouseCatcher
 }
 
 /**
- * Lock the core and sync the database in memory with the one on disk
- *
- * @param data Unused
- * @param file File name to save to
- * @param pdb  Database pointer
- */
-void EventProcessor_Fill::periodicDatabaseSync (std::shared_ptr<void> data, std::timed_mutex &core_lock,
-		std::string file, std::shared_ptr<FillDB> pdb, int synctime)
-{
-    pdb->syncDatabase(file, synctime);
-}
-
-/**
  * Preprocessor function to fill in a CG graphic from the schedule
  *
  * @param event    Reference to playlist event that called the processor
@@ -676,13 +638,11 @@ void EventProcessor_Fill::populateCGNowNext (PlaylistEntry &event, Channel *pcha
  * @param jobpriority    Priority setting for async jobs
  * @param pdb            Pointer to database
  * @param pluginname     Instance name for this file
- * @param dbfile         Database file name
  */
 void EventProcessor_Fill::singleShotMode (PlaylistEntry &event, Channel *pchannel,
         std::vector<std::pair<std::string, std::string>> structuredata, bool filler,
         MouseCatcherEvent continuityfill, int continuitymin, int offset,
-        int jobpriority, std::shared_ptr<FillDB> pdb, std::string pluginname, std::string dbfile,
-        std::shared_ptr<int> psynctime)
+        int jobpriority, std::shared_ptr<FillDB> pdb, std::string pluginname)
 {
     MouseCatcherEvent newevent;
     newevent.m_action = -1;
@@ -709,13 +669,6 @@ void EventProcessor_Fill::singleShotMode (PlaylistEntry &event, Channel *pchanne
             std::bind(&EventProcessor_Fill::populatePlaceholderEvent, pfilledevent,
                     -1, std::placeholders::_1),
             pfilledevent, jobpriority, false);
-
-    // Sync the DB
-    g_async.newAsyncJob(
-			std::bind(&EventProcessor_Fill::periodicDatabaseSync, std::placeholders::_1,
-					std::placeholders::_2, dbfile, pdb, *psynctime), NULL,
-					NULL, jobpriority + 50, false);
-    *psynctime = time(NULL);
 }
 
 /*****************************************************************************
@@ -732,49 +685,18 @@ void EventProcessor_Fill::singleShotMode (PlaylistEntry &event, Channel *pchanne
  */
 FillDB::FillDB (std::string databasefile, std::map<int, int>& weightpoints,
         int fileweight) :
-        SQLiteDB()
+        SQLiteDB(databasefile)
 {
 
     // Table creation
-    oneTimeExec("CREATE TABLE items (id INTEGER PRIMARY KEY AUTOINCREMENT, "
+    oneTimeExec("CREATE TABLE IF NOT EXISTS items (id INTEGER PRIMARY KEY AUTOINCREMENT, "
             "name TEXT NOT NULL, device TEXT NOT NULL, type TEXT NOT NULL, "
             "duration INT NOT NULL, weight INT NOT NULL, description TEXT)");
-    oneTimeExec("CREATE TABLE plays (id INTEGER PRIMARY KEY AUTOINCREMENT, "
+    oneTimeExec("CREATE TABLE IF NOT EXISTS plays (id INTEGER PRIMARY KEY AUTOINCREMENT, "
             "itemid INT NOT NULL, timestamp INT, addtime INT)");
 
-    if (!databasefile.empty())
-    {
-        // Load from existing
-        try
-        {
-            g_logger.info("FillDB()" + ERROR_LOC, "Attaching database " + databasefile);
-            oneTimeExec("ATTACH \"" + databasefile + "\" AS disk");
-
-            oneTimeExec("BEGIN TRANSACTION");
-
-            oneTimeExec("CREATE TABLE IF NOT EXISTS disk.items (id INTEGER PRIMARY KEY AUTOINCREMENT, "
-                    "name TEXT NOT NULL, device TEXT NOT NULL, type TEXT NOT NULL, "
-                    "duration INT NOT NULL, weight INT NOT NULL, description TEXT)");
-            oneTimeExec("CREATE TABLE IF NOT EXISTS disk.plays (id INTEGER PRIMARY KEY AUTOINCREMENT, "
-                    "itemid INT NOT NULL, timestamp INT)");
-
-            oneTimeExec("INSERT INTO items (id, name, device, type, duration, weight, description) "
-                    "SELECT id, name, device, type, duration, weight, description FROM disk.items");
-            oneTimeExec("INSERT INTO plays (id, itemid, timestamp, addtime) "
-                    "SELECT id, itemid, timestamp, strftime('%s', 'now') FROM disk.plays");
-
-            oneTimeExec("END TRANSACTION");
-            oneTimeExec("DETACH disk");
-            g_logger.info("FillDB()" + ERROR_LOC, "Detaching database " + databasefile);
-        }
-        catch (std::exception &ex)
-        {
-            g_logger.error("FillDB()" + ERROR_LOC, ex.what());
-        }
-    }
-
     // Index speeds up some lookups
-    oneTimeExec("CREATE INDEX itemid_index ON plays (itemid)");
+    oneTimeExec("CREATE INDEX IF NOT EXISTS itemid_index ON plays (itemid)");
 
     m_paddplay_query = prepare("INSERT INTO plays (itemid, timestamp, addtime) "
             "VALUES (?, ?, strftime('%s', 'now'));");
@@ -873,49 +795,6 @@ void FillDB::addFile (std::string filename, std::string device, std::string type
 
     m_paddfile_query->bindParams();
     sqlite3_step(m_paddfile_query->getStmt());
-}
-
-/**
- * Synchronise the in-memory database with the one on disk
- *
- * @param databasefile Name of database on disk
- */
-void FillDB::syncDatabase (std::string databasefile, int last_sync)
-{
-    // Attach the file
-    g_logger.info("DB Sync" + ERROR_LOC, "Attaching database " + databasefile);
-    oneTimeExec("ATTACH \"" + databasefile + "\" AS disk");
-    oneTimeExec("BEGIN TRANSACTION");
-
-    // Remove orphaned plays where itemid has gone missing
-    oneTimeExec("DELETE FROM plays WHERE plays.itemid NOT IN "
-            "(SELECT items.id FROM items)");
-
-    // Remove items missing from disk table
-    oneTimeExec("DELETE FROM items WHERE items.id NOT IN "
-            "(SELECT disk.items.id FROM disk.items)");
-
-    // Add items missing from memory table
-    oneTimeExec("INSERT INTO items (id, name, device, type, duration, weight, description) "
-            "SELECT id, name, device, type, duration, weight, description FROM "
-            "disk.items WHERE disk.items.id NOT IN (SELECT items.id FROM "
-            "items)");
-
-    // Sync new plays data
-    oneTimeExec(std::string("INSERT INTO disk.plays (itemid, timestamp) SELECT  "
-            "itemid, timestamp FROM plays WHERE plays.addtime > " + std::to_string(last_sync)).c_str());
-
-    // Detach the database
-    oneTimeExec("END TRANSACTION");
-
-    // Reset the prepared statement or detach will fail
-    m_paddfile_query->getStmt();
-    m_pgetbestfile_query->getStmt();
-    m_paddplay_query->getStmt();
-
-    oneTimeExec("DETACH disk");
-    g_logger.info("DB Sync" + ERROR_LOC, "Detached database " + databasefile);
-
 }
 
 /**

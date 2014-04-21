@@ -168,7 +168,7 @@ VideoDevice_Caspar::VideoDevice_Caspar (PluginConfig config, Hook h) :
 
     try
     {
-        m_pfiledb = std::shared_ptr<CasparFileList>(new CasparFileList(g_pbaseconfig->getOfflineDatabasePath(), m_pluginname));
+        m_pfiledb = std::shared_ptr<CasparFileList>(new CasparFileList(g_pbaseconfig->getDatabasePath(), m_pluginname));
     }
     catch (std::exception&)
     {

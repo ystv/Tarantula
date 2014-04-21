@@ -60,8 +60,7 @@ public:
     std::string getLogsPath ();
     std::string getEventSourcesPath ();
     std::string getEventProcessorsPath ();
-    std::string getOfflineDatabasePath ();
-    int getDatabaseSyncTime ();
+    std::string getDatabasePath ();
 
     int getMCDeletedEventCount ();
 
@@ -75,8 +74,7 @@ private:
     std::string m_logspath;
     std::string m_eventsourcepath;
     std::string m_eventprocessorspath;
-    std::string m_offlinedata_path;
-    int m_db_synctime;
+    std::string m_database_path;
     std::vector<ChannelDetails> m_loadedchannels;
 
     int m_mcdeletedvents;

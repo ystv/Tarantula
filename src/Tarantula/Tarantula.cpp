@@ -106,7 +106,7 @@ int main (int argc, char *argv[])
 
     // Load the core database
     // UNHAPPY NOTE: This MUST be run before any plugins try and use SQLite, or weird segfaults result
-    g_pcoredatabase = std::make_shared<SQLiteDB>(g_pbaseconfig->getOfflineDatabasePath().c_str());
+    g_pcoredatabase = std::make_shared<SQLiteDB>(g_pbaseconfig->getDatabasePath().c_str());
 
     // Load all non-Mousecatcher plugins
     loadAllPlugins("config/" + g_pbaseconfig->getDevicesPath(), "Device");

@@ -34,7 +34,7 @@
  *
  */
 PlaylistDB::PlaylistDB (std::string channel_name) :
-        SQLiteDB(g_pbaseconfig->getOfflineDatabasePath())
+        SQLiteDB(g_pbaseconfig->getDatabasePath())
 {
 	// Identify db table names
 	std::string evt = "\"" + channel_name + "_events\"";

@@ -338,6 +338,8 @@ void EventProcessor_Fill::generateFilledEvents (std::shared_ptr<MouseCatcherEven
         MouseCatcherEvent continuityfill, int continuitymin, float framerate, std::shared_ptr<void> data,
         std::timed_mutex &core_lock, int offset, std::string pluginname)
 {
+	g_logger.info("generateFilledEvents " + ERROR_LOC, "Running fill algorithm...");
+
     int duration = event->m_duration;
 
     // Knock off a few seconds for minimum continuity time
@@ -693,13 +695,13 @@ FillDB::FillDB (std::string databasefile, std::map<int, int>& weightpoints,
             "name TEXT NOT NULL, device TEXT NOT NULL, type TEXT NOT NULL, "
             "duration INT NOT NULL, weight INT NOT NULL, description TEXT)");
     oneTimeExec("CREATE TABLE IF NOT EXISTS plays (id INTEGER PRIMARY KEY AUTOINCREMENT, "
-            "itemid INT NOT NULL, timestamp INT, addtime INT)");
+            "itemid INT NOT NULL, timestamp INT)");
 
     // Index speeds up some lookups
     oneTimeExec("CREATE INDEX IF NOT EXISTS itemid_index ON plays (itemid)");
 
-    m_paddplay_query = prepare("INSERT INTO plays (itemid, timestamp, addtime) "
-            "VALUES (?, ?, strftime('%s', 'now'));");
+    m_paddplay_query = prepare("INSERT INTO plays (itemid, timestamp) "
+            "VALUES (?, ?)");
     m_paddfile_query = prepare("INSERT INTO items (name, device, type, duration, "
             "weight) VALUES (?, ?, ?, ?, ?);");
 

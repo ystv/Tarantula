@@ -29,6 +29,24 @@
 #include "Misc.h"
 
 /**
+ * Equivalent to a row in the playlist database, containing
+ * all the data for a single event
+ *
+ */
+PlaylistEntry::PlaylistEntry ()
+{
+    m_eventid = -1;
+    m_eventtype = EVENT_FIXED;
+    m_trigger = 0;
+    m_device.clear();
+    m_duration = 0;
+    m_parent = 0;
+    m_action = 0;
+    m_devicetype = EVENTDEVICE_PROCESSOR;
+    m_extras.clear();
+}
+
+/**
  * Constructor.
  * Generates a database structure and prepares queries for other functions
  *
@@ -94,12 +112,9 @@ PlaylistDB::PlaylistDB (std::string channel_name) :
     		"WHERE trigger >= ? AND trigger < ? AND parent = 0 AND events.processed >= 0 "
     		"ORDER BY trigger ASC, events.id ASC");
 
-    m_updateevent_query = prepare("UPDATE " + evt + " SET type = ?, trigger = ?, filename = ?, device = ?, devicetype = ?, "
-            "duration = ?, lastupdate = strftime('%s', 'now'), callback = ?, description = ?");
-
     m_getcurrent_toplevel_query = prepare ("SELECT events.id, events.type, events.trigger, events.device, "
     		"events.devicetype, events.action, events.duration, events.parent,  "
-    		"events.preprocessor, events.description "
+    		"events.callback, events.description "
     		"FROM " + evt + " AS events "
     		"WHERE parent = 0 AND processed > 0 "
             "AND (trigger + duration) < strftime('%s', 'now') "
@@ -107,7 +122,7 @@ PlaylistDB::PlaylistDB (std::string channel_name) :
 
     m_getnext_toplevel_query = prepare ("SELECT events.id, events.type, events.trigger, events.device, "
     		"events.devicetype, events.action, events.duration, events.parent,  "
-    		"events.preprocessor, events.description "
+    		"events.callback, events.description "
     		"FROM " + evt + " AS events "
     		"WHERE parent = 0 AND processed = 0 "
     		"AND trigger > strftime('%s', 'now')");

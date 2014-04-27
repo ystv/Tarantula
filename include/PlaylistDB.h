@@ -123,6 +123,7 @@ public:
     int m_parent;
     std::map<std::string, std::string> m_extras;
     std::string m_preprocessor;
+    PlaylistEntry ();
 };
 
 /**
@@ -170,7 +171,6 @@ private:
     std::shared_ptr<DBQuery> m_getextras_query;
     std::shared_ptr<DBQuery> m_gethold_query;
     std::shared_ptr<DBQuery> m_geteventlist_query;
-    std::shared_ptr<DBQuery> m_updateevent_query;
     std::shared_ptr<DBQuery> m_getdeletelist_query;
     std::shared_ptr<DBQuery> m_getupdatelist_query;
     std::shared_ptr<DBQuery> m_getextradata_query;

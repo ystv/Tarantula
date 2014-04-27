@@ -205,7 +205,12 @@ void DBQuery::sql (std::string querystring, sqlite3 *pdb)
     m_pdb = pdb;
     m_querytext = querystring;
 
-    sqlite3_prepare_v2(pdb, (const char*) querystring.c_str(), -1, &m_pstmt, NULL);
+    if (SQLITE_OK != sqlite3_prepare_v2(pdb, (const char*) querystring.c_str(), -1, &m_pstmt, NULL))
+    {
+    	g_logger.OMGWTF("SQLiteDB Query Setup " + ERROR_LOC,
+    			std::string("Failed to create a query. Error: ") + sqlite3_errmsg(m_pdb) +
+    			" on query: " + querystring);
+    }
 }
 
 DBQuery::~DBQuery ()

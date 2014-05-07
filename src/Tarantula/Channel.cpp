@@ -134,20 +134,6 @@ void Channel::tick ()
                     std::string(" ignored due to active hold ") + std::to_string(m_hold_event));
         }
     }
-
-    // Sync database
-    if (m_sync_counter > g_pbaseconfig->getDatabaseSyncTime())
-    {
-        m_sync_counter = 0;
-
-        g_async.newAsyncJob(
-                std::bind(&Channel::periodicDatabaseSync, this, std::placeholders::_1, std::placeholders::_2), NULL,
-                        NULL, 50, false);
-    }
-    else
-    {
-        m_sync_counter++;
-    }
 }
 
 /**
@@ -272,16 +258,6 @@ int Channel::createEvent (PlaylistEntry *pev)
 {
     int ret = m_pl.addEvent(pev);
     return ret;
-}
-
-/**
- * Lock the core and sync the database in memory with the one on disk
- *
- * @param data Unused
- */
-void Channel::periodicDatabaseSync (std::shared_ptr<void> data, std::timed_mutex &core_lock)
-{
-    m_pl.writeToDisk(g_pbaseconfig->getOfflineDatabasePath(), m_channame, core_lock);
 }
 
 /**

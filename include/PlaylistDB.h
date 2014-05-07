@@ -18,7 +18,7 @@
 *
 *   File Name   : PlaylistDB.h
 *   Version     : 1.0
-*   Description : Extends MemDB to use as the playlist database
+*   Description : Extends SQLiteDB to use as the playlist database
 *
 *****************************************************************************/
 
@@ -29,7 +29,7 @@
 #include <cstdlib>
 #include <map>
 #include <mutex>
-#include "MemDB.h" //parent class
+#include "SQLiteDB.h" //parent class
 
 
 enum playlist_event_type_t
@@ -127,10 +127,10 @@ public:
 };
 
 /**
- * This is an extension of MemDB to hold Playlist data in a playlist table,
+ * This is an extension of SQLiteDB to hold Playlist data in a playlist table,
  * with a structure corresponding to the playlist XML spec.
  */
-class PlaylistDB: public MemDB
+class PlaylistDB: public SQLiteDB
 {
 public:
     PlaylistDB (std::string channel);
@@ -159,7 +159,6 @@ private:
     void readFromDisk (std::string file, std::string table);
 
     std::string m_channame;
-    time_t m_last_sync;
 
     std::shared_ptr<DBQuery> m_addevent_query;
     std::shared_ptr<DBQuery> m_getevent_query;
@@ -172,7 +171,6 @@ private:
     std::shared_ptr<DBQuery> m_getextras_query;
     std::shared_ptr<DBQuery> m_gethold_query;
     std::shared_ptr<DBQuery> m_geteventlist_query;
-    std::shared_ptr<DBQuery> m_updateevent_query;
     std::shared_ptr<DBQuery> m_getdeletelist_query;
     std::shared_ptr<DBQuery> m_getupdatelist_query;
     std::shared_ptr<DBQuery> m_getextradata_query;

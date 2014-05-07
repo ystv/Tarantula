@@ -60,7 +60,7 @@ std::vector<PluginStateData> g_plugins;
 std::vector<std::shared_ptr<MouseCatcherSourcePlugin>> g_mcsources;
 std::map<std::string, std::shared_ptr<MouseCatcherProcessorPlugin>> g_mcprocessors;
 std::shared_ptr<BaseConfigLoader> g_pbaseconfig;
-std::shared_ptr<MemDB> g_pcoredatabase;
+std::shared_ptr<SQLiteDB> g_pcoredatabase;
 
 //! Callback functions to run immediately before an event
 std::unordered_map<std::string, PreProcessorHandler> g_preprocessorlist;
@@ -106,7 +106,7 @@ int main (int argc, char *argv[])
 
     // Load the core database
     // UNHAPPY NOTE: This MUST be run before any plugins try and use SQLite, or weird segfaults result
-    g_pcoredatabase = std::make_shared<MemDB>(g_pbaseconfig->getOfflineDatabasePath().c_str());
+    g_pcoredatabase = std::make_shared<SQLiteDB>(g_pbaseconfig->getDatabasePath().c_str());
 
     // Load all non-Mousecatcher plugins
     loadAllPlugins("config/" + g_pbaseconfig->getDevicesPath(), "Device");

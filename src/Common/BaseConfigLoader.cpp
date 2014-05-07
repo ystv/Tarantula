@@ -147,19 +147,12 @@ void BaseConfigLoader::LoadConfig (std::string filename)
             m_framerate = 25;
         }
 
-        m_offlinedata_path = systemnode.child_value("Database");
+        m_database_path = systemnode.child_value("Database");
 
-        if (m_offlinedata_path.empty())
+        if (m_database_path.empty())
         {
-            g_logger.OMGWTF("Base Config Loader", "No Database [path] in config file. This will be a problem");
-            m_offlinedata_path = "temp.db";
-        }
-
-        m_db_synctime = systemnode.child("SyncTicks").text().as_int(-1);
-        if (-1 == m_db_synctime)
-        {
-            g_logger.warn("Base Config Loader", "No SyncTicks in config file. Using 1 minute");
-            m_db_synctime = m_framerate * 60;
+            g_logger.OMGWTF("Base Config Loader", "No Database path in config file. This will be a problem");
+            m_database_path = "temp.db";
         }
     }
 
@@ -277,14 +270,9 @@ std::vector<ChannelDetails> BaseConfigLoader::getLoadedChannels ()
     return m_loadedchannels;
 }
 
-std::string BaseConfigLoader::getOfflineDatabasePath ()
+std::string BaseConfigLoader::getDatabasePath ()
 {
-    return m_offlinedata_path;
-}
-
-int BaseConfigLoader::getDatabaseSyncTime ()
-{
-    return m_db_synctime;
+    return m_database_path;
 }
 
 /**

@@ -16,7 +16,7 @@
 *
 *   Contact     : tarantula@ystv.co.uk
 *
-*   File Name   : MemDB.cpp
+*   File Name   : SQLiteDB.cpp
 *   Version     : 1.0
 *   Description : Base class for an in-memory SQLite database. A wrapper around
 *                 the sqlite functions to make them a bit more C++y Also
@@ -25,7 +25,7 @@
 *****************************************************************************/
 
 
-#include "MemDB.h"
+#include "SQLiteDB.h"
 #include "Log.h"
 #include "ErrorMacro.h"
 #include <iostream>
@@ -67,39 +67,55 @@ DBParam::DBParam ()
 }
 
 /**
- * MemDB implementations.
+ * Opens a file-based database.
+ * Will create it if it doesn't exist.
+ *
+ * @param filename Path to database file
  */
-MemDB::MemDB ()
-{
-    sqlite3_open(":memory:", &m_pdb);
-}
-
-/**
- * Opens a file-based database instead of an in-memory one. Will create it if
- * it doesn't exist.
- */
-MemDB::MemDB (const char* filename)
+SQLiteDB::SQLiteDB (const char* filename)
 {
     int ret = sqlite3_open(filename, &m_pdb);
 
     if (SQLITE_OK != ret)
     {
-        g_logger.error("MemDB Open()" + ERROR_LOC, sqlite3_errmsg(m_pdb));
+        g_logger.error("SQLiteDB Open()" + ERROR_LOC, sqlite3_errmsg(m_pdb));
         throw std::exception();
     }
 }
 
-MemDB::~MemDB ()
+/**
+ * Opens a file-based database.
+ * Will create it if it doesn't exist.
+ *
+ * @param filename Path to database file
+ */
+SQLiteDB::SQLiteDB (std::string filename)
+{
+    int ret = sqlite3_open(filename.c_str(), &m_pdb);
+
+    if (SQLITE_OK != ret)
+    {
+        g_logger.error("SQLiteDB Open()" + ERROR_LOC, sqlite3_errmsg(m_pdb));
+        throw std::exception();
+    }
+
+    // Enable write-ahead and disable synchronous mode for performance
+    oneTimeExec("PRAGMA journal_mode=WAL");
+    oneTimeExec("PRAGMA synchronous=0");
+}
+
+
+SQLiteDB::~SQLiteDB ()
 {
     sqlite3_close_v2(m_pdb);
 }
 
 /**
- * Dump the entire database out to the specified file.
+ * Dump the entire database out to the specified file. Good for debugging
  *
  * @param filename
  */
-void MemDB::dump (const char* filename)
+void SQLiteDB::dump (const char* filename)
 {
     sqlite3_backup *BackupObj;
     sqlite3 *file;
@@ -120,9 +136,9 @@ void MemDB::dump (const char* filename)
  * a pointer to the result. Does not create duplicates.
  *
  * @param sql The SQL query string to be executed
- * @return    A pointer to the entry in the MemDB instance query table.
+ * @return    A pointer to the entry in the SQLiteDB instance query table.
  */
-std::shared_ptr<DBQuery> MemDB::prepare (std::string sql)
+std::shared_ptr<DBQuery> SQLiteDB::prepare (std::string sql)
 {
     return std::make_shared<DBQuery>(sql, m_pdb);
 }
@@ -132,7 +148,7 @@ std::shared_ptr<DBQuery> MemDB::prepare (std::string sql)
  *
  * @param sql
  */
-void MemDB::oneTimeExec (std::string sql)
+void SQLiteDB::oneTimeExec (std::string sql)
 {
     // Prepare query
     sqlite3_stmt *stmt;
@@ -144,11 +160,10 @@ void MemDB::oneTimeExec (std::string sql)
 
     // Run query
     int ret = sqlite3_step(stmt);
-    if (SQLITE_DONE != ret)
+    if (SQLITE_DONE != ret && SQLITE_ROW != ret)
     {
-        g_logger.error("MemDB oneTimeExec()" + ERROR_LOC, sqlite3_errmsg(m_pdb));
-        volatile int error = -1;
-        error = ret;
+        g_logger.error("SQLiteDB oneTimeExec()" + ERROR_LOC,
+        		"Code: " + std::to_string(ret) + " - " + sqlite3_errmsg(m_pdb));
     }
 
     // Remove from prepared statement store to free memory
@@ -159,7 +174,7 @@ void MemDB::oneTimeExec (std::string sql)
  * Return the row ID of the last inserted row.
  * @return
  */
-int MemDB::getLastRowID ()
+int SQLiteDB::getLastRowID ()
 {
     return sqlite3_last_insert_rowid(m_pdb);
 }
@@ -190,7 +205,12 @@ void DBQuery::sql (std::string querystring, sqlite3 *pdb)
     m_pdb = pdb;
     m_querytext = querystring;
 
-    sqlite3_prepare_v2(pdb, (const char*) querystring.c_str(), -1, &m_pstmt, NULL);
+    if (SQLITE_OK != sqlite3_prepare_v2(pdb, (const char*) querystring.c_str(), -1, &m_pstmt, NULL))
+    {
+    	g_logger.OMGWTF("SQLiteDB Query Setup " + ERROR_LOC,
+    			std::string("Failed to create a query. Error: ") + sqlite3_errmsg(m_pdb) +
+    			" on query: " + querystring);
+    }
 }
 
 DBQuery::~DBQuery ()

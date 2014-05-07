@@ -20,7 +20,7 @@
 *   Version     : 1.0
 *   Description : Definition of an EventProcessor to generate events for
 *   idents, trailers and continuity graphics to fill schedules. Also contains
-*   a FillDB class to extend MemDB and provide a database backend.
+*   a FillDB class to extend SQLiteDB and provide a database backend.
 *
 *****************************************************************************/
 
@@ -34,9 +34,9 @@
 
 #include "MouseCatcherProcessorPlugin.h"
 #include "PluginConfig.h"
-#include "MemDB.h"
+#include "SQLiteDB.h"
 
-class FillDB : public MemDB
+class FillDB : public SQLiteDB
 {
 public:
     FillDB(std::string databasefile, std::map<int, int>& weightpoints,
@@ -49,7 +49,6 @@ public:
     int getBestFile (std::string& filename, int inserttime, int duration,
     		std::string device, std::string type, int& resultduration, std::string& description,
     		std::string& excludeid);
-    void syncDatabase (std::string databasefile, int last_sync);
 
     void beginTransaction ();
     void endTransaction ();
@@ -80,8 +79,7 @@ public:
     static void singleShotMode (PlaylistEntry &event, Channel *pchannel,
             std::vector<std::pair<std::string, std::string>> structuredata, bool filler,
             MouseCatcherEvent continuityfill, int continuitymin, int offset,
-            int jobpriority, std::shared_ptr<FillDB> pdb, std::string pluginname, std::string dbfile,
-            std::shared_ptr<int> psynctime);
+            int jobpriority, std::shared_ptr<FillDB> pdb, std::string pluginname);
 
     std::shared_ptr<FillDB> m_pdb;
 private:
@@ -91,25 +89,20 @@ private:
             std::timed_mutex &core_lock, int offset, std::string pluginname);
     static void populatePlaceholderEvent (std::shared_ptr<MouseCatcherEvent> event, int placeholder_id,
             std::shared_ptr<void> data);
-    static void periodicDatabaseSync (std::shared_ptr<void> data, std::timed_mutex &core_lock, std::string file,
-    		std::shared_ptr<FillDB> pdb, int synctime);
 
     // Data from configuration file
     std::string m_dbfile;
     std::map<int, int> m_weightpoints;
     int m_fileweight;
     int m_jobpriority;
-    int m_cyclesbeforesync;
 
     std::vector<std::pair<std::string, std::string>> m_structuredata; ///< An example could be {"ident", "device1"}
     bool m_filler; ///< Whether to fill remaining time with the last item.
     bool m_singleshot; ///< Should events be generated in bulk or on-the-fly?
     int m_offset; ///< Should each trigger time be offset?
-    std::shared_ptr<int> m_psynctime;
 
     MouseCatcherEvent m_continuityfill; ///< Event to tack on the end to fill remaining time
     int m_continuitymin; ///< Minimum length for continuity fill
 
     int m_placeholderid; //!< Next ID of a placeholder event
-    int m_cyclesremaining; //!< How many events to generate before syncing the database to disk
 };

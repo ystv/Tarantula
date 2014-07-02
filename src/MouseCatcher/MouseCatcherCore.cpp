@@ -103,6 +103,45 @@ namespace MouseCatcherCore
             return -1;
         }
 
+        if (event.m_extradata.count("duration") > 0)
+		{
+			try
+			{
+				event.m_duration = 0;
+				int lastfind = 0;
+				int i = 0;
+				size_t found;
+
+				do
+				{
+					found = event.m_extradata["duration"].find(':', lastfind);
+					if (std::string::npos == found)
+					{
+						found = event.m_extradata["duration"].length();
+					}
+
+					std::string sub = event.m_extradata["duration"].substr(lastfind, found - lastfind);
+					lastfind = found + 1;
+
+					event.m_duration = event.m_duration * 60 +
+							ConvertType::stringToInt(sub);
+					i++;
+				}
+				while (found != event.m_extradata["duration"].length() && i < 3);
+			}
+			catch (std::exception &ex)
+			{
+				g_logger.warn("MouseCatcherCore " + ERROR_LOC, "Bad duration of " + event.m_extradata["duration"] +
+						" selecting 10s instead");
+				event.m_duration = 10;
+			}
+
+			// Convert duration from seconds to frames
+			event.m_duration *= g_pbaseconfig->getFramerate();
+
+			event.m_extradata.erase("duration");
+		}
+
         // Process event through EventProcessors, then run this function on new events (ignore "special" manual events)
         if (0 == g_devices.count(event.m_targetdevice) && EVENT_MANUAL != event.m_eventtype)
         {
@@ -595,7 +634,8 @@ namespace MouseCatcherCore
                 }
                 catch (std::exception&)
                 {
-                    g_logger.warn("MouseCatcherCore::eventQueueTicks", "Unknown Action returned from g_pactionqueue");
+                    g_logger.warn("MouseCatcherCore::eventQueueTicks " + ERROR_LOC,
+                    		"Unknown Action returned from g_pactionqueue. Action: " + std::to_string(thisaction.action));
                     thisaction.returnmessage = "Unknown Action type found";
                 }
                 thisaction.isprocessed = true;

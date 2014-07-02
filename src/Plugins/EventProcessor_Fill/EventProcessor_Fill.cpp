@@ -224,45 +224,7 @@ void EventProcessor_Fill::handleEvent(MouseCatcherEvent originalEvent,
         MouseCatcherEvent& resultingEvent)
 {
     // Sort out durations
-    if (originalEvent.m_extradata.count("duration") > 0)
-    {
-        try
-        {
-        	originalEvent.m_duration = 0;
-        	int lastfind = 0;
-        	int i = 0;
-        	size_t found;
-
-        	do
-        	{
-        		found = originalEvent.m_extradata["duration"].find(':', lastfind);
-        		if (std::string::npos == found)
-        		{
-        			found = originalEvent.m_extradata["duration"].length();
-        		}
-
-        		std::string sub = originalEvent.m_extradata["duration"].substr(lastfind, found - lastfind);
-        		lastfind = found + 1;
-
-        		originalEvent.m_duration = originalEvent.m_duration * 60 +
-        				ConvertType::stringToInt(sub);
-        		i++;
-        	}
-        	while (found != originalEvent.m_extradata["duration"].length() && i < 3);
-        }
-        catch (std::exception &ex)
-        {
-            m_hook.gs->L->warn(m_pluginname, "Bad duration of " + originalEvent.m_extradata["duration"] +
-                    " selecting 10s instead");
-            originalEvent.m_duration = 10;
-        }
-
-        // Convert duration from seconds to frames
-        originalEvent.m_duration *= g_pbaseconfig->getFramerate();
-
-        originalEvent.m_extradata.clear();
-    }
-    else if (originalEvent.m_duration <= 0)
+    if (originalEvent.m_duration <= 0)
     {
         m_hook.gs->L->warn(m_pluginname, "No duration given, selecting 10s instead");
         originalEvent.m_duration = 10 * g_pbaseconfig->getFramerate();
@@ -363,11 +325,11 @@ void EventProcessor_Fill::generateFilledEvents (std::shared_ptr<MouseCatcherEven
     // Temporary storage for played file data
     std::vector<std::pair<int, int> > playdata;
 
-    int resultduration;
+    int resultduration = -1;
 
-    std::string pastids;
-    std::string filename;
-    std::string description;
+    std::string pastids = "";
+    std::string filename = "";
+    std::string description = "";
     int id;
 
     // Is a list of IDs to avoid already set?
@@ -544,7 +506,8 @@ void EventProcessor_Fill::populatePlaceholderEvent (std::shared_ptr<MouseCatcher
 
         if (eventid <= -1)
         {
-            g_logger.error("populatePlaceholderEvent", "Got a non-existent playlist event. Failing silently.");
+            g_logger.error("populatePlaceholderEvent " + ERROR_LOC,
+            		"Got a non-existent playlist event. Failing silently.");
             return;
         }
     }

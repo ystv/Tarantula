@@ -282,13 +282,19 @@ std::vector<PlaylistEntry> PlaylistDB::getEventList (time_t starttime,
     sqlite3_stmt *stmt = m_geteventlist_query->getStmt();
     while (sqlite3_step(stmt) == SQLITE_ROW)
     {
+    	// Extract extradata row
+    	const char* key = reinterpret_cast<const char*>(sqlite3_column_text (stmt, 10));
+    	const char* value = reinterpret_cast<const char*>(sqlite3_column_text (stmt, 11));
+
+
     	// Append to the last entry if ids match
     	if (eventlist.size() > 0 &&
     			sqlite3_column_int(stmt, 0) == eventlist.back().m_eventid)
     	{
-    		eventlist.back().m_extras[reinterpret_cast<const char*>(
-            		sqlite3_column_text (stmt, 10))] =
-                    reinterpret_cast<const char*>(sqlite3_column_text (stmt, 11));
+    		if (key && value)
+    		{
+				eventlist.back().m_extras[key] = value;
+    		}
     	}
     	else
     	{
@@ -296,10 +302,10 @@ std::vector<PlaylistEntry> PlaylistDB::getEventList (time_t starttime,
 			PlaylistEntry ple;
 			populateEvent(stmt, &ple);
 
-			ple.m_extras[reinterpret_cast<const char*>(
-				sqlite3_column_text (stmt, 10))] =
-			    reinterpret_cast<const char*>(
-			    	sqlite3_column_text (stmt, 11));
+			if (key && value)
+			{
+				ple.m_extras[key] = value;
+			}
 
 			eventlist.push_back(ple);
     	}

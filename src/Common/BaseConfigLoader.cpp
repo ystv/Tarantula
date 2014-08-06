@@ -27,6 +27,7 @@
 #include "pugixml.hpp"
 #include "Misc.h"
 #include "Log.h"
+#include "CustomExceptions.h"
 
 #include <vector>
 
@@ -62,16 +63,16 @@ void BaseConfigLoader::LoadConfig (std::string filename)
     // Return an error if parsing fails
     if (pugi::status_file_not_found == result.status)
     {
-        throw std::exception();
+        throw FileNotFoundError();
     }
     else if (pugi::status_out_of_memory == result.status
             || pugi::status_internal_error == result.status)
     {
-        throw std::exception();
+        throw InternalParserError();
     }
     else if (pugi::status_ok != result.status)
     {
-        throw std::exception();
+        throw UnknownError();
     }
 
     // Grab the Config node and get some paths

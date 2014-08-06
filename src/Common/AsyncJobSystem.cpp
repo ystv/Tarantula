@@ -43,7 +43,13 @@ AsyncJobSystem::AsyncJobSystem ():
  */
 AsyncJobSystem::~AsyncJobSystem ()
 {
+    // Set the kill flag
     m_halt = true;
+
+    // Add a new empty job to force the wait to exit
+    m_jobs.insert(std::make_shared<AsyncJobData>());
+    m_async_cv.notify_one();
+
     m_async_thread.join();
 }
 

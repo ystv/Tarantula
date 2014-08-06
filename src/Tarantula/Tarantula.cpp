@@ -102,7 +102,18 @@ int main (int argc, char *argv[])
     Log_Screen ls(h);
 
     // Load the config
-    g_pbaseconfig = std::make_shared<BaseConfigLoader>("config/Base.xml");
+    try
+    {
+        g_pbaseconfig = std::make_shared<BaseConfigLoader>();
+        g_pbaseconfig->LoadConfig("config/Base.xml");
+    }
+    catch (std::exception& e)
+    {
+        g_logger.error("Initial startup", std::string("Could not load base config file. Error: ") + e.what());
+        g_logger.info("Tarantula Core", "Shutting down...");
+
+	return 1;
+    }
 
     // Load the core database
     // UNHAPPY NOTE: This MUST be run before any plugins try and use SQLite, or weird segfaults result

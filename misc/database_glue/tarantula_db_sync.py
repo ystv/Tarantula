@@ -41,7 +41,7 @@ cur.execute("SELECT videos.id, (upper(substring(filename from 9 for (length(file
 	"LEFT JOIN videos ON videos.id = video_files.video_id "
 	"LEFT JOIN video_boxes ON videos.video_box_id = video_boxes.id "
 	"LEFT JOIN video_file_types ON video_files.video_file_type_name = video_file_types.name "
-	"WHERE video_file_types.mode = 'schedule' AND duration > interval '0 seconds' AND is_enabled = 'true' AND schedule_fill_enable = 'true' "
+	"WHERE video_file_types.mode = 'schedule' AND duration > interval '0 seconds' AND video_boxes.is_enabled = 'true' AND videos.is_enabled = 'true' AND video_files.is_enabled = 'true' AND schedule_fill_enable = 'true' "
 	"AND video_id NOT IN "
 		"(SELECT video_id FROM schedule_fill_items) "
         "GROUP BY videos.id, filename, duration, created_date, video_boxes.display_name, video_boxes.name, video_boxes.url_name, "

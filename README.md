@@ -7,9 +7,6 @@ automate various broadcast equipment.
 Tarantula is free software, licensed under the GNU General Public License.
 See the file COPYING for copying conditions.
 
-For more information visit http://ystv.co.uk/tarantula
-
-
 ###Downloading
 
 Tarantula can be cloned using git  and the following command:
@@ -38,7 +35,6 @@ appear in the log (demo plugins do nothing but write to the log).
 
 Tarantula is free software, anybody is welcome to extend it, for example by
 writing plugins to complement the default set. To keep track of development
-and contribute, visit https://ystv.co.uk/trac/Tarantula or email
-tarantula@ystv.co.uk.
+and contribute, email tarantula@ystv.co.uk.
 
 

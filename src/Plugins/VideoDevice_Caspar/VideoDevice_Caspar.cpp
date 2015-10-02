@@ -535,23 +535,43 @@ void VideoDevice_Caspar::cb_updatefiles (std::shared_ptr<VideoDevice_Caspar> thi
     // Call the processor
     CasparQueryResponseProcessor::getMediaList(resp, medialist);
 
+    // Find new files
+    std::vector<std::string> newmedialist = get_missing_items(medialist, *transformed_files);
+
+    // Identify removed
+    *deletedfiles = get_missing_items(*transformed_files, medialist);
+
     // Identify the files to remove from the main
     std::sort(medialist.begin(), medialist.end());
 
-    std::vector<std::string> newmedialist;
-
-    std::set_difference(medialist.begin(), medialist.end(), transformed_files->begin(), transformed_files->end(),
-            std::inserter(newmedialist, newmedialist.begin()));
-
-    std::set_difference(transformed_files->begin(), transformed_files->end(), medialist.begin(), medialist.end(),
-            std::inserter(*deletedfiles, deletedfiles->begin()));
-
     // Get lengths for all the new files if needed
-
     if (newmedialist.size() > 0)
     {
         batchFileLengths(thisdev, newmedialist, pccon, newfiles);
     }
+}
+
+/**
+ * Compile a vector of strings in largelist but not in smalllist
+ *
+ * I have no idea how this works, from http://stackoverflow.com/a/15759016
+ *
+ * @param largelist Larger list of strings (probably)
+ * @param smalllist Smaller list of string
+ * @return 			List of differences
+ */
+std::vector<std::string> VideoDevice_Caspar::get_missing_items(std::vector<std::string> largelist,
+		std::vector<std::string> smalllist)
+{
+	std::vector<std::string> resultlist;
+
+	std::remove_copy_if(largelist.begin(), largelist.end(), std::back_inserter(resultlist),
+			[&smalllist](const std::string& arg)
+			{
+				return (std::find(smalllist.begin(), smalllist.end(), arg) != smalllist.end());
+			});
+
+	return resultlist;
 }
 
 /**

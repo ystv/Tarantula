@@ -121,5 +121,8 @@ private:
     static void cb_updatelength (std::shared_ptr<VideoDevice_Caspar> thisdev,
             std::vector<std::string>& medialist, std::vector<std::string>& resp,
             std::shared_ptr<CasparConnection> pccon, std::shared_ptr<std::map<std::string, VideoFile>> newfiles);
+
+    static std::vector<std::string> get_missing_items(std::vector<std::string> largelist,
+    		std::vector<std::string> smalllist);
 };
 

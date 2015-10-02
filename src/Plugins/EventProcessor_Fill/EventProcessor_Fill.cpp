@@ -503,13 +503,6 @@ void EventProcessor_Fill::populatePlaceholderEvent (std::shared_ptr<MouseCatcher
                 }
             }
         }
-
-        if (eventid <= -1)
-        {
-            g_logger.error("populatePlaceholderEvent " + ERROR_LOC,
-            		"Got a non-existent playlist event. Failing silently.");
-            return;
-        }
     }
 
     // Add each child to the playlist using the normal processEvent() mechanism
